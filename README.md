@@ -25,9 +25,9 @@ python recipes/preprocess.py
 ```
 
 This takes in the .csv files and converts them to datastructures
-
-It saves these as .parquet files with name, dimensions and channels
-as metadata while the dataframe is saved as a dataframe
+It saves these as .parquet files with:
+- name, dimensions and channels as metadata
+- dataframe is saved as a dataframe
 
 The dataframe has the following columns:
 
