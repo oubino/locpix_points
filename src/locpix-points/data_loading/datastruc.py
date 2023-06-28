@@ -32,7 +32,7 @@ class SMLMDataset(Dataset):
         processed_dir_root: A string with the directory of the the folder
             which contains the the directory of the
             processed dataset - processed via pygeometric
-            i.e. Raw .csv -> Preprocessing module outputs to
+            i.e. Raw .csv/.parquet -> Preprocessing module outputs to
             raw_dir -> Taken in to data_loading module processed
             to processed_dir -> Then pytorch analysis begins
         transform: The transform to be applied to each
