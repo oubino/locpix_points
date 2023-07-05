@@ -6,8 +6,8 @@ build-backend = "setuptools.build_meta"
 where = ["src"]  
 
 [project]
-name = "heptapods"
-version = "0.0.1"
+name = "locpix_points"
+dynamic = ["version"]
 authors = [
   { name="Oliver Umney", email="scou@leeds.ac.uk" },
 ]
@@ -35,6 +35,7 @@ dependencies = [
     "torch-spline-conv",
     "torch-geometric",
     "torch-summary",
+    "wandb",
     
 
     # "torchvision",  check actually need this
@@ -43,9 +44,17 @@ dependencies = [
 
 ]
 
+[project.scripts]
+preprocess = "locpix_points.scripts.preprocess:main"
+process = "locpix_points.scripts.process:main"
+annotate = "locpix_points.scripts.annotate:main"
+train = "locpix_points.scripts.train:main"
+evaluate = "locpix_points.scripts.evaluate:main"
+clean_up = "locpix_points.scripts.clean_up:main"
+
 [project.urls]
-"Homepage" = "https://github.com/oubino/heptapods"
-"Bug Tracker" = "https://github.com/oubino/heptapods/issues"
+"Homepage" = "https://github.com/oubino/locpix_points"
+"Bug Tracker" = "https://github.com/oubino/locpix_points/issues"
 
 [tool.tox]
 legacy_tox_ini = """

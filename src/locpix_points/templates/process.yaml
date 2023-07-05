@@ -1,0 +1,20 @@
+# whether to process the data as heterogeneous or homogenous
+# graph
+hetero: False
+
+# train/test/val splits
+train_ratio: 0.5
+val_ratio: 0.25
+test_ratio: 0.25
+
+# what to load into position
+# Options: xy, xyz
+pos: 'xy'
+
+# what to load into features
+# Options: uniform (ones), xy, ...
+feat: 'xy'
+
+# label level
+# graph or node
+label_level: 'node'

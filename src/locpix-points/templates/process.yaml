@@ -1,8 +1,0 @@
-# whether to process the data as heterogeneous or homogenous
-# graph
-hetero: False
-
-# train/test/val splits
-train_ratio: 0.7
-val_ratio: 0.1
-test_ratio: 0.2
