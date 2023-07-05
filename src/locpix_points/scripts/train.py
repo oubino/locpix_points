@@ -62,6 +62,7 @@ def main():
     weight_decay = config['weight_decay']
     num_workers = config['num_workers']
     loss_fn = config['loss_fn']
+    label_level = config['label_level']
 
     # define device
     if gpu is True and not torch.cuda.is_available():
@@ -142,7 +143,8 @@ def main():
 
     # initialise model
     model = model_choice(config['model'],
-                         train_set)
+                         # this should parameterise the chosen model
+                         config[config['model']])
 
     # initialise optimiser
     if optimiser == 'adam':
@@ -169,13 +171,12 @@ def main():
     first_train_item = train_set.__getitem__(0)
     nodes = first_train_item.data.num_nodes
     label = first_train_item.data.y
-    if label.shape[0] == nodes:
-        label_level = "node"
-    elif label.shape == 1:
-        label_level = "graph"
+    if label_level == "node":
+        assert label.shape[0] == nodes
+    elif label_level == "graph":
+        assert label.shape == 1:
     else:
         raise ValueError("Label level not defined")
-    print("Label level ", label_level)
 
     # model summary
     print('\n')
