@@ -36,6 +36,7 @@ dependencies = [
     "torch-geometric",
     "torch-summary",
     "wandb",
+    "torchmetrics",
     
 
     # "torchvision",  check actually need this

@@ -12,9 +12,11 @@ from locpix_points.data_loading import datastruc
 import torch_geometric.loader as L
 from locpix_points.training import train
 from locpix_points.models import model_choice
+from locpix_points.evaluation import evaluate
 from torchsummary import summary
 import torch.optim
 import argparse
+import time
 # import torch
 # import torch_geometric.transforms as T
 
@@ -204,8 +206,6 @@ def main():
                      wandb_project=config['wandb_project'],
                      wandb_dataset=config['wandb_dataset']
                      )
-    print('Need checks here to make sure model weights are\
-          correct')
     print('\n')
     print('---- Finished training... ----')
     print('\n')
@@ -213,11 +213,28 @@ def main():
     # save final model
     print('\n')
     print('---- Saving final model... ----')
+    model_folder = os.path.join(project_directory, "models")
+    if not os.path.exists(model_folder):
+        os.makedirs(model_folder)
+    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time.asctime(time.gmtime(time.time()))}_.pt"
+    model_path = os.path.join(model_folder, model_path)
+    #input('stop', need to check weights have changed after training)
+    torch.save(model.state_dict(), model_path)
     print('\n')
 
+    print('\n')
+    print('---- Predict on train & val set... ----')
+    print('\n')
+    train_acc, val_acc = evaluate.make_prediction(model,
+                                                    optimiser,
+                                                    train_loader,
+                                                    val_loader,
+                                                    device,
+                                                    label_level)
+    print('Train accuracy: ', train_acc)
+    print('Validation accuracy: ', val_acc)
+
     # save config file
-    import warnings
-    warnings.warn('Not sure if below is correct and is giving to correct folder')
     yaml_save_loc = os.path.join(
         project_directory, 'train.yaml'
     )
