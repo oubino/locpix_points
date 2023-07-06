@@ -44,3 +44,7 @@ loss_fn: nll
 
 # what trying to predict
 label_level: node # graph
+
+# wandb parameters
+wandb_project: nieves_expt1
+wandb_dataset: nieves

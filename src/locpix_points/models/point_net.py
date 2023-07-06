@@ -80,7 +80,7 @@ class GlobalSAModule(torch.nn.Module):
     def forward(self, x, pos, batch):
         x = self.nn(torch.cat([x, pos], dim=1))
         x = global_max_pool(x, batch)
-        pos = pos.new_zeros((x.size(0), 3))
+        pos = pos.new_zeros((x.size(0), pos.shape[-1]))
         batch = torch.arange(x.size(0), device=batch.device)
         return x, pos, batch
 
@@ -101,7 +101,6 @@ class FPModule(torch.nn.Module):
     def forward(self, x, pos, batch, x_skip, pos_skip, batch_skip):
         x = knn_interpolate(x, pos, pos_skip, batch, batch_skip, k=self.k)
         if x_skip is not None:
-            input('check fp')
             x = torch.cat([x, x_skip], dim=1)
         x = self.nn(x)
         return x, pos_skip, batch_skip
@@ -122,6 +121,7 @@ class PointNetClassification(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
+        self.name = "PointNetClassification"
 
         ratio = config['ratio']
         radius = config['radius']
@@ -134,7 +134,7 @@ class PointNetClassification(torch.nn.Module):
         self.sa2_module = SAModule(ratio[1], radius[1], MLP(channels[1]))
         self.sa3_module = GlobalSAModule(MLP(channels[2]))
 
-        input('stop, do we really want dropout here? - or does it not dropout on final layer')
+        # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(channels[3], dropout=dropout, norm=norm)
 
     def forward(self, data):
@@ -164,7 +164,7 @@ class PointNetSegmentation(torch.nn.Module):
 
     def __init__(self, config):
         super().__init__()
-
+        self.name = "PointNetSegmentation"
         ratio = config['ratio']
         radius = config['radius']
         sa_channels = config['sa_channels']
@@ -184,13 +184,15 @@ class PointNetSegmentation(torch.nn.Module):
         self.fp2_module = FPModule(k[1], MLP(fp_channels[1]))
         self.fp1_module = FPModule(k[2], MLP(fp_channels[2]))
 
+        # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(output_channels, dropout=dropout, norm=norm)
 
-        input('stop do we want these linear layers')
+        import warnings
+        warnings.warn('There are redundant linear layers here...')
 
-        self.lin1 = torch.nn.Linear(128, 128)
-        self.lin2 = torch.nn.Linear(128, 128)
-        self.lin3 = torch.nn.Linear(128, None)
+        #self.lin1 = torch.nn.Linear(128, 128)
+        #self.lin2 = torch.nn.Linear(128, 128)
+        #self.lin3 = torch.nn.Linear(128, None)
 
     def forward(self, data):
         sa0_out = (data.x, data.pos, data.batch)

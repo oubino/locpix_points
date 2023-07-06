@@ -168,24 +168,21 @@ def main():
     print('Number train graphs', num_train_graph)
     num_val_graph = len(val_set)
     print('Number val graphs', num_val_graph)
-    first_train_item = train_set.__getitem__(0)
-    nodes = first_train_item.data.num_nodes
-    label = first_train_item.data.y
+    first_train_item = train_set.get(0)
+    nodes = first_train_item.num_nodes
+    label = first_train_item.y
     if label_level == "node":
         assert label.shape[0] == nodes
     elif label_level == "graph":
-        assert label.shape == 1:
+        assert label.shape == 1
     else:
         raise ValueError("Label level not defined")
 
     # model summary
     print('\n')
-    print('---- Model summary ----')
+    print('---- Model summary (estimate) ----')
     print('\n')
-    number_nodes = 600  # this is just for summary, has no bearing on training
-    print('number of nodes')
-    print(first_train_item)
-    #exit()
+    number_nodes = nodes*len(train_set)  # this is just for summary, has no bearing on training
     summary(model, input_size=(train_set.num_node_features, number_nodes),
             batch_size=batch_size)
 
@@ -201,8 +198,11 @@ def main():
                      loss_fn,
                      device,
                      label_level,
-                     num_train_graph=num_train_graph ,
-                     num_val_graph=num_val_graph,
+                     num_train_graph ,
+                     num_val_graph,
+                     lr,
+                     wandb_project=config['wandb_project'],
+                     wandb_dataset=config['wandb_dataset']
                      )
     print('Need checks here to make sure model weights are\
           correct')

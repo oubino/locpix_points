@@ -181,6 +181,12 @@ class SMLMDataset(Dataset):
             # TODO: change/check this
             # if self.gpu:
             #    data.cuda()
+            if data.x is not None:
+                data.x = data.x.float()
+            if data.pos is not None:
+                data.pos = data.pos.float()
+            if data.y is not None:
+                data.y = data.y.long()
             torch.save(data, os.path.join(self.processed_dir,
                                           f'{idx}.pt'))
 
@@ -258,6 +264,12 @@ class SMLMDataset(Dataset):
             # TODO: change/check this and make option in process
             # if self.gpu:
             #    data.cuda()
+            if data.x is not None:
+                data.x = data.x.float()
+            if data.pos is not None:
+                data.pos = data.pos.float()
+            if data.y is not None:
+                data.y = data.y.long()
             torch.save(data, os.path.join(self.processed_dir,
                                           f'{idx}.pt'))
 

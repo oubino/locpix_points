@@ -123,9 +123,9 @@ def main():
             if os.path.exists(output_path):
                 raise ValueError("Can't preprocess as output file already exists")
         print(files)
-        check = input("If you are happy with these csvs type YES: ")
-        if check != "YES":
-            exit()
+        #check = input("If you are happy with these csvs type YES: ")
+        #if check != "YES":
+        #    exit()
     elif args.parquet is True:
         files = [os.path.join(input_folder, f"{file}.parquet") for file in include_files]
         # check file not already present
@@ -135,9 +135,9 @@ def main():
             if os.path.exists(output_path):
                 raise ValueError("Can't preprocess as output file already exists")
         print(files)
-        check = input("If you are happy with these parquets type YES: ")
-        if check != "YES":
-            exit() 
+        #check = input("If you are happy with these parquets type YES: ")
+        #if check != "YES":
+        #    exit() 
 
     # go through files -> convert to datastructure -> save
     if args.parquet is True:
@@ -176,8 +176,6 @@ def main():
                              drop_pixel_col=config['drop_pixel_col'])
     
     # save yaml file
-    import warnings
-    warnings.warn('Not sure if below is correct and is giving to correct folder')
     yaml_save_loc = os.path.join(
         project_directory, f"preprocess_{os.path.basename(input_folder)}.yaml"
     )

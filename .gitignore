@@ -1,9 +1,16 @@
 # modified from https://github.com/github/gitignore/blob/main/Python.gitignore
 
-# Byte-compiled / optimized / DLL files
+.ipynb_checkpoints# Byte-compiled / optimized / DLL files
 __pycache__/
 #*.py[cod]
 #*$py.class
+
+# Wandb
+wandb/
+
+# Notebook logs
+.ipynb_checkpoints
+*/.ipynb_checkpoints/*
 
 # Distribution / packaging
 #.Python

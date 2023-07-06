@@ -118,6 +118,7 @@ def main():
 
     # TODO: #3 Add in pre-transforms to process @oubino
 
+    print('Train set...')
     # create train dataset
     trainset = datastruc.SMLMDataset(config['hetero'],
                                      os.path.join(project_directory, "preprocessed/annotated"),
@@ -132,6 +133,7 @@ def main():
                                      label_level=config['label_level'],
                                      pre_filter=train_pre_filter)
 
+    print('Val set...')
     # create val dataset
     valset = datastruc.SMLMDataset(config['hetero'],
                                    os.path.join(project_directory, "preprocessed/annotated"),
@@ -143,19 +145,21 @@ def main():
                                    label_level=config['label_level'],
                                    pre_filter=val_pre_filter)
 
+    print('Test set...')
     # create test dataset
     testset = datastruc.SMLMDataset(config['hetero'],
                                     os.path.join(project_directory, "preprocessed/annotated"),
                                     test_folder,
                                     transform=None,
                                     pre_transform=None,
+                                    pos=config['pos'],
+                                    feat=config['feat'],
+                                    label_level=config['label_level'],
                                     pre_filter=test_pre_filter)
     
     # save yaml file
-    import warnings
-    warnings.warn('Not sure if below is correct and is giving to correct folder')
     yaml_save_loc = os.path.join(
-        processed_dir_root, 'process.yaml'
+        project_directory, 'process.yaml'
     )
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)

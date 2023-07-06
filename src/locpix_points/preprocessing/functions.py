@@ -119,7 +119,8 @@ def file_to_datastruc(
             raise ValueError("Shouldn't be any null values in gt label col")
         unique_vals = df[gt_label].unique()
         if len(unique_vals) == 1:
-            warnings.warn("All gt labels same for each localisation")
+            warning = f"All gt labels same for each localisation in file {input_file}"
+            warnings.warn(warning)
         if not set(unique_vals).issubset(gt_label_values):
             raise ValueError("Contains gt labels outside of the domain")
         gt_label_fov = None
@@ -168,7 +169,7 @@ def file_to_datastruc(
                           dim,
                           channel_choice,
                           channel_label,
-                          gt_label_scope=gt_label_scope,
+                          #gt_label_scope=gt_label_scope,
                           gt_label_fov=gt_label_fov,
                           gt_label_map=gt_label_map
                           )

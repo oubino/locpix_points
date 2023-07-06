@@ -27,10 +27,12 @@ def load_pos_feat(arrow_table, data, pos, feat, dimensions):
         coord_data, data = xyz_pos(arrow_table, data)    
     # define coord data in else if position doesn't use
     
-    if feat == "uniform":
+    if feat is None:
+        data.x = None
+    elif feat == "uniform":
         data = uni_feat(data)
     elif feat == "xy" or feat == "xyz":
-        data = pos_feat(data, coord_data)
+        data.x = coord_data
 
     return data
 
@@ -85,24 +87,6 @@ def xyz_pos(arrow_table, data, dimensions):
     data.pos = coord_data
 
     return coord_data, data
-
-def pos_feat(data, coord_data):
-    """Load in position as feature data to each node
-    
-    Args:
-        arrow_table (parquet arrow table) : Data
-                    in form of parquet file
-        data (torch_geometric data) : Data item to load
-            position to
-        coord_data (torch tensor) : Coordinate data
-    Returns:
-        data (torch geometric data) : Data item with
-            features loaded in now"""
-    
-    # feature tensor
-    # shape: [Number of points x 2/3 dimensions]
-    data.x = coord_data
-    return data
 
 def uni_feat(data):
     """Load in uniform tensor as feature data to each node
