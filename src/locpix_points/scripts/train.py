@@ -17,6 +17,8 @@ from torchsummary import summary
 import torch.optim
 import argparse
 import time
+import wandb
+
 # import torch
 # import torch_geometric.transforms as T
 
@@ -179,6 +181,21 @@ def main():
         assert label.shape == 1
     else:
         raise ValueError("Label level not defined")
+    
+    # initialise wandb
+    # start a new wandb run to track this script
+    wandb.init(
+        # set the wandb project where this run will be logged
+        project=config['wandb_project'],
+
+        # track hyperparameters and run metadata
+        config={
+            "learning_rate": lr,
+            "architecture": model.name,
+            "dataset": config['wandb_dataset'],
+            "epochs": epochs,
+        }
+    )
 
     # model summary
     print('\n')
@@ -202,9 +219,6 @@ def main():
                      label_level,
                      num_train_graph ,
                      num_val_graph,
-                     lr,
-                     wandb_project=config['wandb_project'],
-                     wandb_dataset=config['wandb_dataset']
                      )
     print('\n')
     print('---- Finished training... ----')
@@ -231,8 +245,8 @@ def main():
                                                     val_loader,
                                                     device,
                                                     label_level)
-    print('Train accuracy: ', train_acc)
-    print('Validation accuracy: ', val_acc)
+    wandb.log({'Train accuracy': train_acc,
+              'Validation accuracy': val_acc})
 
     # save config file
     yaml_save_loc = os.path.join(
