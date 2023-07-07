@@ -38,7 +38,7 @@ include_files:
   #- ereg_647_egfr_568_fov9_dc
 
 ## Choice of input features
-features:[]
+features: []
 
 ## GT label per loc or per FOV
 gt_label_scope: 'loc'
