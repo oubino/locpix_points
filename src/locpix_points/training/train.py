@@ -62,10 +62,11 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
                 loss = loss_fn(output, data.y)
 
             # scales loss - calls backward on scaled loss creating scaled gradients
-            loss = scaler.scale(loss)
+            scaler.scale(loss).backward()
+
+            # metrics
             running_train_loss += loss
             num_train_node += data.num_nodes
-            loss.backward()
 
             # unscales the gradients of optimiser then optimiser.step is called
             scaler.step(optimiser)

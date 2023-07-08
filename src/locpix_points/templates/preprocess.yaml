@@ -46,6 +46,6 @@ gt_label_scope: 'loc'
 ## if gt label specified, whih channel is it in (if its label per fov then only one row has to have value), or leave as null
 gt_label : index # gt_label
 
-gt_label_map: null
-  #0 : 'EGFR'
-  #1 : 'EREG'
+gt_label_map: #null
+  0 : 'EGFR'
+  1 : 'EREG'
