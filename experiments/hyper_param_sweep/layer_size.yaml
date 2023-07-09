@@ -1,0 +1,50 @@
+# device to train on (gpu or cpu)
+gpu: True
+
+# model parameters
+model: pointnetclass
+
+pointnetclass:
+  ratio : [0.5,0.25]
+  radius : [0.2,0.4]
+  # 130 = 128 + dim (2) + dim of feature (0)
+  # 258 = 256 + dim (2) + dim of feature (0)
+  # num classes = 2
+  channels : [[3, 64, 64, 128], [130, 128, 128, 256], [258, 256, 512, 1024], [1024, 512, 256, 2]]
+  dropout : 0.5
+  norm : null
+
+pointnetseg:
+  ratio : [0.5,0.25]
+  radius : [200, 400]
+  # 2 = dim (2) + dim of feature (0)
+  # 130 = 128 + dim (2) + dim of feature (0)
+  # 258 = 256 + dim (2) + dim of feature (0)
+  sa_channels : [[2, 128, 128, 128], [130, 256, 256, 256], [258, 256, 512, 1024]]
+  k : [30,50,100]
+  # 1080 = 1024 + 256 
+  # 384 = 256 + 128
+  # 130 = 128 + dim (2) + dim of feature (0) 
+  fp_channels : [[1280, 256, 256], [384, 256, 128], [130, 128, 128, 128]]
+  # num classes = 2
+  output_channels : [128, 128, 128, 2]
+  dropout : 0.5
+  norm : null
+
+# optimiser parameters
+optimiser: adam
+lr: 0.001
+weight_decay: 0.0001
+
+# training parameters
+epochs: 50
+batch_size: 5
+num_workers: 1 # generall higher -> faster
+loss_fn: nll
+
+# what trying to predict
+label_level: node # graph
+
+# wandb parameters
+wandb_project: nieves_expt1
+wandb_dataset: nieves
