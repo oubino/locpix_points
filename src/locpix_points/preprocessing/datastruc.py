@@ -56,9 +56,9 @@ class item:
             0 is reserved for background, is of form [X,Y,Z]
         bin_sizes (tuple of floats): Size of bins of the histogram
             e.g. (23.2, 34.5, 21.3)
-        gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per 
+        gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
             localisatoin then they are in column "gt_label"
-        gt_label_map (dict):  Dictionary with keys represetning the gt label present 
+        gt_label_map (dict):  Dictionary with keys represetning the gt label present
             in the dataset and the values erepresenting the
             real concept e.g. 0:'dog', 1:'cat'
     """
@@ -112,7 +112,9 @@ class item:
                 "The label specified is not present in" "the channel labels"
             )
 
-        return list(self.channel_label.keys())[list(self.channel_label.values()).index(label)]
+        return list(self.channel_label.keys())[
+            list(self.channel_label.values()).index(label)
+        ]
 
     def coord_2_histo(
         self,
@@ -528,15 +530,19 @@ class item:
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
-        
+
         if "gt_label" in save_df.columns() and self.gt_label_fov is not None:
-            raise ValueError("Have not worked out how to deal with this yet - how should we save"
-                             "fov label for .csv")
+            raise ValueError(
+                "Have not worked out how to deal with this yet - how should we save"
+                "fov label for .csv"
+            )
 
         # save channel label as well
         if save_chan_label:
-            print("channel label is now a dictionary which changes below line so need to change")
-            channel_label = ['egfr','ereg']
+            print(
+                "channel label is now a dictionary which changes below line so need to change"
+            )
+            channel_label = ["egfr", "ereg"]
             label_df = pl.DataFrame({"chan_label": self.channel_label}).with_row_count(
                 "channel"
             )
@@ -570,7 +576,7 @@ class item:
             drop_pixel_col (bool): If True then don't save
                 the column with x,y,z pixel
             # change
-            gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per 
+            gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
             localisatoin then they are in column "gt_label"
             gt_label_map (dict): Dictionary with integer keys
                 representing the gt labels for each localisation
@@ -606,7 +612,7 @@ class item:
 
         # convert to bytes
         gt_label_map = json.dumps(gt_label_map).encode("utf-8")
-        
+
         meta_data = {
             "name": self.name,
             "dim": str(self.dim),
@@ -670,7 +676,9 @@ class item:
         channels = ast.literal_eval(channels.decode("utf-8"))
         gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]
         gt_label_fov = int(dim)
-        print("channel label is now a dictionary which changes below line so need to change")
+        print(
+            "channel label is now a dictionary which changes below line so need to change"
+        )
         exit()
         channel_label = arrow_table.schema.metadata[b"channel_label"]
         channel_label = ast.literal_eval(channel_label.decode("utf-8"))
@@ -685,10 +693,9 @@ class item:
             df=df,
             dim=dim,
             channels=channels,
-            channel_label=channel_label, 
+            channel_label=channel_label,
             gt_label_fov=gt_label_fov,
             gt_label_map=gt_label_map,
-           
             bin_sizes=bin_sizes,
         )
 

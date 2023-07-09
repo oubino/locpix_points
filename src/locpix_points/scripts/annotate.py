@@ -10,22 +10,21 @@ from heptapods.preprocessing import datastruc
 import polars as pl
 import argparse
 
+
 def main():
 
     # parse arugments
-    parser = argparse.ArgumentParser(
-        description="Annotate the data"
-    )
+    parser = argparse.ArgumentParser(description="Annotate the data")
 
     parser.add_argument(
-        "-i", 
-        "--project_direcotry", 
+        "-i",
+        "--project_direcotry",
         action="store",
-        type=str, 
-        help="location of the project directory", 
+        type=str,
+        help="location of the project directory",
         required=True,
     )
-    
+
     parser.add_argument(
         "-c",
         "--config",
@@ -44,7 +43,6 @@ def main():
         required=True,
     )
 
-
     args = parser.parse_args()
 
     project_directory = args.project_directory
@@ -58,6 +56,7 @@ def main():
     else:
         manual_annotation(project_directory, config)
 
+
 def gt_label_generator(df):
 
     """CUSTOM function takes in a polars dataframe and adds a
@@ -67,7 +66,7 @@ def gt_label_generator(df):
             df (polars dataframe) : Dataframe with localisations"""
 
     # this just takes the channel column as the ground truth label
-    df = df.with_column((pl.col('channel')).alias('gt_label'))
+    df = df.with_column((pl.col("channel")).alias("gt_label"))
 
     return df
 
@@ -76,14 +75,16 @@ def custom_annotation(project_directory, config):
 
     # list items
     try:
-        files = os.listdir(os.path.join(project_directory, "preprocessed/not_annotated"))
+        files = os.listdir(
+            os.path.join(project_directory, "preprocessed/not_annotated")
+        )
     except FileNotFoundError:
         raise ValueError("There should be some preprocessed files to open")
 
     # if output directory not present create it
     output_directory = os.path.join(project_directory, "preprocessed/annotated")
     if not os.path.exists(output_directory):
-        print('Making folder')
+        print("Making folder")
         os.makedirs(output_directory)
 
     for file in files:
@@ -91,9 +92,11 @@ def custom_annotation(project_directory, config):
         item.load_from_parquet(os.path.join(project_directory, file))
 
         # check no gt label already present
-        if 'gt_label' in item.df.columns:
-            raise ValueError('Manual segment cannot be called on a file which\
-                              already has gt labels in it')
+        if "gt_label" in item.df.columns:
+            raise ValueError(
+                "Manual segment cannot be called on a file which\
+                              already has gt labels in it"
+            )
 
         # generate gt label
         item.df = gt_label_generator(item.df)
@@ -104,49 +107,62 @@ def custom_annotation(project_directory, config):
         # drop pixel col is False as we by this point have
         # no pixel col
 
-        input('stop - need to save also the gt label scope & gt label values')
-        item.save_to_parquet(output_directory,
-                             drop_zero_label=False,
-                             drop_pixel_col=False,
-                             gt_label_map=config['gt_label_map'])
+        input("stop - need to save also the gt label scope & gt label values")
+        item.save_to_parquet(
+            output_directory,
+            drop_zero_label=False,
+            drop_pixel_col=False,
+            gt_label_map=config["gt_label_map"],
+        )
+
 
 def manual_annotation(project_directory, config):
 
     # list items
     try:
-        files = os.listdir(os.path.join(project_directory, "preprocessed/not_annotated"))
+        files = os.listdir(
+            os.path.join(project_directory, "preprocessed/not_annotated")
+        )
     except FileNotFoundError:
         raise ValueError("There should be some preprocessed files to open")
 
     # if output directory not present create it
     output_directory = os.path.join(project_directory, "preprocessed/annotated")
     if not os.path.exists(output_directory):
-        print('Making folder')
+        print("Making folder")
         os.makedirs(output_directory)
 
-    if config['dim'] == 2:
-        histo_size = (config['x_bins'], config['y_bins'])
-    elif config['dim'] == 3:
-        histo_size = (config['x_bins'], config['y_bins'], config['z_bins'])
+    if config["dim"] == 2:
+        histo_size = (config["x_bins"], config["y_bins"])
+    elif config["dim"] == 3:
+        histo_size = (config["x_bins"], config["y_bins"], config["z_bins"])
     else:
-        raise ValueError('Dim should be 2 or 3')
+        raise ValueError("Dim should be 2 or 3")
 
     for file in files:
         item = datastruc.item(None, None, None, None)
-        item.load_from_parquet(os.path.join(project_directory, "preprocessed/not_annotated", file))
+        item.load_from_parquet(
+            os.path.join(project_directory, "preprocessed/not_annotated", file)
+        )
 
         # coord2histo
-        item.coord_2_histo(histo_size, plot=config['plot'],
-                           vis_interpolation=config['vis_interpolation'])
+        item.coord_2_histo(
+            histo_size,
+            plot=config["plot"],
+            vis_interpolation=config["vis_interpolation"],
+        )
 
         # manual segment
         item.manual_segment_per_loc()
 
-        input('stop - need to save also the gt label scope & gt label values')
+        input("stop - need to save also the gt label scope & gt label values")
         # save df to parquet with mapping metadata
-        item.save_to_parquet(output_directory,
-                             drop_zero_label=config['drop_zero_label'],
-                             gt_label_map=config['gt_label_map'])
+        item.save_to_parquet(
+            output_directory,
+            drop_zero_label=config["drop_zero_label"],
+            gt_label_map=config["gt_label_map"],
+        )
+
 
 if __name__ == "__main__":
-    def main()
+    main()

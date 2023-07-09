@@ -52,12 +52,12 @@ def file_to_datastruc(
             label for each channel i.e. [0:'egfr',1:'ereg',2:'unk'] means
             channel 0 is egfr protein, channel 1 is ereg proteins and
             channel 2 is unknown
-        gt_label_scope (string) : If not specified (None) there are no gt labels. If 
-            specified then is either 'loc' - gt label per localisatoin or 'fov' - gt 
+        gt_label_scope (string) : If not specified (None) there are no gt labels. If
+            specified then is either 'loc' - gt label per localisatoin or 'fov' - gt
             label for field-of-view
-        gt_label (string) : If specified then this is the column with the gt_label 
+        gt_label (string) : If specified then this is the column with the gt_label
             in
-        gt_label_map (dict) : Dictionary with keys represetning the gt label present 
+        gt_label_map (dict) : Dictionary with keys represetning the gt label present
             in the dataset and the valu erepresenting the
             real concept e.g. 0:'dog', 1:'cat'
         features (list) : List of features to consider for each localisation
@@ -77,26 +77,26 @@ def file_to_datastruc(
     # check file type parquet or csv
     if file_type != "csv" and file_type != "parquet":
         raise ValueError(f"{file_type} is not supported, should be csv or parquet")
-    
+
     # first check all channels desired have specified label
     if channel_col is not None:
         assert sorted(list(channel_label.keys())) == channel_choice
 
     # which columns to be loaded in
     columns = [x_col, y_col]
-    column_names = ['x','y']
+    column_names = ["x", "y"]
     if dim == 3:
         columns.append(z_col)
-        column_names.append('z')
+        column_names.append("z")
     if frame_col is not None:
         columns.append(frame_col)
-        column_names.append('frame')
+        column_names.append("frame")
     if channel_col is not None:
         columns.append(channel_col)
-        column_names.append('channel')
+        column_names.append("channel")
     if gt_label is not None:
         columns.append(gt_label)
-        column_names.append('gt_label')
+        column_names.append("gt_label")
     if len(features) != 0:
         columns.extend(features)
         column_names.extend(features)
@@ -114,7 +114,7 @@ def file_to_datastruc(
     # 1. label for each localisation
     # 2. output warning if all gt label the same
     # 3. all gt labels in the scope of values
-    if gt_label_scope == 'loc':
+    if gt_label_scope == "loc":
         if df[gt_label].null_count() > 0:
             raise ValueError("Shouldn't be any null values in gt label col")
         unique_vals = df[gt_label].unique()
@@ -128,7 +128,7 @@ def file_to_datastruc(
     # if specified gt label per fov
     # 1. if there is more than one value in the column they MUST be the same!
     # 2. gt label in the scope of values
-    if gt_label_scope == 'fov':
+    if gt_label_scope == "fov":
         unique_val = df[gt_label].unique()
         if len(unique_val) != 1:
             raise ValueError("Different labels for localisations")
@@ -136,7 +136,7 @@ def file_to_datastruc(
             raise ValueError("Contains gt label outside of the domain")
         gt_label_fov = unique_val
         # drop gt label column
-        df = df.drop['gt_label']
+        df = df.drop["gt_label"]
 
     if gt_label_scope is None:
         gt_label_fov = None
@@ -144,19 +144,17 @@ def file_to_datastruc(
 
     # rename
     new_names = dict(zip(columns, column_names))
-    df = df.rename(
-        new_names
-    )
+    df = df.rename(new_names)
 
     if frame_col is None:
-        df = df.with_columns(pl.lit(0).alias('frame'))
+        df = df.with_columns(pl.lit(0).alias("frame"))
     if channel_col is None:
-        df = df.with_columns(pl.lit(0).alias('channel'))
+        df = df.with_columns(pl.lit(0).alias("channel"))
 
     # remove so only channels chosen remain
     if channel_col is None:
         channel_choice = [0]
-    df = df.filter(pl.col('channel').is_in(channel_choice))
+    df = df.filter(pl.col("channel").is_in(channel_choice))
 
     # Get name of file - assumes last part of input file name
     if file_type == "csv":
@@ -164,12 +162,13 @@ def file_to_datastruc(
     elif file_type == "parquet":
         name = os.path.basename(os.path.normpath(input_file)).removesuffix(".parquet")
 
-    return datastruc.item(name,
-                          df,
-                          dim,
-                          channel_choice,
-                          channel_label,
-                          #gt_label_scope=gt_label_scope,
-                          gt_label_fov=gt_label_fov,
-                          gt_label_map=gt_label_map
-                          )
+    return datastruc.item(
+        name,
+        df,
+        dim,
+        channel_choice,
+        channel_label,
+        # gt_label_scope=gt_label_scope,
+        gt_label_fov=gt_label_fov,
+        gt_label_map=gt_label_map,
+    )

@@ -8,22 +8,32 @@ training the model.
 import torch
 import wandb
 
-def train_loop(epochs, model, optimiser, train_loader, val_loader, 
-               loss_fn, device, label_level, num_train_graph,
-               num_val_graph):
+
+def train_loop(
+    epochs,
+    model,
+    optimiser,
+    train_loader,
+    val_loader,
+    loss_fn,
+    device,
+    label_level,
+    num_train_graph,
+    num_val_graph,
+):
     """This is the main function which defines
     a training loop.
-    
+
     Args:
         epochs (int): Number of epochs to train for
         optimiser (torch.optim optimiser): Optimiser
             that controls training of the model
         model (torch geometric model): Model that
             is going to be trained
-        train_loader (torch dataloader): Dataloader for the 
+        train_loader (torch dataloader): Dataloader for the
             training dataset
-        val_loader (torch dataloader): Dataloader for the 
-            validation dataset 
+        val_loader (torch dataloader): Dataloader for the
+            validation dataset
         loss_fn (loss function): Loss function calculate loss
             between train and output
         device (gpu or cpu): Device to train the model
@@ -37,7 +47,7 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
     scaler = torch.cuda.amp.GradScaler()
 
     for epoch in range(epochs):
-        print('Epoch: ', epoch)
+        print("Epoch: ", epoch)
 
         # TODO : autocast - look at gradient accumulation and take care with multiple gpus
 
@@ -49,7 +59,7 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
         # training data
         model.train()
         for index, data in enumerate(train_loader):
- 
+
             # note set to none is meant to have less memory footprint
             optimiser.zero_grad(set_to_none=True)
 
@@ -57,7 +67,7 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
             data.to(device)
 
             # forward pass - with autocasting
-            with torch.autocast(device_type='cuda'):
+            with torch.autocast(device_type="cuda"):
                 output = model(data)
                 loss = loss_fn(output, data.y)
 
@@ -88,7 +98,7 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
                 data.to(device)
 
                 # forward pass - with autocasting
-                with torch.autocast(device_type='cuda'):
+                with torch.autocast(device_type="cuda"):
                     output = model(data)
                     loss = loss_fn(output, data.y)
                     running_val_loss += loss
@@ -103,10 +113,7 @@ def train_loop(epochs, model, optimiser, train_loader, val_loader,
             running_val_loss /= num_val_node
 
         # log results
-        wandb.log({"train_loss": running_train_loss,
-                   "val_loss": running_val_loss})
-    
-    print('Number of train nodes', num_train_node)
-    print('Number of val nodes', num_val_node)
+        wandb.log({"train_loss": running_train_loss, "val_loss": running_val_loss})
 
-
+    print("Number of train nodes", num_train_node)
+    print("Number of val nodes", num_val_node)

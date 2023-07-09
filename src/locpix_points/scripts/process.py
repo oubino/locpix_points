@@ -12,6 +12,7 @@ from functools import partial
 import argparse
 import json
 import time
+
 # import torch_geometric.transforms as T
 
 
@@ -31,6 +32,7 @@ def pre_filter(data, inclusion_list=[]):
     else:
         return 0
 
+
 def main():
 
     # parse arugments
@@ -40,14 +42,14 @@ def main():
     )
 
     parser.add_argument(
-        "-i", 
-        "--project_directory", 
+        "-i",
+        "--project_directory",
         action="store",
-        type=str, 
-        help="location of the project directory", 
+        type=str,
+        help="location of the project directory",
         required=True,
     )
-    
+
     parser.add_argument(
         "-c",
         "--config",
@@ -62,7 +64,7 @@ def main():
 
     project_directory = args.project_directory
 
-    # load config 
+    # load config
     with open(args.config, "r") as ymlfile:
         config = yaml.safe_load(ymlfile)
 
@@ -82,27 +84,27 @@ def main():
             json.dump(metadata, outfile)
 
     # Directory of the .parquet files have been
-    # preprocessed by preprocessing module but 
+    # preprocessed by preprocessing module but
     # are raw with respect to pytorch/analysis
     processed_dir_root = os.path.join(project_directory, "processed")
 
     # split into train/val/test using pre filter
     file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
-    file_list = [file.removesuffix('.parquet') for file in file_list]
+    file_list = [file.removesuffix(".parquet") for file in file_list]
     random.shuffle(file_list)
     # split into train/test/val
-    train_length = int(len(file_list) * config['train_ratio'])
-    test_length = int(len(file_list) * config['test_ratio'])
+    train_length = int(len(file_list) * config["train_ratio"])
+    test_length = int(len(file_list) * config["test_ratio"])
     val_length = len(file_list) - train_length - test_length
     train_list = file_list[0:train_length]
-    val_list = file_list[train_length:train_length + val_length]
-    test_list = file_list[train_length + val_length: len(file_list)]
+    val_list = file_list[train_length : train_length + val_length]
+    test_list = file_list[train_length + val_length : len(file_list)]
 
     # folders
 
-    train_folder = os.path.join(processed_dir_root, 'train')
-    val_folder = os.path.join(processed_dir_root, 'val')
-    test_folder = os.path.join(processed_dir_root, 'test')
+    train_folder = os.path.join(processed_dir_root, "train")
+    val_folder = os.path.join(processed_dir_root, "val")
+    test_folder = os.path.join(processed_dir_root, "test")
     # if output directory not present create it
     if not os.path.exists(train_folder):
         os.makedirs(train_folder)
@@ -118,52 +120,56 @@ def main():
 
     # TODO: #3 Add in pre-transforms to process @oubino
 
-    print('Train set...')
+    print("Train set...")
     # create train dataset
-    trainset = datastruc.SMLMDataset(config['hetero'],
-                                     os.path.join(project_directory, "preprocessed/annotated"),
-                                     train_folder,
-                                     transform=None,
-                                     pre_transform=None,
-                                     # e.g. pre_transform =
-                                     # T.RadiusGraph(r=0.0000003,
-                                     # max_num_neighbors=1),
-                                     pos=config['pos'],
-                                     feat=config['feat'],
-                                     label_level=config['label_level'],
-                                     pre_filter=train_pre_filter)
-
-    print('Val set...')
-    # create val dataset
-    valset = datastruc.SMLMDataset(config['hetero'],
-                                   os.path.join(project_directory, "preprocessed/annotated"),
-                                   val_folder,
-                                   transform=None,
-                                   pre_transform=None,
-                                   pos=config['pos'],
-                                   feat=config['feat'],
-                                   label_level=config['label_level'],
-                                   pre_filter=val_pre_filter)
-
-    print('Test set...')
-    # create test dataset
-    testset = datastruc.SMLMDataset(config['hetero'],
-                                    os.path.join(project_directory, "preprocessed/annotated"),
-                                    test_folder,
-                                    transform=None,
-                                    pre_transform=None,
-                                    pos=config['pos'],
-                                    feat=config['feat'],
-                                    label_level=config['label_level'],
-                                    pre_filter=test_pre_filter)
-    
-    # save yaml file
-    yaml_save_loc = os.path.join(
-        project_directory, 'process.yaml'
+    trainset = datastruc.SMLMDataset(
+        config["hetero"],
+        os.path.join(project_directory, "preprocessed/annotated"),
+        train_folder,
+        transform=None,
+        pre_transform=None,
+        # e.g. pre_transform =
+        # T.RadiusGraph(r=0.0000003,
+        # max_num_neighbors=1),
+        pos=config["pos"],
+        feat=config["feat"],
+        label_level=config["label_level"],
+        pre_filter=train_pre_filter,
     )
+
+    print("Val set...")
+    # create val dataset
+    valset = datastruc.SMLMDataset(
+        config["hetero"],
+        os.path.join(project_directory, "preprocessed/annotated"),
+        val_folder,
+        transform=None,
+        pre_transform=None,
+        pos=config["pos"],
+        feat=config["feat"],
+        label_level=config["label_level"],
+        pre_filter=val_pre_filter,
+    )
+
+    print("Test set...")
+    # create test dataset
+    testset = datastruc.SMLMDataset(
+        config["hetero"],
+        os.path.join(project_directory, "preprocessed/annotated"),
+        test_folder,
+        transform=None,
+        pre_transform=None,
+        pos=config["pos"],
+        feat=config["feat"],
+        label_level=config["label_level"],
+        pre_filter=test_pre_filter,
+    )
+
+    # save yaml file
+    yaml_save_loc = os.path.join(project_directory, "process.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
-    
+
 
 if __name__ == "__main__":
     main()

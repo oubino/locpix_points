@@ -48,9 +48,19 @@ class SMLMDataset(Dataset):
             so can access via a numerical index later.
     """
 
-    def __init__(self, heterogeneous, raw_dir_root, processed_dir_root,
-                 transform=None, pre_transform=None, pre_filter=None, pos=None,
-                 feat=None, label_level=None, gpu=True):
+    def __init__(
+        self,
+        heterogeneous,
+        raw_dir_root,
+        processed_dir_root,
+        transform=None,
+        pre_transform=None,
+        pre_filter=None,
+        pos=None,
+        feat=None,
+        label_level=None,
+        gpu=True,
+    ):
         """Inits SMLMDataset with root directory where
         data is located and the transform to be applied when
         getting item.
@@ -66,13 +76,12 @@ class SMLMDataset(Dataset):
         self._raw_dir_root = raw_dir_root
         self._processed_dir_root = processed_dir_root
         self._raw_file_names = list(sorted(os.listdir(raw_dir_root)))
-        self._processed_file_names = \
-            list(sorted(os.listdir(processed_dir_root)))
+        self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
         self.gpu = gpu
         # Note deliberately set root to None
         # as going to overload the raw and processed
         # dir. This could cause problems so be aware
-        self.pos = pos 
+        self.pos = pos
         self.feat = feat
         self.label_level = label_level
         super().__init__(None, transform, pre_transform, pre_filter)
@@ -121,8 +130,8 @@ class SMLMDataset(Dataset):
             # read in parquet file
             arrow_table = pq.read_table(raw_path)
             # dimensions and channels metadata
-            dimensions = arrow_table.schema.metadata[b'dim']
-            channels = arrow_table.schema.metadata[b'channels']
+            dimensions = arrow_table.schema.metadata[b"dim"]
+            channels = arrow_table.schema.metadata[b"channels"]
             dimensions = int(dimensions)
             channels = ast.literal_eval(channels.decode("utf-8"))
             # each dataitem is a heterogeneous graph
@@ -136,12 +145,12 @@ class SMLMDataset(Dataset):
                 filter = pc.field("channel") == chan
                 filter_table = arrow_table.filter(filter)
                 # convert to tensor (Number of points x 2/3 (dimensions))
-                x = torch.tensor(filter_table['x'].to_numpy())
-                y = torch.tensor(filter_table['y'].to_numpy())
+                x = torch.tensor(filter_table["x"].to_numpy())
+                y = torch.tensor(filter_table["y"].to_numpy())
                 if dimensions == 2:
                     coord_data = torch.stack((x, y), dim=1)
                 if dimensions == 3:
-                    z = torch.tensor(arrow_table['z'].to_numpy())
+                    z = torch.tensor(arrow_table["z"].to_numpy())
                     coord_data = torch.stack((x, y, z), dim=1)
 
                 # feature tensor
@@ -153,18 +162,17 @@ class SMLMDataset(Dataset):
                 data[str(chan)].pos = coord_data
 
                 # localisation level labels
-                data[str(chan)].y = torch.tensor(filter_table['gt_label']
-                                                     .to_numpy())
+                data[str(chan)].y = torch.tensor(filter_table["gt_label"].to_numpy())
 
             _, extension = os.path.splitext(raw_path)
             _, tail = os.path.split(raw_path)
             file_name = tail.strip(extension)
 
             # assign name to data
-            print('file name', file_name)
-            name = arrow_table.schema.metadata[b'name']
-            print('name', name)
-            input('stop dataloading')
+            print("file name", file_name)
+            name = arrow_table.schema.metadata[b"name"]
+            print("name", name)
+            input("stop dataloading")
 
             # if pre filter skips it then skip this item
             if self.pre_filter is not None and not self.pre_filter(data):
@@ -187,17 +195,16 @@ class SMLMDataset(Dataset):
                 data.pos = data.pos.float()
             if data.y is not None:
                 data.y = data.y.long()
-            torch.save(data, os.path.join(self.processed_dir,
-                                          f'{idx}.pt'))
+            torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
 
             # add to index
-            idx_to_name['idx'].append(idx)
-            idx_to_name['file_name'].append(file_name)
+            idx_to_name["idx"].append(idx)
+            idx_to_name["file_name"].append(file_name)
             idx += 1
 
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
-        df.write_csv(os.path.join(self.processed_dir, 'file_map.csv'))
+        df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
 
     def process_homogeneous(self):
         """Process the raw data into procesed data.
@@ -208,40 +215,38 @@ class SMLMDataset(Dataset):
             3. Then the graph is saved"""
 
         idx = 0
-        idx_to_name = {'idx': [], 'file_name': []}
+        idx_to_name = {"idx": [], "file_name": []}
 
         # convert raw parquet files to tensors
         for raw_path in self.raw_paths:
             # read in parquet file
             arrow_table = pq.read_table(raw_path)
             # dimensions metadata
-            dimensions = arrow_table.schema.metadata[b'dim']
+            dimensions = arrow_table.schema.metadata[b"dim"]
             dimensions = int(dimensions)
             # each dataitem is a homogeneous graph
             data = Data()
 
             # load position (if present) and features to data
-            data = features.load_pos_feat(arrow_table,
-                                          data,
-                                          self.pos,
-                                          self.feat,
-                                          dimensions)
-            
-            gt_label_fov = arrow_table.schema.metadata[b'gt_label_fov']
-            
+            data = features.load_pos_feat(
+                arrow_table, data, self.pos, self.feat, dimensions
+            )
+
+            gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]
+
             # load gt label to data
             if self.label_level == "graph":
                 if gt_label_fov is None:
                     raise ValueError("No gt label for the fov")
                 else:
-                    data.y = gt_label_fov 
+                    data.y = gt_label_fov
             elif self.label_level == "node":
-                data.y = torch.tensor(arrow_table['gt_label'].to_numpy())
+                data.y = torch.tensor(arrow_table["gt_label"].to_numpy())
             else:
                 raise ValueError("Label level should be graph or node")
 
             # assign name to data
-            name = arrow_table.schema.metadata[b'name']
+            name = arrow_table.schema.metadata[b"name"]
             name = str(name.decode("utf-8"))
             data.name = name
 
@@ -270,33 +275,32 @@ class SMLMDataset(Dataset):
                 data.pos = data.pos.float()
             if data.y is not None:
                 data.y = data.y.long()
-            torch.save(data, os.path.join(self.processed_dir,
-                                          f'{idx}.pt'))
+            torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
 
             # add to index
-            idx_to_name['idx'].append(idx)
-            idx_to_name['file_name'].append(file_name)
+            idx_to_name["idx"].append(idx)
+            idx_to_name["file_name"].append(file_name)
             idx += 1
 
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
-        df.write_csv(os.path.join(self.processed_dir, 'file_map.csv'))
+        df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
 
     def len(self):
         files = self._processed_file_names
-        if 'pre_filter.pt' in files:
-            files.remove('pre_filter.pt')
-        if 'pre_transform.pt' in files:
-            files.remove('pre_transform.pt')
-        if 'file_map.csv' in files:
-            files.remove('file_map.csv')
+        if "pre_filter.pt" in files:
+            files.remove("pre_filter.pt")
+        if "pre_transform.pt" in files:
+            files.remove("pre_transform.pt")
+        if "file_map.csv" in files:
+            files.remove("file_map.csv")
         return len(files)
 
     def get(self, idx):
         """I believe that pytorch geometric is wrapper
         over get item and therefore it handles the
         transform"""
-        data = torch.load(os.path.join(self.processed_dir, f'{idx}.pt'))
+        data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"))
         data = data if self.transform is None else self.transform(data)
         return data
 
@@ -319,8 +323,6 @@ class SMLMDataset(Dataset):
         r"""Returns the number of classes in the dataset."""
         y = torch.cat([data.y for data in self], dim=0)
         # Do not fill cache for `InMemoryDataset`:
-        if hasattr(self, '_data_list') and self._data_list is not None:
+        if hasattr(self, "_data_list") and self._data_list is not None:
             self._data_list = self.len() * [None]
         return self._infer_num_classes(y)
-
-

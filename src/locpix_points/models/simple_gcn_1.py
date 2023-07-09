@@ -5,7 +5,6 @@ Basic GCN for testing purposes
 """
 
 
-class SimpleGCN1():
-
+class SimpleGCN1:
     def __init__(self, name):
         self.name = name

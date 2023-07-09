@@ -13,11 +13,11 @@ from .point_net import PointNetClassification, PointNetSegmentation
 
 
 def model_choice(name, *args):
-    if name == 'simplegcn1':
+    if name == "simplegcn1":
         return SimpleGCN1(*args)
-    elif name == 'pointnetclass':
+    elif name == "pointnetclass":
         return PointNetClassification(*args)
-    elif name == 'pointnetseg':
+    elif name == "pointnetseg":
         return PointNetSegmentation(*args)
     else:
-        raise ValueError(f'{name} is not a supported model')
+        raise ValueError(f"{name} is not a supported model")

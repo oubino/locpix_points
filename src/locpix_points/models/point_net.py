@@ -16,8 +16,14 @@ PointNet++ https://arxiv.org/abs/1706.02413
 """
 
 import torch
-import torch.nn.functional as F
-from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius, knn_interpolate
+from torch_geometric.nn import (
+    MLP,
+    PointNetConv,
+    fps,
+    global_max_pool,
+    radius,
+    knn_interpolate,
+)
 
 # TODO: layer sizes
 # make sure sizes multiples of 8 to map onto tensor cores
@@ -28,14 +34,14 @@ from torch_geometric.nn import MLP, PointNetConv, fps, global_max_pool, radius, 
 
 class SAModule(torch.nn.Module):
     """SA module adapted from https://github.com/pyg-team/pytorch_geometric/blob/
-    master/examples/pointnet2_classification.py from PointNet/PointNet++ 
-    
+    master/examples/pointnet2_classification.py from PointNet/PointNet++
+
     Args:
         ratio (float) : ratio of points to sample from point cloud
         r (float) : radius which we will consider nearest neighbours for
         conv (neural net) : PointNetConv from Pytorch Geometric - this
-            is the PointNet architecture defining function applied to each 
-            point """
+            is the PointNet architecture defining function applied to each
+            point"""
 
     def __init__(self, ratio, r, nn):
         super().__init__()
@@ -56,8 +62,9 @@ class SAModule(torch.nn.Module):
         # e.g. [0,0,1,1,2,2] - first, second, third points
         # col is the index of the nearest points to these
         # e.g. [1,0,2,1,3,0]
-        row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
-                          max_num_neighbors=64)
+        row, col = radius(
+            pos, pos[idx], self.r, batch, batch[idx], max_num_neighbors=64
+        )
         edge_index = torch.stack([col, row], dim=0)
 
         x_dst = None if x is None else x[idx]
@@ -68,8 +75,8 @@ class SAModule(torch.nn.Module):
 
 class GlobalSAModule(torch.nn.Module):
     """Global SA module adapted from https://github.com/pyg-team/pytorch_geometric/blob/
-    master/examples/pointnet2_classification.py from PointNet/PointNet++ 
-    
+    master/examples/pointnet2_classification.py from PointNet/PointNet++
+
     Args:
         nn (neural net) : Neural network which acts on points"""
 
@@ -88,11 +95,11 @@ class GlobalSAModule(torch.nn.Module):
 class FPModule(torch.nn.Module):
     """FP module adapted from https://github.com/pyg-team/pytorch_geometric/blob/master/
     examples/pointnet2_segmentation.py from PointNet/PointNet++
-     
+
     Args:
         k (int) :  Number of neighbours to consider during interpolation of features
         nn (neural net) : Net which acts on features for each point"""
-    
+
     def __init__(self, k, nn):
         super().__init__()
         self.k = k
@@ -106,10 +113,9 @@ class FPModule(torch.nn.Module):
         return x, pos_skip, batch_skip
 
 
-
 class PointNetClassification(torch.nn.Module):
     """PointNet classification model as noted modified from above
-    
+
     Args:
         config (dictionary) : Configure with these parameters with following keys
             ratio (list) : Ratio of points to sample for each layer
@@ -123,11 +129,11 @@ class PointNetClassification(torch.nn.Module):
         super().__init__()
         self.name = "PointNetClassification"
 
-        ratio = config['ratio']
-        radius = config['radius']
-        channels = config['channels']
-        dropout = config['dropout']
-        norm = config['norm']
+        ratio = config["ratio"]
+        radius = config["radius"]
+        channels = config["channels"]
+        dropout = config["dropout"]
+        norm = config["norm"]
 
         # Input channels account for both `pos` and node features.
         self.sa1_module = SAModule(ratio[0], radius[0], MLP(channels[0]))
@@ -149,7 +155,7 @@ class PointNetClassification(torch.nn.Module):
 
 class PointNetSegmentation(torch.nn.Module):
     """PointNet segmentation model as noted modified from above
-    
+
     Args:
         config (dictionary) : Configure with these parameters with following keys
             ratio (list) : Ratio of points to sample for each layer
@@ -165,15 +171,14 @@ class PointNetSegmentation(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.name = "PointNetSegmentation"
-        ratio = config['ratio']
-        radius = config['radius']
-        sa_channels = config['sa_channels']
-        fp_channels = config['fp_channels']
-        output_channels = config['output_channels']
-        k = config['k']
-        dropout = config['dropout']
-        norm = config['norm']
-
+        ratio = config["ratio"]
+        radius = config["radius"]
+        sa_channels = config["sa_channels"]
+        fp_channels = config["fp_channels"]
+        output_channels = config["output_channels"]
+        k = config["k"]
+        dropout = config["dropout"]
+        norm = config["norm"]
 
         # Input channels account for both `pos` and node features.
         self.sa1_module = SAModule(ratio[0], radius[0], MLP(sa_channels[0]))
@@ -188,11 +193,12 @@ class PointNetSegmentation(torch.nn.Module):
         self.mlp = MLP(output_channels, dropout=dropout, norm=norm)
 
         import warnings
-        warnings.warn('There are redundant linear layers here...')
 
-        #self.lin1 = torch.nn.Linear(128, 128)
-        #self.lin2 = torch.nn.Linear(128, 128)
-        #self.lin3 = torch.nn.Linear(128, None)
+        warnings.warn("There are redundant linear layers here...")
+
+        # self.lin1 = torch.nn.Linear(128, 128)
+        # self.lin2 = torch.nn.Linear(128, 128)
+        # self.lin3 = torch.nn.Linear(128, None)
 
     def forward(self, data):
         sa0_out = (data.x, data.pos, data.batch)
@@ -205,5 +211,3 @@ class PointNetSegmentation(torch.nn.Module):
         x, _, _ = self.fp1_module(*fp2_out, *sa0_out)
 
         return self.mlp(x).log_softmax(dim=-1)
-
-
