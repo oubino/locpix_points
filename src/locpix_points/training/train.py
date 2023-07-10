@@ -20,6 +20,7 @@ def train_loop(
     label_level,
     num_train_graph,
     num_val_graph,
+    model_path,
 ):
     """This is the main function which defines
     a training loop.
@@ -40,11 +41,14 @@ def train_loop(
             on
         label_level (string) : Either node or graph
         num_train_graph (int) : Number of graphs in train set
-        num_val_graph (int) : Number of graphs in val set"""
+        num_val_graph (int) : Number of graphs in val set
+        model_path (string) : Where to save the model to"""
 
     model.to(device)
 
     scaler = torch.cuda.amp.GradScaler()
+
+    best_loss = 1e10
 
     for epoch in range(epochs):
         print("Epoch: ", epoch)
@@ -114,6 +118,11 @@ def train_loop(
 
         # log results
         wandb.log({"train_loss": running_train_loss, "val_loss": running_val_loss})
+
+        # if loss lowest on validation set save it
+        if running_val_loss < best_loss:
+            best_loss = running_val_loss
+            torch.save(model.state_dict(), model_path)
 
     print("Number of train nodes", num_train_node)
     print("Number of val nodes", num_val_node)
