@@ -85,31 +85,12 @@ def main():
     val_folder = os.path.join(processed_directory, "val")
     test_folder = os.path.join(processed_directory, "test")
 
-    # transform
-    # TODO: #4 add in transforms, and ensure specified in config file
-    train_transform = None
-    val_transform = None
-    # Transforms that appear to be good
-    # normalize rotation
-    # normalizes scale
-    # random jitter
-    # random flip
-    # random rotate
-    # random shear
-    # normalize features
-    # knngraph
-    # radius graph
-    # gdc
-    # gcnnorm
-    # feature propagation
-    # e.g. T.compose([T.ToUndirected(), T.AddSelfLoops()])
-
     # load in train dataset
     train_set = datastruc.SMLMDataset(
         None,
         None,
         train_folder,
-        transform=train_transform,
+        transform=config['transforms'],
         pre_transform=None,
         pre_filter=None,
         gpu=gpu,
@@ -120,7 +101,7 @@ def main():
         None,
         None,
         val_folder,
-        transform=val_transform,
+        transform=config['transforms'],
         pre_transform=None,
         pre_filter=None,
         gpu=gpu,
@@ -245,7 +226,9 @@ def main():
     model_folder = os.path.join(project_directory, "models")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time.asctime(time.gmtime(time.time()))}_.pt"
+    time_o = time.gmtime(time.time())
+    time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
+    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time_o}_.pt"
     model_path = os.path.join(model_folder, model_path)
     # input('stop', need to check weights have changed after training)
     torch.save(model.state_dict(), model_path)
@@ -259,8 +242,11 @@ def main():
     )
     wandb.log({"Train accuracy": train_acc, "Validation accuracy": val_acc})
 
+    # log config file to wandb
+    wandb.log(config)
+
     # save config file
-    yaml_save_loc = os.path.join(project_directory, "train.yaml")
+    yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
