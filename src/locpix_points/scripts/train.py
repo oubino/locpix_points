@@ -241,7 +241,7 @@ def main():
     print("---- Predict on train & val set... ----")
     print("\n")
     train_acc, val_acc = evaluate.make_prediction(
-        model, optimiser, train_loader, val_loader, device, label_level
+        model, optimiser, train_loader, val_loader, device, label_level, train_set.num_classes
     )
     wandb.log({"Train accuracy": train_acc, "Validation accuracy": val_acc})
 
