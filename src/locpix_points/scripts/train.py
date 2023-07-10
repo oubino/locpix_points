@@ -200,6 +200,15 @@ def main():
         batch_size=batch_size,
     )
 
+    # define save location for model
+    model_folder = os.path.join(project_directory, "models")
+    if not os.path.exists(model_folder):
+        os.makedirs(model_folder)
+    time_o = time.gmtime(time.time())
+    time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
+    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time_o}_.pt"
+    model_path = os.path.join(model_folder, model_path)    
+
     # train loop
     print("\n")
     print("---- Training... ----")
@@ -215,24 +224,18 @@ def main():
         label_level,
         num_train_graph,
         num_val_graph,
+        model_path,
     )
     print("\n")
     print("---- Finished training... ----")
+    print("Model saved when loss on validation set was lowest")
     print("\n")
 
-    # save final model
     print("\n")
-    print("---- Saving final model... ----")
-    model_folder = os.path.join(project_directory, "models")
-    if not os.path.exists(model_folder):
-        os.makedirs(model_folder)
-    time_o = time.gmtime(time.time())
-    time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
-    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time_o}_.pt"
-    model_path = os.path.join(model_folder, model_path)
-    # input('stop', need to check weights have changed after training)
-    torch.save(model.state_dict(), model_path)
+    print("Loading in best model")
     print("\n")
+    model = model.load_state_dict(torch.load(model_path))
+    model = model.to(device)
 
     print("\n")
     print("---- Predict on train & val set... ----")
