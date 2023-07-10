@@ -70,12 +70,12 @@ def train_loop(
             with torch.autocast(device_type="cuda"):
                 output = model(data)
                 loss = loss_fn(output, data.y)
+                running_train_loss += loss
 
             # scales loss - calls backward on scaled loss creating scaled gradients
             scaler.scale(loss).backward()
 
             # metrics
-            running_train_loss += loss
             num_train_node += data.num_nodes
 
             # unscales the gradients of optimiser then optimiser.step is called
@@ -104,13 +104,13 @@ def train_loop(
                     running_val_loss += loss
                     num_val_node += data.num_nodes
 
-        # divide by number of grpahs or number of locs
-        if label_level == "graph":
-            running_train_loss /= num_train_graph
-            running_val_loss /= num_val_graph
-        elif label_level == "node":
-            running_train_loss /= num_train_node
-            running_val_loss /= num_val_node
+        # divide by number of graphs as we reduce the loss by the mean already
+        # or number of locs
+        running_train_loss /= num_train_graph
+        running_val_loss /= num_val_graph
+        #elif label_level == "node":
+        #    running_train_loss /= num_train_node
+        #    running_val_loss /= num_val_node
 
         # log results
         wandb.log({"train_loss": running_train_loss, "val_loss": running_val_loss})
