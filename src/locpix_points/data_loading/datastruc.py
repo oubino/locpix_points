@@ -7,6 +7,7 @@ SMLM dataitem will be parsed as during processing.
 import os
 import torch
 from torch_geometric.data import Dataset, HeteroData, Data
+from torch_geometric import transforms
 import pyarrow.parquet as pq
 import pyarrow.compute as pc
 import ast
@@ -84,7 +85,45 @@ class SMLMDataset(Dataset):
         self.pos = pos
         self.feat = feat
         self.label_level = label_level
-        super().__init__(None, transform, pre_transform, pre_filter)
+
+        if transform is None or len(transform) == 0:
+            super().__init__(None, None, pre_transform, pre_filter)
+
+        else:
+
+            # define transforms
+            output_transforms = []
+            
+            if 'normalisescale' in transform:
+                output_transforms.append(transforms.NormalizeScale)
+
+            # need to either define as constant or allow precision to impact this
+            #if 'jitter' in transform:
+            #    output_transforms.append(transforms.RandomJitter())
+
+            # need to check which axis 0 is 
+            #if 'x_flip' in transform:
+            #    output_transforms.append(transforms.RandomFlip(axis=0))
+
+            # need to check which axis 1 is 
+            #if 'y_flip' in transform:
+            #    output_transforms.append(transforms.RandomFlip(axis=1))
+
+            # need t o define scale factor interval in config
+            # if 'randscale' in transform:
+            #   output_transforms.append(transforms.RandomScale())
+
+            # need to define degrees of rotation and axis rotated around
+            # if 'rotate' in transform:
+            #   output_transforms.append(transforms.RandomRotate())
+
+            # shear by particular matrix
+            # if 'shear' in transform:
+            #   output_transforms.append(transforms.RandomShear())
+
+            output_transforms = transforms.Compose(output_transforms)
+
+            super().__init__(None, output_transforms, pre_transform, pre_filter)
 
     @property
     def raw_dir(self) -> str:
