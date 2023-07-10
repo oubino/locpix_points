@@ -95,7 +95,7 @@ class SMLMDataset(Dataset):
             output_transforms = []
             
             if 'normalisescale' in transform:
-                output_transforms.append(transforms.NormalizeScale)
+                output_transforms.append(transforms.NormalizeScale())
 
             # need to either define as constant or allow precision to impact this
             #if 'jitter' in transform:

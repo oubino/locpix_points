@@ -234,16 +234,17 @@ def main():
     print("\n")
     print("Loading in best model")
     print("\n")
-    model = model.load_state_dict(torch.load(model_path))
-    model = model.to(device)
+    model.load_state_dict(torch.load(model_path))
+    model.to(device)
 
     print("\n")
     print("---- Predict on train & val set... ----")
     print("\n")
-    train_acc, val_acc = evaluate.make_prediction(
+    train_metrics, val_metrics = evaluate.make_prediction(
         model, optimiser, train_loader, val_loader, device, label_level, train_set.num_classes
     )
-    wandb.log({"Train accuracy": train_acc, "Validation accuracy": val_acc})
+    wandb.log(train_metrics)
+    wandb.log(val_metrics)
 
     # log config file to wandb
     wandb.log(config)

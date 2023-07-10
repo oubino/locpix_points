@@ -31,7 +31,16 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
         Recall(task="multiclass", num_classes=num_classes, average='none'),
         Precision(task="multiclass", num_classes=num_classes, average='none'),
         F1Score(task="multiclass", num_classes=num_classes, average='none'),
-        MulticlassJaccardIndex(num_classses=num_classes, average='none'),
+        MulticlassJaccardIndex(num_classes=num_classes, average='none'),
+        Accuracy(task="multiclass", num_classes=num_classes, average='none')
+    ).to(device)
+
+    val_metrics = MetricCollection(
+        MulticlassConfusionMatrix(num_classes=num_classes),
+        Recall(task="multiclass", num_classes=num_classes, average='none'),
+        Precision(task="multiclass", num_classes=num_classes, average='none'),
+        F1Score(task="multiclass", num_classes=num_classes, average='none'),
+        MulticlassJaccardIndex(num_classes=num_classes, average='none'),
         Accuracy(task="multiclass", num_classes=num_classes, average='none')
     ).to(device)
 
@@ -74,10 +83,5 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
     # metric over all batches
     train_metrics = train_metrics.compute()
     val_metrics = val_metrics.compute()
-
-    print(train_metrics)
-    print(val_metrics)
-
-    input('stop')
 
     return train_metrics, val_metrics
