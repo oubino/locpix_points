@@ -123,9 +123,6 @@ class SMLMDataset(Dataset):
 
             output_transforms = transforms.Compose(output_transforms)
 
-            print(output_transforms)
-            print('here')
-
             super().__init__(None, output_transforms, pre_transform, pre_filter)
 
     @property
