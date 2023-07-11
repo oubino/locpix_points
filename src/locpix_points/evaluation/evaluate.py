@@ -84,4 +84,23 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
     train_metrics = train_metrics.compute()
     val_metrics = val_metrics.compute()
 
-    return train_metrics, val_metrics
+    # output metrics
+    metrics = {}
+
+    # make into format acceptable to wandb 
+    for i in range(num_classes):
+        metrics[f"TrainRecall_{i}"] = train_metrics["MulticlassRecall"][i]
+        metrics[f"ValRecall_{i}"] = val_metrics["MulticlassRecall"][i]
+        metrics[f"TrainPrecision_{i}"] = train_metrics["MulticlassPrecision"][i]
+        metrics[f"ValPrecision_{i}"] = val_metrics["MulticlassPrecision"][i]
+        metrics[f"TrainF1Score_{i}"] = train_metrics["MulticlassF1Score"][i]
+        metrics[f"ValF1Score_{i}"] = val_metrics["MulticlassF1Score"][i]
+        metrics[f"TrainJaccardIndex_{i}"] = train_metrics["MulticlassJaccardIndex"][i]
+        metrics[f"ValJaccardIndex_{i}"] = val_metrics["MulticlassJaccardIndex"][i]
+        metrics[f"TrainAccuracy_{i}"] = train_metrics["MulticlassAccuracy"][i]
+        metrics[f"ValAccuracy_{i}"] = val_metrics["MulticlassAccuracy"][i]
+        for j in range(num_classes):
+            metrics[f"train_actual_{i}_pred_{j}"] = train_metrics['MulticlassConfusionMatrix'][i][j] 
+            metrics[f"val_actual_{i}_pred_{j}"] = val_metrics['MulticlassConfusionMatrix'][i][j]
+
+    return metrics

@@ -240,20 +240,19 @@ def main():
     print("\n")
     print("---- Predict on train & val set... ----")
     print("\n")
-    train_metrics, val_metrics = evaluate.make_prediction(
+    metrics = evaluate.make_prediction(
         model, optimiser, train_loader, val_loader, device, label_level, train_set.num_classes
     )
-    wandb.log(train_metrics)
-    wandb.log(val_metrics)
 
-    # log config file to wandb
-    wandb.log(config)
+    wandb.log(metrics)
 
-    # save config file
+    # save config file to folder and wandb
     yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
-
+    yaml_save_loc = os.path.join(wandb.run.dir, f"train_{time_o}.yaml")
+    with open(yaml_save_loc, "w") as outfile:
+        yaml.dump(config, outfile)
 
 if __name__ == "__main__":
     main()
