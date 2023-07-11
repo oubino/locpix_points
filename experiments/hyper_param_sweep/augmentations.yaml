@@ -47,7 +47,7 @@ label_level: node # graph
 
 # train/val transforms
 # options: ['normalisescale', 'jitter', 'x_flip', 'y_flip', 'randscale', 'rotate', 'shear'] # null
-transforms: ['normalisescale']
+transforms: ['normalisescale', 'x_flip', 'y_flip', 'rotate']
 
 # wandb parameters
 wandb_project: nieves_expt1

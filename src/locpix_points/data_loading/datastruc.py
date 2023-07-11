@@ -99,23 +99,23 @@ class SMLMDataset(Dataset):
 
             # need to either define as constant or allow precision to impact this
             #if 'jitter' in transform:
-            #    output_transforms.append(transforms.RandomJitter())
+            #    output_transforms.append(transforms.RandomJitter(0.05))
 
             # need to check which axis 0 is 
-            #if 'x_flip' in transform:
-            #    output_transforms.append(transforms.RandomFlip(axis=0))
+            if 'x_flip' in transform:
+                output_transforms.append(transforms.RandomFlip(axis=0))
 
             # need to check which axis 1 is 
-            #if 'y_flip' in transform:
-            #    output_transforms.append(transforms.RandomFlip(axis=1))
+            if 'y_flip' in transform:
+                output_transforms.append(transforms.RandomFlip(axis=1))
 
             # need t o define scale factor interval in config
             # if 'randscale' in transform:
-            #   output_transforms.append(transforms.RandomScale())
+            #   output_transforms.append(transforms.RandomScale(scales=(0.9,1.1)))
 
             # need to define degrees of rotation and axis rotated around
-            # if 'rotate' in transform:
-            #   output_transforms.append(transforms.RandomRotate())
+            if 'rotate' in transform:
+               output_transforms.append(transforms.RandomRotate(degrees=180, axis=2))
 
             # shear by particular matrix
             # if 'shear' in transform:
