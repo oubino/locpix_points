@@ -70,7 +70,9 @@ class SMLMDataset(Dataset):
         pre_filter (function) : Takes in data object and returns 1 if
             data should be included in dataset and 0 if it should not
         gpu (boolean): Whether the data should be savedd from the GPU
-            or not."""
+            or not.
+        transform (dict) : Keys are the transforms and values are the relevant
+            parameters if applicable"""
 
         self.heterogeneous = heterogeneous
         # index the dataitems (idx)
@@ -94,32 +96,35 @@ class SMLMDataset(Dataset):
             # define transforms
             output_transforms = []
             
-            if 'normalisescale' in transform:
-                output_transforms.append(transforms.NormalizeScale())
+            # axis to rotate around i.e. axis=2 rotate around z axis - meaning
+            # coordinates are rotated in the xy plane
+            if 'z_rotate' in transform.keys():
+                output_transforms.append(transforms.RandomRotate(degrees=180, axis=2))
 
             # need to either define as constant or allow precision to impact this
-            #if 'jitter' in transform:
-            #    output_transforms.append(transforms.RandomJitter(0.05))
+            if 'jitter' in transform.keys():
+                output_transforms.append(transforms.RandomJitter(transform['jitter']))
 
-            # need to check which axis 0 is 
-            if 'x_flip' in transform:
+            # axis = 0 - means x coordinates are flipped - i.e. reflection
+            # in the y axis
+            if 'x_flip' in transform.keys():
                 output_transforms.append(transforms.RandomFlip(axis=0))
 
-            # need to check which axis 1 is 
-            if 'y_flip' in transform:
+            # axis = 1 - means y coordinates are flipped - i.e. reflection
+            # in the x axis 
+            if 'y_flip' in transform.keys():
                 output_transforms.append(transforms.RandomFlip(axis=1))
 
-            # need t o define scale factor interval in config
-            # if 'randscale' in transform:
-            #   output_transforms.append(transforms.RandomScale(scales=(0.9,1.1)))
-
-            # need to define degrees of rotation and axis rotated around
-            if 'rotate' in transform:
-               output_transforms.append(transforms.RandomRotate(degrees=180, axis=2))
+            # need to define scale factor interval in config
+            if 'randscale' in transform.keys():
+                output_transforms.append(transforms.RandomScale(scales=tuple(transform['randscale'])))
 
             # shear by particular matrix
-            # if 'shear' in transform:
-            #   output_transforms.append(transforms.RandomShear())
+            if 'shear' in transform.keys():
+                output_transforms.append(transforms.RandomShear(transform['shear']))
+
+            if 'normalisescale' in transform.keys():
+                output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)
 
