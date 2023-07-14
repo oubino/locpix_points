@@ -12,6 +12,9 @@ from functools import partial
 import argparse
 import json
 import time
+import warnings
+import torch
+import ast
 
 # import torch_geometric.transforms as T
 
@@ -31,6 +34,20 @@ def pre_filter(data, inclusion_list=[]):
         return 1
     else:
         return 0
+    
+def load_pre_filter(path):
+    """Load in a pre-filter from previous run
+    
+    Args:
+        path (string) : Path to the pre-filter.pt"""
+
+    pre_filter = torch.load(path)
+    if pre_filter.startswith("functools.partial(<function>, inclusion_list=") and pre_filter[-1] == ")":
+        pre_filter = pre_filter.removeprefix("functools.partial(<function>, inclusion_list=")
+        pre_filter = pre_filter[:-1:]
+        return ast.literal_eval(pre_filter)  
+    else:
+        raise ValueError("Unknown pre-filter type")
 
 
 def main():
@@ -58,6 +75,16 @@ def main():
         help="the location of the .yaml configuaration file\
                              for processing",
         required=True,
+    )
+
+    parser.add_argument(
+        "-r",
+        "--split",
+        action="store",
+        type=str,
+        default=None,
+        help="if you want to copy the data split of another project then include this argument with\
+              the location of the project folder",
     )
 
     args = parser.parse_args()
@@ -89,16 +116,36 @@ def main():
     processed_dir_root = os.path.join(project_directory, "processed")
 
     # split into train/val/test using pre filter
-    file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
-    file_list = [file.removesuffix(".parquet") for file in file_list]
-    random.shuffle(file_list)
-    # split into train/test/val
-    train_length = int(len(file_list) * config["train_ratio"])
-    test_length = int(len(file_list) * config["test_ratio"])
-    val_length = len(file_list) - train_length - test_length
-    train_list = file_list[0:train_length]
-    val_list = file_list[train_length : train_length + val_length]
-    test_list = file_list[train_length + val_length : len(file_list)]
+
+    # split randomly
+    if args.split is None:
+        file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
+        file_list = [file.removesuffix(".parquet") for file in file_list]
+        random.shuffle(file_list)
+        # split into train/test/val
+        train_length = int(len(file_list) * config["train_ratio"])
+        test_length = int(len(file_list) * config["test_ratio"])
+        val_length = len(file_list) - train_length - test_length
+        train_list = file_list[0:train_length]
+        val_list = file_list[train_length : train_length + val_length]
+        test_list = file_list[train_length + val_length : len(file_list)]
+
+    else:
+        warnings.warn("Known omission is if pre-transform is done to dataset"
+                      "this is not currently also done to this dataset as well")
+        
+        train_list_path = os.path.join(args.split, "processed/train/pre_filter.pt")
+        val_list_path = os.path.join(args.split, "processed/val/pre_filter.pt")
+        test_list_path = os.path.join(args.split, "processed/test/pre_filter.pt")
+
+        train_list = load_pre_filter(train_list_path)
+        val_list = load_pre_filter(val_list_path)
+        test_list = load_pre_filter(test_list_path)
+
+    # bind arguments to functions
+    train_pre_filter = partial(pre_filter, inclusion_list=train_list)
+    val_pre_filter = partial(pre_filter, inclusion_list=val_list)
+    test_pre_filter = partial(pre_filter, inclusion_list=test_list)
 
     # folders
 
@@ -113,11 +160,7 @@ def main():
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
 
-    # bind arguments to functions
-    train_pre_filter = partial(pre_filter, inclusion_list=train_list)
-    val_pre_filter = partial(pre_filter, inclusion_list=val_list)
-    test_pre_filter = partial(pre_filter, inclusion_list=test_list)
-
+    
     # TODO: #3 Add in pre-transforms to process @oubino
 
     print("Train set...")
