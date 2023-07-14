@@ -29,7 +29,7 @@ def load_pos_feat(arrow_table, data, pos, feat, dimensions):
     if feat is None:
         data.x = None
     elif feat == "uniform":
-        data = uni_feat(data)
+        data.x = torch.ones((data.pos.shape[0],1))
     elif feat == "xy" or feat == "xyz":
         data.x = coord_data
 
@@ -86,17 +86,3 @@ def xyz_pos(arrow_table, data, dimensions):
     data.pos = coord_data
 
     return coord_data, data
-
-
-def uni_feat(data):
-    """Load in uniform tensor as feature data to each node
-
-    Args:
-        data (torch_geometric data) : Data item to load
-            position to
-    Returns:
-        data (torch geometric data) : Data item with
-            features loaded in now"""
-
-    data.x = torch.ones(len(data))
-    return data

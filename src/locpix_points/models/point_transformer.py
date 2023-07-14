@@ -24,11 +24,7 @@ from torch_geometric.nn import (
     knn_graph,
     knn_interpolate,
 )
-from torch_geometric.typing import WITH_TORCH_CLUSTER
 from torch_geometric.utils import scatter
-
-if not WITH_TORCH_CLUSTER:
-    quit("This model requires 'torch-cluster'")
 
 
 class TransformerBlock(torch.nn.Module):
@@ -240,8 +236,9 @@ class Segmenter(torch.nn.Module):
             # Add Transition Up block followed by Point Transformer block
             self.transition_up.append(
                 TransitionUp(in_channels=dim_model[i + 1],
-                             out_channels=dim_model[i]),
-                             k_up)
+                             out_channels=dim_model[i],
+                             k=k_up)
+            )
 
             self.transformers_up.append(
                 TransformerBlock(in_channels=dim_model[i],
@@ -266,7 +263,11 @@ class Segmenter(torch.nn.Module):
         # class score computation
         self.mlp_output = MLP([dim_model[0], output_mlp_layers, out_channels], norm=None)
 
-    def forward(self, x, pos, batch=None):
+    def forward(self, data):
+
+        x = data.x
+        pos = data.pos
+        batch = data.batch
 
         out_x = []
         out_pos = []
