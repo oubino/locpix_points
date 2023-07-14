@@ -1,9 +1,5 @@
 """SimplePointNet
 
-Test PointNet model very basic
-and will be deleted was here for
-purpose of code experimenting
-
 PointNets are adapted from 
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pointnet2_classification.py
 and 

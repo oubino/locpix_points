@@ -133,24 +133,7 @@ def main():
         pin_memory=pin_memory,
         num_workers=num_workers,
     )
-
-    # initialise model
-    model = model_choice(
-        config["model"],
-        # this should parameterise the chosen model
-        config[config["model"]],
-    )
-
-    # initialise optimiser
-    if optimiser == "adam":
-        optimiser = torch.optim.Adam(
-            model.parameters(), lr=lr, weight_decay=weight_decay
-        )
-
-    # initialise loss function
-    if loss_fn == "nll":
-        loss_fn = torch.nn.functional.nll_loss
-
+    
     # print parameters
     print("\n")
     print("---- Params -----")
@@ -172,6 +155,27 @@ def main():
         assert label.shape == 1
     else:
         raise ValueError("Label level not defined")
+    dim = first_train_item.pos.shape[-1]
+
+    # initialise model
+    model = model_choice(
+        config["model"],
+        # this should parameterise the chosen model
+        config[config["model"]],
+        dim = dim,
+    )
+
+    # initialise optimiser
+    if optimiser == "adam":
+        optimiser = torch.optim.Adam(
+            model.parameters(), lr=lr, weight_decay=weight_decay
+        )
+
+    # initialise loss function
+    if loss_fn == "nll":
+        loss_fn = torch.nn.functional.nll_loss
+
+    
 
     # initialise wandb
     # start a new wandb run to track this script
