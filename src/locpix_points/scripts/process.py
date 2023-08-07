@@ -160,6 +160,9 @@ def main():
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
 
+    # calculate min/max for each column of training data and save to config file
+    # CHANGE
+
     
     # TODO: #3 Add in pre-transforms to process @oubino
 

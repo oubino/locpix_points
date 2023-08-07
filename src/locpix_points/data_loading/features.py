@@ -32,7 +32,11 @@ def load_pos_feat(arrow_table, data, pos, feat, dimensions):
         data.x = torch.ones((data.pos.shape[0],1))
     elif feat == "xy" or feat == "xyz":
         data.x = coord_data
-
+    elif (type(feat) is list):
+        # normalise data
+        # cut off from 0 to 1
+        # CHANGE
+        data.x = torch.tensor(arrow_table[feat].to_numpy())
     return data
 
 

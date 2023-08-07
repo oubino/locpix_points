@@ -13,4 +13,4 @@
 #$ -m be
 
 #Now run the job
-python locpix_points/src/locpix_points/scripts/train.py -i /nobackup/scou/output/nieves/expt3 -c locpix_points/experiments/expt3/starter.yaml
+python locpix_points/src/locpix_points/scripts/train.py -i /nobackup/scou/output/c15/expt5 -c locpix_points/experiments/expt5/starter.yaml
