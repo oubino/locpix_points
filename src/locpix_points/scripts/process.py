@@ -15,6 +15,7 @@ import time
 import warnings
 import torch
 import ast
+import polars as pl
 
 # import torch_geometric.transforms as T
 
@@ -77,7 +78,9 @@ def main():
         required=True,
     )
 
-    parser.add_argument(
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
         "-r",
         "--split",
         action="store",
@@ -85,6 +88,15 @@ def main():
         default=None,
         help="if you want to copy the data split of another project then include this argument with\
               the location of the project folder",
+    )
+
+    group.add_argument(
+        "-m",
+        "--manual_split",
+        action="store",
+        type=list,
+        default=None,
+        help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
 
     args = parser.parse_args()
@@ -118,7 +130,7 @@ def main():
     # split into train/val/test using pre filter
 
     # split randomly
-    if args.split is None:
+    if args.split is None and args.manual_split is None:
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
@@ -130,7 +142,7 @@ def main():
         val_list = file_list[train_length : train_length + val_length]
         test_list = file_list[train_length + val_length : len(file_list)]
 
-    else:
+    elif args.split is not None and args.manual_split is None:
         warnings.warn("Known omission is if pre-transform is done to dataset"
                       "this is not currently also done to this dataset as well")
         
@@ -141,6 +153,11 @@ def main():
         train_list = load_pre_filter(train_list_path)
         val_list = load_pre_filter(val_list_path)
         test_list = load_pre_filter(test_list_path)
+    
+    elif args.split is None and args.manual_split is not None:
+        train_list = args.manual_split[0]
+        val_list = args.manual_split[1]
+        test_list = args.manual_split[2]
 
     # bind arguments to functions
     train_pre_filter = partial(pre_filter, inclusion_list=train_list)
@@ -148,7 +165,6 @@ def main():
     test_pre_filter = partial(pre_filter, inclusion_list=test_list)
 
     # folders
-
     train_folder = os.path.join(processed_dir_root, "train")
     val_folder = os.path.join(processed_dir_root, "val")
     test_folder = os.path.join(processed_dir_root, "test")
@@ -161,9 +177,18 @@ def main():
         os.makedirs(val_folder)
 
     # calculate min/max for each column of training data and save to config file
-    # CHANGE
+    if type(config['feat']) is list:
+        for file in train_list:
+            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/annotated', file))
+            min_df = df.select(pl.col(config['feat']).min())
+            max_df = df.select(pl.col(config['feat']).max())
+            print(config['feat'])
+            print(min_df)
+            print(max_df)
+            print(min_df.to_numpy())
+            print(max_df.to_numpy())
+            input('stop')
 
-    
     # TODO: #3 Add in pre-transforms to process @oubino
 
     print("Train set...")
