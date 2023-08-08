@@ -45,14 +45,14 @@ pointtransformerclass:
 
 pointtransformerseg:
   # used in both transition down and for considreing how many neighbours point transformer should consider
-  k: 16
+  k: 8
   in_channels: 11
   out_channels: 2
-  dim_model: [32, 64, 128, 256, 512]
+  dim_model: [16, 32, 64, 128, 256]
   k_up: 3 # trilinear interpolation
   output_mlp_layers: 64
   # ratio of points to sample when transition down
-  ratio: 0.25
+  ratio: 0.05
   pos_nn_layers: 64
   attn_nn_layers: 64
 
