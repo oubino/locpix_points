@@ -6,7 +6,7 @@ This module defines some feature representations that are used repeatedly
 import torch
 
 
-def load_pos_feat(arrow_table, data, pos, feat, dimensions):
+def load_pos_feat(arrow_table, data, pos, feat, min_feat, max_feat):
     """Decided how to load in position and features to each node
 
     Args:
@@ -16,6 +16,8 @@ def load_pos_feat(arrow_table, data, pos, feat, dimensions):
             load position and features into
         pos (string) : How to load in position data
         feat (string) : How to load in feature data
+        min_feat (dict) : Minimum values of features for the training dataset
+        max_feat (dict) : Maxmimum values of features over training dataset
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
@@ -33,10 +35,15 @@ def load_pos_feat(arrow_table, data, pos, feat, dimensions):
     elif feat == "xy" or feat == "xyz":
         data.x = coord_data
     elif (type(feat) is list):
-        # normalise data
-        # cut off from 0 to 1
-        # CHANGE
-        data.x = torch.tensor(arrow_table[feat].to_numpy())
+        # first need to check same features used for max/min calc as loaded in
+        assert list(min_feat.keys()) == feat
+        assert list(max_feat.keys()) == feat
+        feat_data = torch.tensor(arrow_table.select(feat).to_pandas().to_numpy())
+        min_vals = torch.tensor(list(min_feat.values()))
+        max_vals = torch.tensor(list(max_feat.values()))
+        feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+        feat_data = torch.clamp(feat_data, min=0, max=1)
+        data.x = feat_data
     return data
 
 

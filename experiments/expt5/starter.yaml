@@ -46,7 +46,7 @@ pointtransformerclass:
 pointtransformerseg:
   # used in both transition down and for considreing how many neighbours point transformer should consider
   k: 16
-  in_channels: 1
+  in_channels: 11
   out_channels: 2
   dim_model: [32, 64, 128, 256, 512]
   k_up: 3 # trilinear interpolation
@@ -85,5 +85,5 @@ transforms:
   # CHANGE
 
 # wandb parameters
-wandb_project: nieves_expt3
-wandb_dataset: nieves
+wandb_project: c15_expt5
+wandb_dataset: c15

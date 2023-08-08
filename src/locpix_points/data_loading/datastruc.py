@@ -61,6 +61,8 @@ class SMLMDataset(Dataset):
         feat=None,
         label_level=None,
         gpu=True,
+        min_feat=None,
+        max_feat=None,
     ):
         """Inits SMLMDataset with root directory where
         data is located and the transform to be applied when
@@ -72,7 +74,9 @@ class SMLMDataset(Dataset):
         gpu (boolean): Whether the data should be savedd from the GPU
             or not.
         transform (dict) : Keys are the transforms and values are the relevant
-            parameters if applicable"""
+            parameters if applicable
+        min_feat (dict) : Minimum values for the features over the training dataset
+        max_feat (dict) : Maximum values for the features over the training dataset"""
 
         self.heterogeneous = heterogeneous
         # index the dataitems (idx)
@@ -87,6 +91,8 @@ class SMLMDataset(Dataset):
         self.pos = pos
         self.feat = feat
         self.label_level = label_level
+        self.min_feat = min_feat
+        self.max_feat = max_feat
 
         if transform is None or len(transform) == 0:
             super().__init__(None, None, pre_transform, pre_filter)
@@ -273,7 +279,7 @@ class SMLMDataset(Dataset):
 
             # load position (if present) and features to data
             data = features.load_pos_feat(
-                arrow_table, data, self.pos, self.feat, dimensions
+                arrow_table, data, self.pos, self.feat, self.min_feat, self.max_feat
             )
 
             gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]

@@ -16,6 +16,7 @@ import warnings
 import torch
 import ast
 import polars as pl
+import numpy as np
 
 # import torch_geometric.transforms as T
 
@@ -93,13 +94,16 @@ def main():
     group.add_argument(
         "-m",
         "--manual_split",
-        action="store",
-        type=list,
+        type=str,
+        nargs='+',
+        action='append',
         default=None,
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
 
     args = parser.parse_args()
+
+    print(args.manual_split)
 
     project_directory = args.project_directory
 
@@ -178,16 +182,18 @@ def main():
 
     # calculate min/max for each column of training data and save to config file
     if type(config['feat']) is list:
-        for file in train_list:
-            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/annotated', file))
+        for index, file in enumerate(train_list):
+            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/annotated', file + '.parquet'))
             min_df = df.select(pl.col(config['feat']).min())
             max_df = df.select(pl.col(config['feat']).max())
-            print(config['feat'])
-            print(min_df)
-            print(max_df)
-            print(min_df.to_numpy())
-            print(max_df.to_numpy())
-            input('stop')
+            if index == 0:
+                min_vals = min_df.to_numpy()[0]
+                max_vals = max_df.to_numpy()[0]
+            else:
+                min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
+                max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
+    min_vals = dict(zip(config['feat'], min_vals))
+    max_vals = dict(zip(config['feat'], max_vals))
 
     # TODO: #3 Add in pre-transforms to process @oubino
 
@@ -206,6 +212,8 @@ def main():
         feat=config["feat"],
         label_level=config["label_level"],
         pre_filter=train_pre_filter,
+        min_feat=min_vals,
+        max_feat=max_vals,
     )
 
     print("Val set...")
@@ -220,6 +228,8 @@ def main():
         feat=config["feat"],
         label_level=config["label_level"],
         pre_filter=val_pre_filter,
+        min_feat=min_vals,
+        max_feat=max_vals,
     )
 
     print("Test set...")
@@ -234,6 +244,8 @@ def main():
         feat=config["feat"],
         label_level=config["label_level"],
         pre_filter=test_pre_filter,
+        min_feat=min_vals,
+        max_feat=max_vals,
     )
 
     # save yaml file
