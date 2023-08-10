@@ -48,13 +48,13 @@ pointtransformerseg:
   k: 16
   in_channels: 11
   out_channels: 2
-  dim_model: [8, 16, 32, 64, 128]
+  dim_model: [4, 8, 16, 32, 64]
   k_up: 3 # trilinear interpolation
   output_mlp_layers: 2
   # ratio of points to sample when transition down
   ratio: 0.01
-  pos_nn_layers: 32
-  attn_nn_layers: 32
+  pos_nn_layers: 16
+  attn_nn_layers: 16
 
 
 # optimiser parameters
