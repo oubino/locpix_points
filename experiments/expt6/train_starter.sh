@@ -4,7 +4,7 @@
 #$ -V -cwd
 
 #Request some time- min 15 mins - max 48 hours
-#$ -l h_rt=02:00:00
+#$ -l h_rt=05:30:00
 
 # GPU/CPU request
 #$ -l coproc_v100=1
