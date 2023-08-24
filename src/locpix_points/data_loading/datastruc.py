@@ -13,6 +13,7 @@ import pyarrow.compute as pc
 import ast
 import polars as pl
 from . import features
+from . import custom_transforms
 
 
 class SMLMDataset(Dataset):
@@ -131,6 +132,9 @@ class SMLMDataset(Dataset):
 
             if 'normalisescale' in transform.keys():
                 output_transforms.append(transforms.NormalizeScale())
+
+            if 'subsample' in transform.keys():
+                output_transforms.append(custom_transforms.Subsample(transform['subsample']))
 
             output_transforms = transforms.Compose(output_transforms)
 
