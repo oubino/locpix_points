@@ -12,7 +12,7 @@ import numpy as np
 
 # had to change base code as basetransform not implemented yet for me 
 @functional_transform('subsample')
-class subsample(BaseTransform):
+class Subsample(BaseTransform):
     r"""Samples points and features from a point cloud within a circle
     (functional name: :obj:`subsample`).
 
@@ -38,7 +38,7 @@ class subsample(BaseTransform):
         data.edge_index, data.edge_attr = subgraph(col, data.edge_index, data.edge_attr)  
 
         print('number of data nodes', data.num_nodes)
-        
+
         return data
 
     def __repr__(self) -> str:
