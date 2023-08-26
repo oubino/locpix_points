@@ -85,6 +85,10 @@ def main():
     val_folder = os.path.join(processed_directory, "val")
     test_folder = os.path.join(processed_directory, "test")
 
+    print("\n")
+    print("---- Dataset -----")
+    print("\n")
+
     # load in train dataset
     train_set = datastruc.SMLMDataset(
         None,
@@ -117,6 +121,10 @@ def main():
         pin_memory = True
     else:
         raise ValueError("gpu should be True or False")
+    
+    print("\n")
+    print("---- Dataloaders -----")
+    print("\n")
 
     # initialise dataloaders
     train_loader = L.DataLoader(
