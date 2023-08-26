@@ -147,6 +147,7 @@ def main():
     num_val_graph = len(val_set)
     print("Number val graphs", num_val_graph)
     for index, data in enumerate(train_loader):
+        print('batch size', batch_size)
         first_train_item = data
         break
     nodes = first_train_item.num_nodes

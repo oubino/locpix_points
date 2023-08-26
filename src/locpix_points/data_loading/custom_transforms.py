@@ -9,6 +9,7 @@ from torch_geometric.nn import (
 )
 from torch_geometric.utils import subgraph
 import numpy as np
+import torch
 
 # had to change base code as basetransform not implemented yet for me 
 @functional_transform('subsample')
@@ -32,6 +33,8 @@ class Subsample(BaseTransform):
         idx = np.random.choice(data.num_nodes, 1)
         pos = data.pos
         batch = data.batch  
+        print('pos shape', pos.shape)
+        batch = torch.zeros(data.num_nodes)
         print('batch', data.batch)
         print('pos', data.pos)
         print('radius', self.radius)
