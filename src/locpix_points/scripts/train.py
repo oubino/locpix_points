@@ -85,10 +85,6 @@ def main():
     val_folder = os.path.join(processed_directory, "val")
     test_folder = os.path.join(processed_directory, "test")
 
-    print("\n")
-    print("---- Dataset -----")
-    print("\n")
-
     # load in train dataset
     train_set = datastruc.SMLMDataset(
         None,
@@ -122,10 +118,6 @@ def main():
     else:
         raise ValueError("gpu should be True or False")
     
-    print("\n")
-    print("---- Dataloaders -----")
-    print("\n")
-
     # initialise dataloaders
     train_loader = L.DataLoader(
         train_set,
@@ -154,7 +146,7 @@ def main():
     print("Number train graphs", num_train_graph)
     num_val_graph = len(val_set)
     print("Number val graphs", num_val_graph)
-    first_train_item = train_set.get(0)
+    first_train_item = next(iter(train_loader))
     nodes = first_train_item.num_nodes
     label = first_train_item.y
     if label_level == "node":
