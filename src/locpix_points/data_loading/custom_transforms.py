@@ -39,14 +39,16 @@ class Subsample(BaseTransform):
         print('batch', data.batch)
         print('pos', data.pos)
         print('radius', self.radius)
-        _, col = radius(
+        row, col = radius(
             pos, pos[idx], self.radius, batch, batch[idx]
         )
         sys.stdout.flush()
         print('edge index')
+        edge_index = torch.stack([col, row], dim=0)
+
         print(data.edge_index)
         sys.stdout.flush()
-        data.edge_index, data.edge_attr = subgraph(col, data.edge_index, data.edge_attr)  
+        data.edge_index, data.edge_attr = subgraph(col, edge_index, data.edge_attr)  
 
         print('number of data nodes', data.num_nodes)
 
