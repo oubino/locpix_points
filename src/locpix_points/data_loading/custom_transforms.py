@@ -31,7 +31,10 @@ class Subsample(BaseTransform):
         
         idx = np.random.choice(data.num_nodes, 1)
         pos = data.pos
-        batch = data.batch
+        batch = data.batch  
+        print('batch', data.batch)
+        print('pos', data.pos)
+        print('radius', self.radius)
         _, col = radius(
             pos, pos[idx], self.radius, batch, batch[idx]
         )
