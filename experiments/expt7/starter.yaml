@@ -81,7 +81,7 @@ transforms:
   z_rotate: null
   #shear: 0.05
   normalisescale: null
-  subsample: 300 # box size in nm to sample from
+  subsample: 3 # box size in nm to sample from
   # normalise features
   # CHANGE
 
