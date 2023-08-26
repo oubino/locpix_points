@@ -10,6 +10,7 @@ from torch_geometric.nn import (
 from torch_geometric.utils import subgraph
 import numpy as np
 import torch
+import sys
 
 # had to change base code as basetransform not implemented yet for me 
 @functional_transform('subsample')
@@ -41,6 +42,10 @@ class Subsample(BaseTransform):
         _, col = radius(
             pos, pos[idx], self.radius, batch, batch[idx]
         )
+        sys.stdout.flush()
+        print('edge index')
+        print(data.edge_index)
+        sys.stdout.flush()
         data.edge_index, data.edge_attr = subgraph(col, data.edge_index, data.edge_attr)  
 
         print('number of data nodes', data.num_nodes)
