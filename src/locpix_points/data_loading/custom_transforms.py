@@ -50,6 +50,11 @@ class Subsample(BaseTransform):
         sys.stdout.flush()
         data.edge_index, data.edge_attr = subgraph(col, edge_index, data.edge_attr)  
 
+        print('need to remove isolated nodes')
+
+        transform = T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])
+        data = transform(data)
+
         print('number of data nodes', data.num_nodes)
 
         return data
