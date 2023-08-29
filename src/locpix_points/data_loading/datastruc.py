@@ -134,7 +134,7 @@ class SMLMDataset(Dataset):
                 output_transforms.append(transforms.NormalizeScale())
 
             if 'subsample' in transform.keys():
-                output_transforms.append(custom_transforms.Subsample(transform['subsample']))
+                output_transforms.append(custom_transforms.Subsample(transform['subsample'][0], transform['subsample'][1]))
 
             output_transforms = transforms.Compose(output_transforms)
 

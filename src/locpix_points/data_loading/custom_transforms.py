@@ -19,44 +19,29 @@ class Subsample(BaseTransform):
     (functional name: :obj:`subsample`).
 
     Args:
-        radius (float): The size of the circle to sample from in nm
+        x (float): The size of the x box in nm
+        y (float) : The size of the y box in nm
     """
     def __init__(
         self,
-        radius: float,
+        x: float,
+        y: float,
     ):
-        self.radius = radius
+        self.x = x
+        self.y = y
 
     def forward(self, data: Data) -> Data:
 
-        print('number of data nodes', data.num_nodes)
-        
         idx = np.random.choice(data.num_nodes, 1)
-        pos = data.pos
-        batch = data.batch  
-        print('pos shape', pos.shape)
-        batch = torch.zeros(data.num_nodes)
-        print('batch', data.batch)
-        print('pos', data.pos)
-        print('radius', self.radius)
-        row, col = radius(
-            pos, pos[idx], self.radius, batch, batch[idx]
-        )
-        sys.stdout.flush()
-        print('edge index')
-        edge_index = torch.stack([col, row], dim=0)
+        
+        data_min_x = data.pos[:,0] > data.pos[idx[0]][0] - self.x/2
+        data_max_x = data.pos[:,0] < data.pos[idx[0]][0] + self.x/2
+        data_min_y = data.pos[:,1] > data.pos[idx[0]][1] - self.y/2
+        data_max_y = data.pos[:,1] < data.pos[idx[0]][1] + self.y/2
 
-        print(data.edge_index)
-        sys.stdout.flush()
-        data.edge_index, data.edge_attr = subgraph(col, edge_index, data.edge_attr)  
-
-        print('need to remove isolated nodes')
-
-        transform = T.Compose([T.remove_isolated_nodes.RemoveIsolatedNodes()])
-        data = transform(data)
-
-        print('number of data nodes', data.num_nodes)
-
+        data.pos = data.pos[data_min_x&data_max_x&data_min_y&data_max_y]
+        data.x = data.x[data_min_x&data_max_x&data_min_y&data_max_y]
+    
         return data
 
     def __repr__(self) -> str:
