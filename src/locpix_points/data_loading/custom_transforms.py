@@ -37,9 +37,6 @@ class Subsample(BaseTransform):
 
         print('number nodes pre')
         print(data.num_nodes)
-        print(data.x)
-        print(data.pos)
-        print(data.y)
 
         data_min_x = data.pos[:,0] > data.pos[idx[0]][0] - self.x/2
         data_max_x = data.pos[:,0] < data.pos[idx[0]][0] + self.x/2
@@ -62,9 +59,6 @@ class Subsample(BaseTransform):
 
         print('number nodes post')
         print(data.num_nodes)
-        print(data.x)
-        print(data.pos)
-        print(data.y)
     
         return data
 

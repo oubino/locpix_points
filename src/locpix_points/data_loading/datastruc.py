@@ -130,11 +130,11 @@ class SMLMDataset(Dataset):
             if 'shear' in transform.keys():
                 output_transforms.append(transforms.RandomShear(transform['shear']))
 
-            if 'normalisescale' in transform.keys():
-                output_transforms.append(transforms.NormalizeScale())
-
             if 'subsample' in transform.keys():
                 output_transforms.append(custom_transforms.Subsample(transform['subsample'][0], transform['subsample'][1]))
+
+            if 'normalisescale' in transform.keys():
+                output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)
 
