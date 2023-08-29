@@ -34,7 +34,7 @@ class Subsample(BaseTransform):
 
         idx = np.random.choice(data.num_nodes, 1)
 
-        print('number nodes')
+        print('number nodes pre')
         print(data.num_nodes)
 
         data_min_x = data.pos[:,0] > data.pos[idx[0]][0] - self.x/2
@@ -45,7 +45,7 @@ class Subsample(BaseTransform):
         data.pos = data.pos[data_min_x&data_max_x&data_min_y&data_max_y]
         data.x = data.x[data_min_x&data_max_x&data_min_y&data_max_y]
 
-        print('number nodes')
+        print('number nodes post')
         print(data.num_nodes)
     
         return data
