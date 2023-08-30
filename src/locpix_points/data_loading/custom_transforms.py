@@ -10,7 +10,7 @@ import torch_geometric.transforms as T
 #from torch_geometric.utils import subgraph
 import numpy as np
 #import torch
-#import sys
+import sys
 import warnings
 
 # had to change base code as basetransform not implemented yet for me 
@@ -37,6 +37,10 @@ class Subsample(BaseTransform):
 
         print('number nodes pre')
         print(data.num_nodes)
+
+        batch = data.batch if 'batch' in data else None
+        print('batch', batch)
+        sys.stdout.flush()
 
         data_min_x = data.pos[:,0] > data.pos[idx[0]][0] - self.x/2
         data_max_x = data.pos[:,0] < data.pos[idx[0]][0] + self.x/2
