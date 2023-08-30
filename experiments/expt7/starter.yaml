@@ -39,7 +39,7 @@ pointtransformerclass:
   dim_model: [32, 64, 128, 256, 512]
   output_mlp_layers: 64
   # ratio of points to sample when transition down
-  ratio: 0.25
+  ratio: 0.5
   pos_nn_layers: 64
   attn_nn_layers: 64
 
