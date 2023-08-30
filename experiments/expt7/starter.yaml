@@ -52,7 +52,7 @@ pointtransformerseg:
   k_up: 3 # trilinear interpolation
   output_mlp_layers: 2
   # ratio of points to sample when transition down
-  ratio: 0.01
+  ratio: 0.2
   pos_nn_layers: 16
   attn_nn_layers: 16
 
