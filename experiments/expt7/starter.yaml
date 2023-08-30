@@ -48,7 +48,7 @@ pointtransformerseg:
   k: 16
   in_channels: 12
   out_channels: 2
-  dim_model: [4, 8, 16, 32, 64]
+  dim_model: [8, 16, 32, 64, 128]
   k_up: 3 # trilinear interpolation
   output_mlp_layers: 2
   # ratio of points to sample when transition down
