@@ -35,13 +35,6 @@ class Subsample(BaseTransform):
 
         idx = np.random.choice(data.num_nodes, 1)
 
-        print('number nodes pre')
-        print(data.num_nodes)
-
-        batch = data.batch if 'batch' in data else None
-        print('batch', batch)
-        sys.stdout.flush()
-
         data_min_x = data.pos[:,0] > data.pos[idx[0]][0] - self.x/2
         data_max_x = data.pos[:,0] < data.pos[idx[0]][0] + self.x/2
         data_min_y = data.pos[:,1] > data.pos[idx[0]][1] - self.y/2
@@ -59,9 +52,6 @@ class Subsample(BaseTransform):
             data.x = data.x[indices]
             data.pos = data.pos[indices]
             data.y = data.y[indices]
-
-        print('number nodes post')
-        print(data.num_nodes)
     
         return data
 

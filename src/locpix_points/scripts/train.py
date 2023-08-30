@@ -120,8 +120,6 @@ def main():
         raise ValueError("gpu should be True or False")
     
     # initialise dataloaders
-    print('Train loader')
-    sys.stdout.flush()
     train_loader = L.DataLoader(
         train_set,
         batch_size=batch_size,
@@ -129,8 +127,6 @@ def main():
         pin_memory=pin_memory,
         num_workers=num_workers,
     )
-    print('Val loader')
-    sys.stdout.flush()
     val_loader = L.DataLoader(
         val_set,
         batch_size=batch_size,
@@ -147,21 +143,12 @@ def main():
     print("Num classes: ", train_set.num_classes)
     print("Batch size: ", batch_size)
     print("Epochs: ", epochs)
-    sys.stdout.flush()
     num_train_graph = len(train_set)
     print("Number train graphs", num_train_graph)
-    sys.stdout.flush()
     num_val_graph = len(val_set)
     print("Number val graphs", num_val_graph)
-    sys.stdout.flush()
     for index, data in enumerate(train_loader):
-        print('index', index)
-        print('batch size', batch_size)
-        sys.stdout.flush()
         first_train_item = data
-        break
-    sys.stdout.flush()
-    exit()
     nodes = first_train_item.num_nodes
     label = first_train_item.y
     if label_level == "node":

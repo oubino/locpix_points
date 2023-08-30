@@ -138,8 +138,6 @@ class SMLMDataset(Dataset):
 
             output_transforms = transforms.Compose(output_transforms)
 
-            print('output transform', output_transforms)
-
             super().__init__(None, output_transforms, pre_transform, pre_filter)
 
     @property
@@ -357,7 +355,6 @@ class SMLMDataset(Dataset):
         over get item and therefore it handles the
         transform"""
         data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"))
-        data = data if self.transform is None else self.transform(data)
         return data
 
     # This is copied from the pytorch geometric docs
