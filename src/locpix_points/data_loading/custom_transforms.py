@@ -49,7 +49,6 @@ class Subsample(BaseTransform):
 
         if data.edge_index is not None:
             raise ValueError('Not sure if below works')
-            data = data.subgraph(indices)
         if data.edge_attr is not None:
             raise ValueError('Not implemented')
         if data.edge_index is None and data.edge_attr is None:
@@ -63,4 +62,4 @@ class Subsample(BaseTransform):
         return data
 
     def __repr__(self) -> str:
-        return f'{self.__class__.__name__}({self.radius})'
+        return f'{self.__class__.__name__}(x: {self.x} y: {self.y})'

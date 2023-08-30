@@ -61,6 +61,7 @@ def train_loop(
         num_val_node = 0
 
         # training data
+        print('----- Training ------')
         model.train()
         for index, data in enumerate(train_loader):
 
@@ -91,6 +92,7 @@ def train_loop(
         # val data
         # TODO: make sure torch.no_grad() somewhere
         # make sure model in eval mode
+        print('----- Validation ------')
         model.eval()
         for index, data in enumerate(val_loader):
             with torch.no_grad():
