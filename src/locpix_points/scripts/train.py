@@ -18,6 +18,7 @@ import torch.optim
 import argparse
 import time
 import wandb
+import sys
 
 # import torch
 # import torch_geometric.transforms as T
@@ -119,6 +120,7 @@ def main():
         raise ValueError("gpu should be True or False")
     
     # initialise dataloaders
+    print('Train loader')
     train_loader = L.DataLoader(
         train_set,
         batch_size=batch_size,
@@ -126,6 +128,7 @@ def main():
         pin_memory=pin_memory,
         num_workers=num_workers,
     )
+    print('Val loader')
     val_loader = L.DataLoader(
         val_set,
         batch_size=batch_size,
@@ -150,6 +153,8 @@ def main():
         print('batch size', batch_size)
         first_train_item = data
         break
+    sys.stdout.flush()
+    exit()
     nodes = first_train_item.num_nodes
     label = first_train_item.y
     if label_level == "node":
