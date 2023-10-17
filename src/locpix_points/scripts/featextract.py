@@ -63,16 +63,19 @@ def main():
     
     # extract features
 
-    # clustering
+    # clustering (clusterID)
+
+    # basic features (com cluster, locs per cluster, radius of gyration)
 
     # pca on cluster
     
+    # convex hull (perimeter, area, length)
 
-    # convex hull
+    # cluster density do this here
 
-    # cluster skew, num locs, density, radius of gyration, length, distance birth/death
+    # cluster skew?  length, 
 
-    # convex hull - area, perimeter
+    # distance birth/death ?
 
     # cluster df save to item separately to reduce redundancy
 

@@ -11,6 +11,8 @@ import polars as pl
 from scipy.spatial import ConvexHull
 from cuml.cluster import DBSCAN
 import cudf
+from sklearn.neighbors import NearestNeighbors
+import numpy as np
 
 def cluster_data(df, eps=50.0, min_samples=10, x_col='x', y_col='y'):
     """Cluster the data using DBSCAN
@@ -42,7 +44,11 @@ def basic_cluster_feats():
     
     # calculate com of each cluster
 
-    # 
+    # radius of gyration
+
+    # number of locs per cluster
+
+    # return cluster_df (i.e. # rows = # clusters)
 
 def pca_fn(X):
     dX = da.from_array(X, chunks=X.shape)
@@ -81,8 +87,21 @@ def pca_cluster(df, col_name='cluster'):
     return cluster_df
 
 def convex_hull(array):
+    """Convex hull function
+    
+    Args:
+        array (numpy array) : Input array
+        
+    Returns:
+        hull.area (float) : Perimeter of the 2D convex hull
+        hull.volume (float) : Area of the 3D convex hull
+        np.max(neigh_dist) : Maximum length of the convex hull"""
     hull = ConvexHull(array)
-    return hull.area, hull.volume
+    vertices = hull.vertices
+    neigh = NearestNeighbors(n_neighbors=len(vertices))
+    neigh.fit(array[vertices])
+    neigh_dist, _ = neigh.kneighbors(array[vertices], return_distance=True)
+    return hull.area, hull.volume, np.max(neigh_dist)
 
 def convex_hull_cluster(df, col_name='cluster'):
     """Calculate convex hull for each cluster

@@ -39,8 +39,11 @@ Actions
 Under preprocessing
 
 1. Clustering and visualisation (feature extraction)
-    a. Use CUML to cluster calculate cluster features (skew, num locs, circularity, density, convex hull area, radius of gyration, length, distance birth, distance death) - note papers about cluster size and number of receptors per cluster for DBSCAN
+    a. Use CUML to cluster calculate cluster features (skew?, num locs, circularity, density, convex hull area, radius of gyration, length, distance birth, distance death) - note papers about cluster size and number of receptors per cluster for DBSCAN
     b. Also note other things can provide e.g. UMAP?
+    - extract basic features of cluster
+    - make note in readme which environment needed for each recipe
+    - write the featextract recipe
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
 4. Train small test dataset 3 cancer 3 not cancer with pointtransformer
