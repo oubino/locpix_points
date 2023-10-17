@@ -105,6 +105,7 @@ def file_to_datastruc(
     if file_type == "csv":
         df = pl.read_csv(input_file, columns=columns)
     elif file_type == "parquet":
+        raise ValueError('Need to reqd in using pyarrow to preserve meatadata')
         df = pl.read_parquet(input_file, columns=columns)
 
     # List of possible values

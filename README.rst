@@ -1,3 +1,18 @@
+Layout
+------
+
+All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
+
+This repository then does the following:
+    - Feature extraction
+    - Preprocess for Pytorch geometric
+    - Annotate or prepare GT labels
+    - Process for Pytorch geometric
+    - Train
+    - Evaluate
+    - Allow visualisation
+
+
 Model architecture
 ------------------
 
@@ -8,6 +23,7 @@ Recipe 1
 ^^^^^^^^
 
 Preprocess
+Featextract
 Annotate
 Process
 Train
@@ -16,6 +32,7 @@ Recipe 2
 ^^^^^^^^
 
 Preprocess
+Featextract
 GT label generation
 Process
 Train
@@ -29,7 +46,7 @@ Navigate to folder then run
 python recipes/preprocess.py
 ```
 
-This takes in the .csv files and converts them to datastructures
+This takes in the .csv/.parquet files and converts them to datastructures
 It saves these as .parquet files with:
 - name, dimensions and channels as metadata
 - dataframe is saved as a dataframe
@@ -43,6 +60,11 @@ Current limitations:
     are considered.
     Drop zero label is set to False by default no option to change
     Drop pixel col is set to False by default no option to change
+
+Featextract
+^^^^^^^^^^^
+
+
 
 Annotate or ...
 ^^^^^^^^^^^^^^^
@@ -78,6 +100,73 @@ Obviously may want to play with this - number of photons etc.
 Pre transform: saves pretransform.pt saves the pre transform that was done to the data i.e. a knn graph of this shape
 
 so that it can make sure the data loaded in afterwards has gone through same preprocessing
+
+
+Mixed precision training
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
+
+See above link for more information.
+The key takeaway is that GPUs with tensor cores can do FP16 matrix multiplications
+in very optimised fashion.
+
+Pytorch standard precision is FP32, therefore converting to FP16 can speed up
+the training significantly.
+
+However, as FP16 has a higher rounding error, small gradients can 'underflow'
+to zero, where underflow means that small values become zero, which leads to
+these gradients vanishing.
+
+If we scale the gradients up, then work with them in FP16 before scaling them
+back down during backpropagation we can work in FP16 while avoiding underflow.
+
+It is called mixed precision, as we maintain two copies of a weight matrix
+in FP32 and FP16.
+The gradient updates are calculated using FP16 but they are applied to the 
+FP32 matrix, thereby making the updates safer.
+
+Some operations are safe in FP16 while some are only safe in FP32, therefore
+we work with mixed precision where pytorch automatically casts the tensors
+to the safest/fastest precision.
+
+There is memory saved from using FP16 but the speed up comes from the tensor
+cores which provide faster computation for FP16 matrices.
+
+
+Features of ONI data
+^^^^^^^^^^^^^^^^^^^^
+
+X (nm): x
+Y (nm: y
+Z (nm): z
+X precision (nm): include, normalise to 0-1	
+Y precision (nm): include, normalise to 0-1	
+X (pix): ignore	
+Y (pix): ignore	
+Z (pix): ignore	
+X precision (pix): ignore	
+Y precision (pix): ignore	
+Photons: normalise 0-1	
+Background: normalise 0-1	
+PSF Sigma X (pix): normalise 0-1	
+PSF Sigma Y (pix): normalise 0-1	
+Sigma X var: normalise 0-1	
+Sigma Y var: normalise 0-1	
+p-value: leave as is
+
+Need to load these in, need to calculate max and min for each column over the whole training dataset
+
+Then can normalise features to between 0 and 1 for these features
+
+Note that when then apply to new point need to clamp points below 0 to 0 and above 1 to 1
+
+Then also experiment with pytorch geometric normalise features
+
+2. Need to calculate max and min for each dataitem 
+3. Need to load in train/val/test files for fold 0
+4. Need to normalise each feature by the max and min values
+5. Then can run on arc
 
 
 Licenses

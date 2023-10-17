@@ -1,0 +1,5 @@
+# which features to extract
+clustering:
+  eps: 2 # nm
+  minpts: 15
+
