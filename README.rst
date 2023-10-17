@@ -1,3 +1,53 @@
+Installation
+------------
+
+Requirements
+^^^^^^^^^^^^
+
+Requires Cuda 12.1 or above!
+
+For wsl for windows - follow 
+
+Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local 
+
+Also had to install Rapids on WSL
+
+```
+micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
+```
+
+
+Environment 1
+^^^^^^^^^^^^^
+
+Create new environment
+
+```
+micromamba create -n locpix-points python=3.11
+```
+
+Then install this repository
+
+```
+pip install -e .
+```
+
+Before installing the remaining requirements
+
+```
+pip install -r requirements.txt
+```
+
+Environment 2
+^^^^^^^^^^^^^
+
+```
+micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
+micromamba activate feat_extract
+pip install dask dask-ml polars
+```
+
+
 Layout
 ------
 
@@ -163,10 +213,10 @@ Note that when then apply to new point need to clamp points below 0 to 0 and abo
 
 Then also experiment with pytorch geometric normalise features
 
-2. Need to calculate max and min for each dataitem 
-3. Need to load in train/val/test files for fold 0
-4. Need to normalise each feature by the max and min values
-5. Then can run on arc
+1. Need to calculate max and min for each dataitem 
+2. Need to load in train/val/test files for fold 0
+3. Need to normalise each feature by the max and min values
+4. Then can run on arc
 
 
 Licenses

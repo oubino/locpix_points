@@ -28,16 +28,12 @@ dependencies = [
     "PyQt5", # napari needs this
     "torch",
     "pyarrow",
-    "torch-scatter",
-    # "torch-scatter @ https://data.pyg.org/whl/torch-1.12.0+cu116.html",
-    "torch-sparse",
-    "torch-cluster",
-    #"torch-spline-conv",
-    "torch-geometric",
-    "torch-summary",
     "wandb",
-    "torchmetrics",
-    
+    "python-dotenv",
+    "pyyaml",
+    "flake8",
+    "tox",
+    "pytest",
 
     # "torchvision",  check actually need this
     # conda install pyg -c pyg
