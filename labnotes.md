@@ -34,21 +34,16 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
-Actions
-
-change so preprocess save in prepcorecessed/gt_label and preprocessed/no_gt_label
-Update readme to reflect this change
-
-- feat extract has folder for locs & clusters 
-8. Process needs to deal with clusters/locs and how we connect cluster graph
-    - options for process locs only, clusters only, locs and clusters
-    - need a note for how it has been processed somewhere
-9. Update ReadMe
+Process.yaml should have option for locs, clusters or locs+clusters
+Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
+Need decision on how to connect cluster graph
+Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
+Update ReadMe
 
 Under preprocessing
 
 1. Clustering and visualisation (feature extraction)
-    a. Use CUML to cluster calculate cluster features (distance birth, distance death)
+    a.distance birth, distance death?
     b. Note papers about cluster size and number of receptors per cluster for DBSCAN
     c. Also note other things can provide e.g. UMAP on features for each cluster
     For below two see arXiv:1711.09869v2
@@ -64,14 +59,15 @@ Under preprocessing
 9. Explainability stuff
 10. Decision to create a reserved test set early on (how many to set aside)
 11. Update ReadMe so clear how to use
-12. New dataset
+12. Also add docs
+13. New dataset
 
 Different models to try
 
 1. PointNet etc. on all points
 2. Simple machine learning on clustered data /w features
 3. GraphNet on clustered data /w features
-4. GraphNet on cluster data + graph net for localisations within each cluster
+4. GraphNet on cluster data + pointNet/graphnet? for localisations within each cluster
 4.5 As above but place the top level graph randomly/systematically across the FOV?
 5. Also includ learned clustering
 6. UMAP of clusters and features

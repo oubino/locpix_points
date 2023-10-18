@@ -75,7 +75,6 @@ Recipe 1
 --------
 
 Preprocess
-Annotate
 Featextract (use Environment 2)
 Process
 Train
@@ -84,7 +83,7 @@ Recipe 2
 --------
 
 Preprocess
-Annotate (-a flag)
+Annotate 
 Featextract (use Environment 2)
 Process
 Train
@@ -98,7 +97,7 @@ Navigate to folder then run
 python recipes/preprocess.py
 ```
 
-This takes in the .csv/.parquet files and converts them to datastructures
+This takes in the .parquet files and converts them to datastructures
 It saves these as .parquet files with:
 - name, dimensions and channels as metadata
 - dataframe is saved as a dataframe
@@ -116,12 +115,6 @@ Current limitations:
 Annotate
 --------
 
-Manual (no -a flag)
-^^^^^^^^^^^^^^^^^^^
-
-If you do not specify the -a flag for the annotate command you will
-manually annotate the data.
-
 This takes in the .parquet file, and allow the user to visualise in histogram
 Then annotate - thus returning localisation level labels
 
@@ -130,24 +123,20 @@ These are added in a separate column to the dataframe called 'gt_label'
 The dataframe is saved to parquet file with metadata specifying the mapping from 
 label to integer
 
-Custom annotate (-a flag)
-^^^^^^^^^^^^^^^^^^^^^^^^^
-
-If you specify the -a flag for the annotate command you will
-annotate the data using a custom function.
-
-This first checks there isn't a column called gt_label - if there is it won't work
-
-If there is not then it will create a new column called gt_label which will
-be valued according to user specification
-
-Save to parquet file metadata specifying the mapping from 
-label to integer
-
-Output the present labels and mapping as sanity check
 
 Featextract
 -----------
+
+
+Process
+-------
+
+Train
+-----
+
+
+Clean up
+--------
 
 
 
