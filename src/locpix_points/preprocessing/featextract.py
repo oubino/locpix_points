@@ -14,13 +14,13 @@ import cudf
 from sklearn.neighbors import NearestNeighbors
 import numpy as np
 
-def cluster_data(df, eps=50.0, min_samples=10, x_col='x', y_col='y'):
+def cluster_data(df, eps=50.0, minpts=10, x_col='x', y_col='y'):
     """Cluster the data using DBSCAN
     
     Args:
         df (polars df) : Input dataframe
         eps (float) : eps for DBSCAN
-        min_samples (int) : min samples for DBSCAN
+        minpts (int) : min samples for DBSCAN
         x_col (string) : Name for the x column
         y_col (string) : Name for the y column
     
@@ -30,25 +30,23 @@ def cluster_data(df, eps=50.0, min_samples=10, x_col='x', y_col='y'):
     dataframe = cudf.DataFrame()
     dataframe['x'] = df[x_col].to_numpy()
     dataframe['y'] = df[y_col].to_numpy()
-    dbscan = DBSCAN(eps = eps, min_samples = min_samples)
+    dbscan = DBSCAN(eps = eps, min_samples = minpts)
     dbscan.fit(dataframe)
 
     raise ValueError("Is this correctly implemented need to check")
-    df = df.with_columns(pl.lit(dbscan.labels_.to_numpy().astype('int32')).alias('cluster'))
+    df = df.with_columns(pl.lit(dbscan.labels_.to_numpy().astype('int32')).alias('clusterID'))
+    # return the original df with cluster id for each loc 
+    return df
 
-    # return the original df with cluster id for each loc (this is above)
-
-def basic_cluster_feats():
+def basic_cluster_feats(df, col_name='clusterID', x_name='x', y_name='y'):
 
     # take in loc df with cluster id per cluster
-    
-    # calculate com of each cluster
+    cluster_df = df.groupby(col_name).agg([pl.count(), pl.col(x_name).mean().suffix('_mean'), pl.col(y_name).mean().suffix('_mean'), ((((pl.col(x_name)-pl.col(x_name).mean())**2).sum() + ((pl.col(y_name)-pl.col(y_name).mean())**2).sum())/pl.count()).alias('RGyration')])
 
-    # radius of gyration
+    # number of rows = number of clusters
+    raise ValueError("Check radius of gyration correctly calculated")
 
-    # number of locs per cluster
-
-    # return cluster_df (i.e. # rows = # clusters)
+    return cluster_df
 
 def pca_fn(X):
     dX = da.from_array(X, chunks=X.shape)
@@ -61,7 +59,7 @@ def pca_fn(X):
     raise ValueError('Which features of PCA do we want?')
     return singular_values
 
-def pca_cluster(df, col_name='cluster'):
+def pca_cluster(df, col_name='clusterID'):
     """Calculate pca for each cluster
     
     Args:
@@ -85,7 +83,7 @@ def pca_cluster(df, col_name='cluster'):
 
     results = dask.compute(*lazy_results)
 
-    cluster_df = pl.DataFrame({'cluster':cluster_id, 'pca':results})
+    cluster_df = pl.DataFrame({'clusterID':cluster_id, 'pca':results})
 
     raise ValueError("Is it normalised correctly? Need to check against known result?")
 
@@ -108,7 +106,7 @@ def convex_hull(array):
     neigh_dist, _ = neigh.kneighbors(array[vertices], return_distance=True)
     return hull.area, hull.volume, np.max(neigh_dist)
 
-def convex_hull_cluster(df, col_name='cluster'):
+def convex_hull_cluster(df, col_name='clusterID'):
     """Calculate convex hull for each cluster
     
     Args:
@@ -132,7 +130,7 @@ def convex_hull_cluster(df, col_name='cluster'):
 
     results = dask.compute(*lazy_results)
 
-    cluster_df = pl.DataFrame({'cluster':cluster_id, 'convex_hull':results})
+    cluster_df = pl.DataFrame({'clusterID':cluster_id, 'convex_hull':results})
 
     raise ValueError("Is it normalised correctly? Need to check against known result?")
 

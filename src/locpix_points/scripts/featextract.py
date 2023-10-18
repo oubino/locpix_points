@@ -10,6 +10,7 @@ import argparse
 import json
 import time
 from locpix_points.data_loading import datastruc
+from locpix_points.preprocessing import featextract
 
 def main():
 
@@ -80,24 +81,29 @@ def main():
     for file in files:
         item = datastruc.item(None, None, None, None)
         item.load_from_parquet(os.path.join(project_directory, file))
-
         
-        
-        # for each fov
-        
-        # extract features
-
         # clustering (clusterID)
+        df = featextract.cluster_data(item.df, eps=config['clustering']['eps'], minpts=config['clustering']['minpts'], x_col='x', y_col='y')
 
         # basic features (com cluster, locs per cluster, radius of gyration)
+        basic_cluster_df = featextract.basic_cluster_feats(df)
 
         # pca on cluster (linearity, circularity see DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS)
+        pca_cluster_df = featextract.pca_cluster(df)
         
         # convex hull (perimeter, area, length)
+        convex_hull_cluster_df = featextract.convex_hull_cluster(df)
+
+        # merge cluster df
+        cluster_df = basic_cluster_df.join(pca_cluster_df, on='clusterID', how='inner')
+        cluster_df = cluster_df.join(convex_hull_cluster_df, on='clusterID', how='inner')
+        raise ValueError("Need to check this join is okay")
 
         # cluster density do this here
 
-        # cluster skew?  length, 
+        # cluster skew?
+
+        # cluster length should i be using pca or length of convex hull?
 
         # distance birth/death ?
 

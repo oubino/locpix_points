@@ -1,8 +1,8 @@
 Installation
-------------
+============
 
 Requirements
-^^^^^^^^^^^^
+------------
 
 Requires Cuda 12.1 or above!
 
@@ -18,7 +18,7 @@ micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.1
 
 
 Environment 1
-^^^^^^^^^^^^^
+-------------
 
 Create new environment
 
@@ -39,7 +39,7 @@ pip install -r requirements.txt
 ```
 
 Environment 2
-^^^^^^^^^^^^^
+-------------
 
 ```
 micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
@@ -47,9 +47,8 @@ micromamba activate feat_extract
 pip install dask dask-ml polars
 ```
 
-
 Layout
-------
+======
 
 All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
 
@@ -64,31 +63,34 @@ This repository then does the following:
 
 
 Model architecture
-------------------
+==================
+
 
 Recipes
--------
+=======
+
+Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2.
 
 Recipe 1
-^^^^^^^^
+--------
 
 Preprocess
-Featextract
 Annotate
+Featextract (use Environment 2)
 Process
 Train
 
 Recipe 2
-^^^^^^^^
+--------
 
 Preprocess
-Featextract
-GT label generation
+Annotate (-a flag)
+Featextract (use Environment 2)
 Process
 Train
 
 Preprocess
-^^^^^^^^^^
+----------
 
 Navigate to folder then run
 
@@ -111,13 +113,14 @@ Current limitations:
     Drop zero label is set to False by default no option to change
     Drop pixel col is set to False by default no option to change
 
-Featextract
-^^^^^^^^^^^
+Annotate
+--------
 
+Manual (no -a flag)
+^^^^^^^^^^^^^^^^^^^
 
-
-Annotate or ...
-^^^^^^^^^^^^^^^
+If you do not specify the -a flag for the annotate command you will
+manually annotate the data.
 
 This takes in the .parquet file, and allow the user to visualise in histogram
 Then annotate - thus returning localisation level labels
@@ -127,8 +130,11 @@ These are added in a separate column to the dataframe called 'gt_label'
 The dataframe is saved to parquet file with metadata specifying the mapping from 
 label to integer
 
-... GT label (alternative to annotate)
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Custom annotate (-a flag)
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+If you specify the -a flag for the annotate command you will
+annotate the data using a custom function.
 
 This first checks there isn't a column called gt_label - if there is it won't work
 
@@ -140,9 +146,14 @@ label to integer
 
 Output the present labels and mapping as sanity check
 
+Featextract
+-----------
+
+
+
 
 Pytorch geometric
-^^^^^^^^^^^^^^^^^
+=================
 
 Currently the location is taken in as feature vector i.e. the values of x and y
 Obviously may want to play with this - number of photons etc.
@@ -153,7 +164,7 @@ so that it can make sure the data loaded in afterwards has gone through same pre
 
 
 Mixed precision training
-^^^^^^^^^^^^^^^^^^^^^^^^
+========================
 
 https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
 
@@ -185,7 +196,7 @@ cores which provide faster computation for FP16 matrices.
 
 
 Features of ONI data
-^^^^^^^^^^^^^^^^^^^^
+====================
 
 X (nm): x
 Y (nm: y
@@ -220,7 +231,7 @@ Then also experiment with pytorch geometric normalise features
 
 
 Licenses
-^^^^^^^^
+========
 
 +-------------------------------------+----------------------------------------------------------------------+
 |               Package               |                               License                                |
