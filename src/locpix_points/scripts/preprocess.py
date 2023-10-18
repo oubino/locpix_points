@@ -85,12 +85,6 @@ def main():
         help="the location of the project directory",
         required=True,
     )
-    parser.add_argument(
-        "-p",
-        "--parquet",
-        action="store_true",
-        help="if true will process as parquet files",
-    )
 
     args = parser.parse_args()
 
@@ -121,44 +115,24 @@ def main():
 
     # check with user
     print("List of files which will be processed")
-    if args.parquet is False:
-        files = [os.path.join(input_folder, f"{file}.csv") for file in include_files]
-        # check file not already present
-        for file in files:
-            file_name = os.path.basename(file)
-            output_path = os.path.join(
-                output_folder, f"{file_name.replace('.csv', '.parquet')}"
-            )
-            if os.path.exists(output_path):
-                raise ValueError("Can't preprocess as output file already exists")
-        print(files)
-        # check = input("If you are happy with these csvs type YES: ")
-        # if check != "YES":
-        #    exit()
-    elif args.parquet is True:
-        files = [
-            os.path.join(input_folder, f"{file}.parquet") for file in include_files
-        ]
-        # check file not already present
-        for file in files:
-            file_name = os.path.basename(file)
-            output_path = os.path.join(output_folder, f"{file_name}")
-            if os.path.exists(output_path):
-                raise ValueError("Can't preprocess as output file already exists")
-        print(files)
-        # check = input("If you are happy with these parquets type YES: ")
-        # if check != "YES":
-        #    exit()
+    files = [
+        os.path.join(input_folder, f"{file}.parquet") for file in include_files
+    ]
+    # check file not already present
+    for file in files:
+        file_name = os.path.basename(file)
+        output_path = os.path.join(output_folder, f"{file_name}")
+        if os.path.exists(output_path):
+            raise ValueError("Can't preprocess as output file already exists")
+    print(files)
+    # check = input("If you are happy with these parquets type YES: ")
+    # if check != "YES":
+    #    exit()
 
     # go through files -> convert to datastructure -> save
-    if args.parquet is True:
-        file_type = "parquet"
-    else:
-        file_type = "csv"
     for index, file in enumerate(files):
         item = functions.file_to_datastruc(
             file,
-            file_type,
             config["dim"],
             config["channel_col"],
             config["frame_col"],
@@ -168,14 +142,13 @@ def main():
             config["channel_choice"],
             config["channel_label"],
             config["gt_label_scope"],
-            config["gt_label"],
-            config["gt_label_map"],
+            config["gt_label_loc"],
             config["features"],
         )
 
         # if succesfully get to here on first occasion create folder for data
         if index == 0:
-            if config["gt_label"] is not None:
+            if config["gt_label_scope"] is not None:
                 output_directory = os.path.join(
                     project_directory, "preprocessed/annotated"
                 )
@@ -186,8 +159,6 @@ def main():
                 )
                 os.makedirs(output_directory)
 
-        # have to not drop zero label
-        # as no gt_label yet
         item.save_to_parquet(
             output_directory,
             drop_zero_label=False,

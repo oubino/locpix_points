@@ -57,8 +57,11 @@ class item:
             0 is reserved for background, is of form [X,Y,Z]
         bin_sizes (tuple of floats): Size of bins of the histogram
             e.g. (23.2, 34.5, 21.3)
-        gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
-            localisatoin then they are in column "gt_label"
+        gt_label_scope (string) : If not specified (None) there are no gt labels. If
+            specified then is either 'loc' - gt label per localisatoin or 'fov' - gt
+            label for field-of-view
+        gt_label (int) : Value of the gt label for the fov or None is gt_label_scope
+            is None or loc
         gt_label_map (dict):  Dictionary with keys represetning the gt label present
             in the dataset and the values erepresenting the
             real concept e.g. 0:'dog', 1:'cat'
@@ -75,7 +78,8 @@ class item:
         histo_edges=None,
         histo_mask=None,
         bin_sizes=None,
-        gt_label_fov=None,
+        gt_label_scope=None,
+        gt_label=None,
         gt_label_map=None,
     ):
         """Initialises item"""
@@ -89,8 +93,28 @@ class item:
         self.bin_sizes = bin_sizes
         self.channels = channels
         self.channel_label = channel_label
-        self.gt_label_fov = gt_label_fov
+        self.gt_label_scope = gt_label_scope
+        self.gt_label = gt_label
         self.gt_label_map = gt_label_map
+
+        if self.gt_label_scope == 'loc':
+            if self.gt_label is not None:
+                raise ValueError('Cannot have gt label per fov and loc')
+            if self.gt_label_map is None:
+                raise ValueError('Need a label map')
+        if self.gt_label_scope is None:
+            if self.gt_label_map is not None:
+                raise ValueError('Cant have gt label map and no labels')
+            if self.gt_label is not None:
+                raise ValueError('Cant have no scope and a gt label')
+        if self.gt_label_scope == 'fov':
+            if self.gt_label is None:
+                raise ValueError('Need a gt label')
+            if 'gt_label' in self.df.columns:
+                raise ValueError('Cannot have gt label column for fov label')
+            if self.gt_label_map is None:
+                raise ValueError('Need a label map')
+
 
     def chan_2_label(self, chan):
         """Returns the label associated with the channel specified
@@ -526,13 +550,12 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if "gt_label" in save_df.columns():
-                # change so checks scope
+            if self.gt_label_scope is 'loc':
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
 
-        if "gt_label" in save_df.columns() and self.gt_label_fov is not None:
+        if self.gt_label_scope is 'fov':
             raise ValueError(
                 "Have not worked out how to deal with this yet - how should we save"
                 "fov label for .csv"
@@ -591,7 +614,7 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if "gt_label" in save_df.columns():
+            if self.gt_label_scope == 'loc':
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
@@ -605,25 +628,32 @@ class item:
         # convert to bytes
         gt_label_map = json.dumps(self.gt_label_map).encode("utf-8")
 
-        if self.gt_label_fov is not None:
+        if self.gt_label_scope == 'loc':
+            if self.gt_label is not None:
+                raise ValueError('Cannot have gt label per fov and loc')
             if self.gt_label_map is None:
-                raise ValueError('If have gt label for FOV also need a map')
-        else:
+                raise ValueError('Need a label map')
+        if self.gt_label_scope is None:
+            warnings.warn("No ground truth label or gt label map")
+            if self.gt_label_map is not None:
+                raise ValueError('Cant have gt label map and no labels')
+            if self.gt_label is not None:
+                raise ValueError('Cant have no scope and a gt label')
+        if self.gt_label_scope == 'fov':
+            if self.gt_label is None:
+                raise ValueError('Need a gt label')
+            if 'gt_label' in self.df.columns:
+                raise ValueError('Cannot have gt label column for fov label')
             if self.gt_label_map is None:
-                warnings.warn("No ground truth label or gt label map")
-            if not 'gt_label' in self.df.columns:
-                warnings.warn("No gt label column or gt label per FOV")
-        if 'gt_label' in self.df.columns:
-            if self.gt_label_map is None:
-                raise ValueError('If have gt label for each loc also need a map')
+                raise ValueError('Need a label map')
 
         meta_data = {
             "name": self.name,
             "dim": str(self.dim),
             "channels": str(self.channels),
             "channel_label": str(self.channel_label),
-            # change
-            "gt_label_fov": str(self.gt_label_fov),
+            "gt_label_scope": self.gt_label_scope,
+            "gt_label": str(self.gt_label),
             "gt_label_map": gt_label_map,
             "bin_sizes": str(self.bin_sizes),
         }
@@ -678,8 +708,9 @@ class item:
         dim = int(dim)
         channels = arrow_table.schema.metadata[b"channels"]
         channels = ast.literal_eval(channels.decode("utf-8"))
-        gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]
-        gt_label_fov = int(dim)
+        gt_label = arrow_table.schema.metadata[b"gt_label"]
+        gt_label = int(gt_label)
+        gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
         print(
             "channel label is now a dictionary which changes below line so need to change"
         )
@@ -698,8 +729,9 @@ class item:
             dim=dim,
             channels=channels,
             channel_label=channel_label,
-            gt_label_fov=gt_label_fov,
+            gt_label=gt_label,
             gt_label_map=gt_label_map,
+            gt_label_scope=gt_label_scope,
             bin_sizes=bin_sizes,
         )
 

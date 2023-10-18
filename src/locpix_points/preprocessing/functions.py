@@ -11,11 +11,11 @@ import polars as pl
 import os
 from . import datastruc
 import warnings
-
+import pyarrow.parquet as pq
+import json
 
 def file_to_datastruc(
     input_file,
-    file_type,
     dim,
     channel_col,
     frame_col,
@@ -25,8 +25,7 @@ def file_to_datastruc(
     channel_choice,
     channel_label=None,
     gt_label_scope=None,
-    gt_label=None,
-    gt_label_map=None,
+    gt_label_loc=None,
     features=None,
 ):
     """Loads in .csv or .parquet and converts to the required datastructure.
@@ -37,7 +36,6 @@ def file_to_datastruc(
 
     Args:
         input_file (string) : Location of the file
-        file_type (string) : Either csv or parquet
         save_loc (string) : Location to save datastructure to
         dim (int) : Dimensions to consider either 2 or 3
         channel_col (string) : Name of column which gives channel
@@ -55,11 +53,11 @@ def file_to_datastruc(
         gt_label_scope (string) : If not specified (None) there are no gt labels. If
             specified then is either 'loc' - gt label per localisatoin or 'fov' - gt
             label for field-of-view
-        gt_label (string) : If specified then this is the column with the gt_label
-            in
-        gt_label_map (dict) : Dictionary with keys represetning the gt label present
-            in the dataset and the valu erepresenting the
-            real concept e.g. 0:'dog', 1:'cat'
+        gt_label_loc (dict) : If specified then this contains a dictionary with two
+            keys 'gt_label_col' giving the column the gt_label is in and 'gt_label_map'
+            a dictionary with keys represetning the gt label present
+            in the dataset and the value erepresenting the
+            real concept e.g. {0:'dog', 1:'cat'}
         features (list) : List of features to consider for each localisation
 
     Returns:
@@ -73,10 +71,6 @@ def file_to_datastruc(
         raise ValueError("If dimensions are two no z should be specified")
     if dim == 3 and not z_col:
         raise ValueError("If dimensions are 3 then z_col must be specified")
-
-    # check file type parquet or csv
-    if file_type != "csv" and file_type != "parquet":
-        raise ValueError(f"{file_type} is not supported, should be csv or parquet")
 
     # first check all channels desired have specified label
     if channel_col is not None:
@@ -94,28 +88,45 @@ def file_to_datastruc(
     if channel_col is not None:
         columns.append(channel_col)
         column_names.append("channel")
-    if gt_label is not None:
-        columns.append(gt_label)
-        column_names.append("gt_label")
     if len(features) != 0:
         columns.extend(features)
         column_names.extend(features)
 
+    # check what gt labels have been loaded in if any
+    if gt_label_scope == 'loc':
+        assert gt_label_loc is not None
+        gt_label_col = gt_label_loc['gt_label_col']
+        gt_label_map = gt_label_loc['gt_label_map']
+        gt_label = None
+        columns.append(gt_label_col)
+        column_names.append('gt_label')
+        print('Per localisation labels')
+        arrow_table = pq.read_table(input_file, columns=columns)
+    elif gt_label_scope == 'fov':
+        print('Per fov labels')
+        arrow_table = pq.read_table(input_file, columns=columns)
+        gt_label_map = json.loads(
+            arrow_table.schema.metadata[b"gt_label_map"].decode("utf-8")
+        )
+        gt_label_map = {int(key): value for key, value in gt_label_map.items()}
+        gt_label = arrow_table.schema.metadata[b"gt_label"]
+        gt_label = int(gt_label)
+        assert 'gt_label' not in arrow_table.columns
+    elif gt_label_scope is None:
+        print('No labels')
+        arrow_table = pq.read_table(input_file, columns=columns)
+        gt_label_map = None
+        gt_label = None
+    else:
+        raise ValueError('gt_label_scope should be loc, fov or None')
+
     # Load in data
-    if file_type == "csv":
-        df = pl.read_csv(input_file, columns=columns)
-    elif file_type == "parquet":
-        raise ValueError('Need to reqd in using pyarrow to preserve meatadata')
-        df = pl.read_parquet(input_file, columns=columns)
-
-    # List of possible values
-    gt_label_values = set(gt_label_map.keys())
-
-    # if specified gt label per loc should be:
-    # 1. label for each localisation
-    # 2. output warning if all gt label the same
-    # 3. all gt labels in the scope of values
+    arrow_table = pq.read_table(input_file, columns=columns)
+        
+    # check gt labels
     if gt_label_scope == "loc":
+        # List of possible values
+        gt_label_values = set(gt_label_map.keys())
         if df[gt_label].null_count() > 0:
             raise ValueError("Shouldn't be any null values in gt label col")
         unique_vals = df[gt_label].unique()
@@ -124,24 +135,13 @@ def file_to_datastruc(
             warnings.warn(warning)
         if not set(unique_vals).issubset(gt_label_values):
             raise ValueError("Contains gt labels outside of the domain")
-        gt_label_fov = None
-
+        
     # if specified gt label per fov
     # 1. if there is more than one value in the column they MUST be the same!
     # 2. gt label in the scope of values
     if gt_label_scope == "fov":
-        unique_val = df[gt_label].unique()
-        if len(unique_val) != 1:
-            raise ValueError("Different labels for localisations")
-        if not set(unique_val).issubset(gt_label_values):
+        if gt_label not in set(gt_label_map.keys()):
             raise ValueError("Contains gt label outside of the domain")
-        gt_label_fov = unique_val
-        # drop gt label column
-        df = df.drop["gt_label"]
-
-    if gt_label_scope is None:
-        gt_label_fov = None
-        gt_label_map = None
 
     # rename
     new_names = dict(zip(columns, column_names))
@@ -158,10 +158,7 @@ def file_to_datastruc(
     df = df.filter(pl.col("channel").is_in(channel_choice))
 
     # Get name of file - assumes last part of input file name
-    if file_type == "csv":
-        name = os.path.basename(os.path.normpath(input_file)).removesuffix(".csv")
-    elif file_type == "parquet":
-        name = os.path.basename(os.path.normpath(input_file)).removesuffix(".parquet")
+    name = os.path.basename(os.path.normpath(input_file)).removesuffix(".parquet")
 
     return datastruc.item(
         name,
@@ -169,7 +166,7 @@ def file_to_datastruc(
         dim,
         channel_choice,
         channel_label,
-        # gt_label_scope=gt_label_scope,
-        gt_label_fov=gt_label_fov,
+        gt_label_scope=gt_label_scope,
+        gt_label=gt_label,
         gt_label_map=gt_label_map,
     )

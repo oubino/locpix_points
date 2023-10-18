@@ -40,12 +40,17 @@ include_files:
 ## Choice of input features
 features: []
 
-## GT label per loc or per FOV
+## GT label per loc, fov or null (not specified)
 gt_label_scope: 'loc'
 
-## if gt label specified, whih channel is it in (if its label per fov then only one row has to have value), or leave as null
-gt_label : index # gt_label
+# if gt_label_scope is 'loc' then the following applies
+gt_label_loc:
+  gt_label_map:
+    0 : 'EGFR'
+    1 : 'EREG'
+  # which column is the gt label in
+  gt_label_col : index 
 
-gt_label_map: #null
-  0 : 'EGFR'
-  1 : 'EREG'
+# if gt_label_scope is 'fov' then we assume 
+# but will check that gt_label and gt_label_map are both
+# in the metadata

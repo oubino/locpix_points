@@ -285,15 +285,15 @@ class SMLMDataset(Dataset):
             data = features.load_pos_feat(
                 arrow_table, data, self.pos, self.feat, self.min_feat, self.max_feat
             )
-
-            gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]
+            
+            gt_label = arrow_table.schema.metadata[b"gt_label"]
 
             # load gt label to data
             if self.label_level == "graph":
-                if gt_label_fov is None:
+                if gt_label is None:
                     raise ValueError("No gt label for the fov")
                 else:
-                    data.y = gt_label_fov
+                    data.y = gt_label
             elif self.label_level == "node":
                 data.y = torch.tensor(arrow_table["gt_label"].to_numpy())
             else:

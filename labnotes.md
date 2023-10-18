@@ -36,19 +36,15 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 Actions
 
-preprocess should deal with gt_label_fov or if gt_label already present
-then annotate purely does the annotation
-deal with
-    - gt_label_scope
-    - gt_label_fov
-    - gt_label_map
-    - save_to_parquet
+Need final check in process that don't have per fov annotation and per loc annotation
+then annotate purely does the annotation - check/amend to cover this
+change so preprocess save in prepcorecessed/gt_label and preprocessed/no_gt_label
+outcomes notebook need to save dictionary with key gt_label = str(cancer)
+and also include gt_label_map 
 
+Update readme to reflect this change
 
-3. write the featextract recipe
-4. Note that annotate script should be used to generate gt label but also could be done in preprocess
-5. Option with annotate script to generate per FOV annotation of per loc annotation
-7. feat extract has folder for locs & clusters 
+- feat extract has folder for locs & clusters 
 8. Process needs to deal with clusters/locs and how we connect cluster graph
     - options for process locs only, clusters only, locs and clusters
     - need a note for how it has been processed somewhere
