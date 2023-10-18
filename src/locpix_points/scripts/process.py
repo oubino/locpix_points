@@ -135,7 +135,7 @@ def main():
 
     # split randomly
     if args.split is None and args.manual_split is None:
-        file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
+        file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
         # split into train/test/val
@@ -183,7 +183,7 @@ def main():
     # calculate min/max for each column of training data and save to config file
     if type(config['feat']) is list:
         for index, file in enumerate(train_list):
-            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/annotated', file + '.parquet'))
+            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/gt_label', file + '.parquet'))
             min_df = df.select(pl.col(config['feat']).min())
             max_df = df.select(pl.col(config['feat']).max())
             if index == 0:
@@ -201,7 +201,7 @@ def main():
     # create train dataset
     trainset = datastruc.SMLMDataset(
         config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
+        os.path.join(project_directory, "preprocessed/gt_label"),
         train_folder,
         transform=None,
         pre_transform=None,
@@ -220,7 +220,7 @@ def main():
     # create val dataset
     valset = datastruc.SMLMDataset(
         config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
+        os.path.join(project_directory, "preprocessed/gt_label"),
         val_folder,
         transform=None,
         pre_transform=None,
@@ -236,7 +236,7 @@ def main():
     # create test dataset
     testset = datastruc.SMLMDataset(
         config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
+        os.path.join(project_directory, "preprocessed/gt_label"),
         test_folder,
         transform=None,
         pre_transform=None,

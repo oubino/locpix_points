@@ -46,13 +46,13 @@ def main():
     # list items
     try:
         files = os.listdir(
-            os.path.join(project_directory, "preprocessed/not_annotated")
+            os.path.join(project_directory, "preprocessed/no_gt_label")
         )
     except FileNotFoundError:
         raise ValueError("There should be some preprocessed files to open")
 
     # if output directory not present create it
-    output_directory = os.path.join(project_directory, "preprocessed/annotated")
+    output_directory = os.path.join(project_directory, "preprocessed/gt_label")
     if not os.path.exists(output_directory):
         print("Making folder")
         os.makedirs(output_directory)
@@ -67,7 +67,7 @@ def main():
     for file in files:
         item = datastruc.item(None, None, None, None)
         item.load_from_parquet(
-            os.path.join(project_directory, "preprocessed/not_annotated", file)
+            os.path.join(project_directory, "preprocessed/no_gt_label", file)
         )
 
         # coord2histo

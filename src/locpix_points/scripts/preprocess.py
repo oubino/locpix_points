@@ -150,12 +150,12 @@ def main():
         if index == 0:
             if config["gt_label_scope"] is not None:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/annotated"
+                    project_directory, "preprocessed/gt_label"
                 )
                 os.makedirs(output_directory)
             else:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/not_annotated"
+                    project_directory, "preprocessed/no_gt_label"
                 )
                 os.makedirs(output_directory)
 

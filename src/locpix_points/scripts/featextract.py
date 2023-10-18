@@ -64,10 +64,10 @@ def main():
     # list items
     try:
         files = os.listdir(
-            os.path.join(project_directory, "preprocessed/annotated")
+            os.path.join(project_directory, "preprocessed/gt_label")
         )
     except FileNotFoundError:
-        raise ValueError("There should be some annotated files to open")
+        raise ValueError("There should be some files to open")
 
     # if output directory not present create it
     output_loc_directory = os.path.join(project_directory, "preprocessed/featextract/locs")

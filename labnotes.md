@@ -36,10 +36,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 Actions
 
-Need final check in process that don't have per fov annotation and per loc annotation
 change so preprocess save in prepcorecessed/gt_label and preprocessed/no_gt_label
-
-
 Update readme to reflect this change
 
 - feat extract has folder for locs & clusters 
