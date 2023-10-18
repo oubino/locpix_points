@@ -36,6 +36,15 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 Actions
 
+preprocess should deal with gt_label_fov or if gt_label already present
+then annotate purely does the annotation
+deal with
+    - gt_label_scope
+    - gt_label_fov
+    - gt_label_map
+    - save_to_parquet
+
+
 3. write the featextract recipe
 4. Note that annotate script should be used to generate gt label but also could be done in preprocess
 5. Option with annotate script to generate per FOV annotation of per loc annotation

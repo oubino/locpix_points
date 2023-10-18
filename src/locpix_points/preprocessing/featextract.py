@@ -57,7 +57,7 @@ def pca_fn(X):
     variance_ratio = pca.explained_variance_
     singular_values = pca.singular_values_
     raise ValueError('Which features of PCA do we want?')
-    return singular_values
+    return components, variance, variance_ratio, singular_values
 
 def pca_cluster(df, col_name='clusterID'):
     """Calculate pca for each cluster
@@ -83,7 +83,17 @@ def pca_cluster(df, col_name='clusterID'):
 
     results = dask.compute(*lazy_results)
 
-    cluster_df = pl.DataFrame({'clusterID':cluster_id, 'pca':results})
+    array = np.array(results)
+    comps = array[:,0]
+    vars = array[:,1]
+    var_ratio = array[:,2]
+    sing_vals = array[:,3]
+
+    cluster_df = pl.DataFrame({'clusterID':cluster_id, 
+                               'compoments':comps
+                               'variances':vars,
+                               'variance_ratios':var_ratio,
+                               'singular_values':sing_vals})
 
     raise ValueError("Is it normalised correctly? Need to check against known result?")
 
@@ -129,8 +139,11 @@ def convex_hull_cluster(df, col_name='clusterID'):
         lazy_results.append(lazy_result)
 
     results = dask.compute(*lazy_results)
+    array = np.array(results)
+    areas = array[:,0]
+    lengths = array[:,1]
 
-    cluster_df = pl.DataFrame({'clusterID':cluster_id, 'convex_hull':results})
+    cluster_df = pl.DataFrame({'clusterID':cluster_id, 'area':areas, 'length':lengths})
 
     raise ValueError("Is it normalised correctly? Need to check against known result?")
 

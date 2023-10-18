@@ -13,6 +13,7 @@ import pyarrow.parquet as pq
 import ast
 import os
 import json
+import warnings
 
 _interpolate = {
     "log2": lambda d: np.log2(d),
@@ -561,8 +562,6 @@ class item:
         save_folder,
         drop_zero_label=False,
         drop_pixel_col=False,
-        gt_label_fov=None,
-        gt_label_map=None,
         overwrite=False,
     ):
         """Save the dataframe to a parquet with option to drop positions which
@@ -575,13 +574,6 @@ class item:
                 label positions are saved to parquet
             drop_pixel_col (bool): If True then don't save
                 the column with x,y,z pixel
-            # change
-            gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
-            localisatoin then they are in column "gt_label"
-            gt_label_map (dict): Dictionary with integer keys
-                representing the gt labels for each localisation
-                with value being a string, representing the
-                real concept e.g. 0:'dog', 1:'cat'
             overwrite (bool): Whether to overwrite
 
         Returns:
@@ -611,7 +603,19 @@ class item:
         old_metadata = arrow_table.schema.metadata
 
         # convert to bytes
-        gt_label_map = json.dumps(gt_label_map).encode("utf-8")
+        gt_label_map = json.dumps(self.gt_label_map).encode("utf-8")
+
+        if self.gt_label_fov is not None:
+            if self.gt_label_map is None:
+                raise ValueError('If have gt label for FOV also need a map')
+        else:
+            if self.gt_label_map is None:
+                warnings.warn("No ground truth label or gt label map")
+            if not 'gt_label' in self.df.columns:
+                warnings.warn("No gt label column or gt label per FOV")
+        if 'gt_label' in self.df.columns:
+            if self.gt_label_map is None:
+                raise ValueError('If have gt label for each loc also need a map')
 
         meta_data = {
             "name": self.name,
@@ -619,7 +623,7 @@ class item:
             "channels": str(self.channels),
             "channel_label": str(self.channel_label),
             # change
-            "gt_label_fov": str(gt_label_fov),
+            "gt_label_fov": str(self.gt_label_fov),
             "gt_label_map": gt_label_map,
             "bin_sizes": str(self.bin_sizes),
         }

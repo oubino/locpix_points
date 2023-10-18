@@ -108,11 +108,11 @@ def custom_annotation(project_directory, config):
         # no pixel col
 
         input("stop - need to save also the gt label scope & gt label values")
+        item.gt_label_map = config['gt_label_map']
         item.save_to_parquet(
             output_directory,
             drop_zero_label=False,
             drop_pixel_col=False,
-            gt_label_map=config["gt_label_map"],
         )
 
 
@@ -157,10 +157,10 @@ def manual_annotation(project_directory, config):
 
         input("stop - need to save also the gt label scope & gt label values")
         # save df to parquet with mapping metadata
+        item.gt_label_map = config['gt_label_map']
         item.save_to_parquet(
             output_directory,
             drop_zero_label=config["drop_zero_label"],
-            gt_label_map=config["gt_label_map"],
         )
 
 

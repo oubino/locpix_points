@@ -100,6 +100,7 @@ def main():
         raise ValueError("Need to check this join is okay")
 
         # cluster density do this here
+        cluster_df.with_columns(pl.col('count')/pl.col('area')).alias('density')
 
         # cluster skew?
 
@@ -107,28 +108,26 @@ def main():
 
         # distance birth/death ?
 
-        # cluster df save to item separately to reduce redundancy
-
-        # circularity: null
-
         # save locs dataframe
+        item.df = df
         item.save_to_parquet(
-                output_directory,
+                output_loc_directory,
                 drop_zero_label=False,
                 drop_pixel_col=False,
-                gt_label_map=config["gt_label_map"],
             )
 
         # save clusters dataframe 
+        item.df = cluster_df
         item.save_to_parquet(
-                output_directory,
+                output_cluster_directory,
                 drop_zero_label=False,
                 drop_pixel_col=False,
-                gt_label_map=config["gt_label_map"],
             )
+        
+        raise ValueError("Check gt label map and gt label fov")
     
     # save yaml file
-    yaml_save_loc = os.path.join(project_directory, "process.yaml")
+    yaml_save_loc = os.path.join(project_directory, "featextract.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
