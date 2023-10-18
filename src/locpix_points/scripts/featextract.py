@@ -9,6 +9,7 @@ from locpix_points.preprocessing import functions
 import argparse
 import json
 import time
+from locpix_points.data_loading import datastruc
 
 def main():
 
@@ -59,27 +60,66 @@ def main():
         with open(metadata_path, "w") as outfile:
             json.dump(metadata, outfile)
 
-    # for each fov
-    
-    # extract features
+    # list items
+    try:
+        files = os.listdir(
+            os.path.join(project_directory, "preprocessed/annotated")
+        )
+    except FileNotFoundError:
+        raise ValueError("There should be some annotated files to open")
 
-    # clustering (clusterID)
+    # if output directory not present create it
+    output_loc_directory = os.path.join(project_directory, "preprocessed/featextract/locs")
+    output_cluster_directory = os.path.join(project_directory, "preprocessed/featextract/clusters")
+    folders = [output_loc_directory, output_cluster_directory]
+    for folder in folders:
+        if not os.path.exists(folder):
+            print("Making folder")
+            os.makedirs(folder)
 
-    # basic features (com cluster, locs per cluster, radius of gyration)
+    for file in files:
+        item = datastruc.item(None, None, None, None)
+        item.load_from_parquet(os.path.join(project_directory, file))
 
-    # pca on cluster
-    
-    # convex hull (perimeter, area, length)
+        
+        
+        # for each fov
+        
+        # extract features
 
-    # cluster density do this here
+        # clustering (clusterID)
 
-    # cluster skew?  length, 
+        # basic features (com cluster, locs per cluster, radius of gyration)
 
-    # distance birth/death ?
+        # pca on cluster (linearity, circularity see DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS)
+        
+        # convex hull (perimeter, area, length)
 
-    # cluster df save to item separately to reduce redundancy
+        # cluster density do this here
 
-    # circularity: null
+        # cluster skew?  length, 
+
+        # distance birth/death ?
+
+        # cluster df save to item separately to reduce redundancy
+
+        # circularity: null
+
+        # save locs dataframe
+        item.save_to_parquet(
+                output_directory,
+                drop_zero_label=False,
+                drop_pixel_col=False,
+                gt_label_map=config["gt_label_map"],
+            )
+
+        # save clusters dataframe 
+        item.save_to_parquet(
+                output_directory,
+                drop_zero_label=False,
+                drop_pixel_col=False,
+                gt_label_map=config["gt_label_map"],
+            )
     
     # save yaml file
     yaml_save_loc = os.path.join(project_directory, "process.yaml")

@@ -54,7 +54,12 @@ def pca_fn(X):
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
-    return pca.singular_values_
+    components = pca.components_
+    variance = pca.explained_variance_
+    variance_ratio = pca.explained_variance_
+    singular_values = pca.singular_values_
+    raise ValueError('Which features of PCA do we want?')
+    return singular_values
 
 def pca_cluster(df, col_name='cluster'):
     """Calculate pca for each cluster

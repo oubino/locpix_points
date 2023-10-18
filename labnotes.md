@@ -39,11 +39,19 @@ Actions
 Under preprocessing
 
 1. Clustering and visualisation (feature extraction)
-    a. Use CUML to cluster calculate cluster features (skew?, num locs, circularity, density, convex hull area, radius of gyration, length, distance birth, distance death) - note papers about cluster size and number of receptors per cluster for DBSCAN
-    b. Also note other things can provide e.g. UMAP?
+    a. Use CUML to cluster calculate cluster features (distance birth, distance death)
+    b. Note papers about cluster size and number of receptors per cluster for DBSCAN
+    c. Also note other things can provide e.g. UMAP on features for each cluster
     - extract basic features of cluster
     - make note in readme which environment needed for each recipe
     - write the featextract recipe
+    - Note that annotate script should be used to generate gt label but also could be done in preprocess
+    - Option with annotate script to generate per FOV annotation of per loc annotation
+    - Order should be preprocess - annotate - feat extract
+    - feat extract has folder for locs & clusters 
+    For below two see arXiv:1711.09869v2
+    d. Is length just the eigenvalue for the largest and area one lambda1 x labmda 2
+    e. Do we use the geometric features just as input to embedding or should we add on
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
 4. Train small test dataset 3 cancer 3 not cancer with pointtransformer
@@ -65,7 +73,7 @@ Different models to try
 4.5 As above but place the top level graph randomly/systematically across the FOV?
 5. Also includ learned clustering
 6. UMAP of clusters and features
-7. 
+7. What edge features?
 
 ### 17th October 2023
 
