@@ -8,10 +8,10 @@ Recipe :
 
 import os
 import yaml
-from heptapods.data_loading import datastruc
+from locpix_points.data_loading import datastruc
 import torch_geometric.loader as L
-from heptapods.training import train
-from heptapods.models import model_choice
+from locpix_points.training import train
+from locpix_points.models import model_choice
 from torchsummary import summary
 
 # import torch

@@ -6,7 +6,7 @@ visualise histo mask, save the exported annotation .parquet
 
 import yaml
 import os
-from heptapods.preprocessing import datastruc
+from locpix_points.preprocessing import datastruc
 import polars as pl
 import argparse
 
@@ -35,14 +35,6 @@ def main():
         required=True,
     )
 
-    parser.add_argument(
-        "-a",
-        "--custom_annotation",
-        action="store_true",
-        help="if true uses custom annotation; otherwise uses manual annotation",
-        required=True,
-    )
-
     args = parser.parse_args()
 
     project_directory = args.project_directory
@@ -50,73 +42,6 @@ def main():
     # load yaml
     with open(args.config, "r") as ymlfile:
         config = yaml.safe_load(ymlfile)
-
-    if args.custom_annotation:
-        custom_annotation(project_directory, config)
-    else:
-        manual_annotation(project_directory, config)
-
-
-def gt_label_generator(df):
-
-    """CUSTOM function takes in a polars dataframe and adds a
-    gt_label column in whichever user specified way
-
-        Args:
-            df (polars dataframe) : Dataframe with localisations"""
-
-    # this just takes the channel column as the ground truth label
-    df = df.with_column((pl.col("channel")).alias("gt_label"))
-
-    return df
-
-
-def custom_annotation(project_directory, config):
-
-    # list items
-    try:
-        files = os.listdir(
-            os.path.join(project_directory, "preprocessed/not_annotated")
-        )
-    except FileNotFoundError:
-        raise ValueError("There should be some preprocessed files to open")
-
-    # if output directory not present create it
-    output_directory = os.path.join(project_directory, "preprocessed/annotated")
-    if not os.path.exists(output_directory):
-        print("Making folder")
-        os.makedirs(output_directory)
-
-    for file in files:
-        item = datastruc.item(None, None, None, None)
-        item.load_from_parquet(os.path.join(project_directory, file))
-
-        # check no gt label already present
-        if "gt_label" in item.df.columns:
-            raise ValueError(
-                "Manual segment cannot be called on a file which\
-                              already has gt labels in it"
-            )
-
-        # generate gt label
-        item.df = gt_label_generator(item.df)
-
-        # save df to parquet with mapping metadata
-        # note drop zero label important is False as we have
-        # channel 0 (EGFR) -> gt_label 0 -> don't want to drop this
-        # drop pixel col is False as we by this point have
-        # no pixel col
-
-        input("stop - need to save also the gt label scope & gt label values")
-        item.gt_label_map = config['gt_label_map']
-        item.save_to_parquet(
-            output_directory,
-            drop_zero_label=False,
-            drop_pixel_col=False,
-        )
-
-
-def manual_annotation(project_directory, config):
 
     # list items
     try:
@@ -155,8 +80,9 @@ def manual_annotation(project_directory, config):
         # manual segment
         item.manual_segment_per_loc()
 
-        input("stop - need to save also the gt label scope & gt label values")
-        # save df to parquet with mapping metadata
+        # save df to parquet 
+        item.gt_label_scope = 'loc'
+        item.gt_label = None
         item.gt_label_map = config['gt_label_map']
         item.save_to_parquet(
             output_directory,
