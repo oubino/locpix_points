@@ -37,10 +37,8 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 Actions
 
 Need final check in process that don't have per fov annotation and per loc annotation
-then annotate purely does the annotation - check/amend to cover this
 change so preprocess save in prepcorecessed/gt_label and preprocessed/no_gt_label
-outcomes notebook need to save dictionary with key gt_label = str(cancer)
-and also include gt_label_map 
+
 
 Update readme to reflect this change
 

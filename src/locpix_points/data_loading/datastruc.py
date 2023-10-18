@@ -14,7 +14,7 @@ import ast
 import polars as pl
 from . import features
 from . import custom_transforms
-
+import json
 
 class SMLMDataset(Dataset):
     """SMLM dataset class.
@@ -46,6 +46,8 @@ class SMLMDataset(Dataset):
             label labels the whole graph in later label per node.
             There will often only be one option but this is in case you
             have graph label and node label
+        label_map (dict) : Dictionary mapping labels to their actual meaning
+            e.g. {0: 'dog', 1: 'cat'}
         _data_list: A list of the data from the dataset
             so can access via a numerical index later.
     """
@@ -179,6 +181,8 @@ class SMLMDataset(Dataset):
         idx = 0
         idx_to_name = {}
 
+        raise ValueError("Haven't looked at in a while may need amending")
+
         # convert raw parquet files to tensors
         for raw_path in self.raw_paths:
             # read in parquet file
@@ -278,6 +282,20 @@ class SMLMDataset(Dataset):
             # dimensions metadata
             dimensions = arrow_table.schema.metadata[b"dim"]
             dimensions = int(dimensions)
+            # gt label scope metadata
+            gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
+            if gt_label_scope == 'loc':
+                assert self.label_level == "node"
+            elif gt_label_scope == 'fov':
+                assert self.label_level == "graph"
+            else:
+                raise ValueError("No gt label scope")
+            # gt label map metadata
+            gt_label_map = json.loads(
+                arrow_table.schema.metadata[b"gt_label_map"].decode("utf-8")
+            )
+            gt_label_map = {int(key): value for key, value in gt_label_map.items()}
+            self.gt_label_map = gt_label_map
             # each dataitem is a homogeneous graph
             data = Data()
 
@@ -285,17 +303,25 @@ class SMLMDataset(Dataset):
             data = features.load_pos_feat(
                 arrow_table, data, self.pos, self.feat, self.min_feat, self.max_feat
             )
-            
+
+            # load in gt label 
             gt_label = arrow_table.schema.metadata[b"gt_label"]
 
             # load gt label to data
             if self.label_level == "graph":
                 if gt_label is None:
                     raise ValueError("No gt label for the fov")
+                if 'gt_label' in arrow_table.columns:
+                    raise ValueError('Should be no gt label column')
                 else:
-                    data.y = gt_label
+                    data.y = int(gt_label)
             elif self.label_level == "node":
-                data.y = torch.tensor(arrow_table["gt_label"].to_numpy())
+                if 'gt_label' not in arrow_table.columns:
+                    raise ValueError('No gt label column')
+                if gt_label is not None:
+                    raise ValueError("GT label should be none if per loc")
+                else:
+                    data.y = torch.tensor(arrow_table["gt_label"].to_numpy())
             else:
                 raise ValueError("Label level should be graph or node")
 
