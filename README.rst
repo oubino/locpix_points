@@ -12,9 +12,9 @@ Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html 
 
 Also had to install Rapids on WSL
 
-```
+``
 micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
-```
+``
 
 
 Environment 1
@@ -22,30 +22,30 @@ Environment 1
 
 Create new environment
 
-```
+``
 micromamba create -n locpix-points python=3.11
-```
+``
 
 Then install this repository
 
-```
+``
 pip install -e .
-```
+``
 
 Before installing the remaining requirements
 
-```
+``
 pip install -r requirements.txt
-```
+``
 
 Environment 2
 -------------
 
-```
+``
 micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
 micromamba activate feat_extract
 pip install dask dask-ml polars
-```
+``
 
 Layout
 ======
@@ -91,45 +91,132 @@ Train
 Preprocess
 ----------
 
-Navigate to folder then run
-
-```
+*Run*
+``
 python recipes/preprocess.py
-```
+``
 
-This takes in the .parquet files and converts them to datastructures
-It saves these as .parquet files with:
-- name, dimensions and channels as metadata
-- dataframe is saved as a dataframe
+*Arguments*
+``
+-i Path to the input data folder
+-c Path to configuration .yaml file
+-o Path to the project folder will create
+``
+
+*Structure*
+
+If 'gt_label_scope' in config file is null:
+
+    Data stored in project_folder/preprocessed/no_gt_label
+
+If 'gt_label_scope' in config file is 'loc' or 'fov':
+
+    Data store in project_folder/preprocessed/gt_label
+
+*Long description*
+
+Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
+- name: Name of the file/fov
+- dimensions: Dimensions of the localisations
+- channels: List of ints representing channels in data user wants to consider
+- channel label: label for each channel i.e. [0:'egfr',1:'ereg',2:'unk'] means
+channel 0 is egfr protein, channel 1 is ereg proteins and channel 2 is unknown
+- gt_label_scope: If not specified (None) there are no gt labels. If
+specified then is either 'loc' - gt label per localisatoin or 'fov' - gt label for field-of-view
+- gt_label: Value of the gt label for the fov or None if gt_label_scope
+is None or loc
+- gt_label_map:  Dictionary with keys representing the gt label present
+in the dataset and the values representing the real concept e.g. 0:'dog', 1:'cat'
+- bin sizes: Size of bins of the histogram if constructed e.g. (23.2, 34.5, 21.3)
 
 The dataframe has the following columns:
+- x 
+- y 
+- z 
+- channel 
+- frame 
 
-x, y, z, channel, frame
-
-Current limitations:
-    Currently there is no option to manually choose which channels to consider, so all channels
-    are considered.
-    Drop zero label is set to False by default no option to change
-    Drop pixel col is set to False by default no option to change
+*Current limitations*
+- Currently there is no option to manually choose which channels to consider, so all channels are considered.
+- Drop zero label is set to False by default no option to change
+- Drop pixel col is set to False by default no option to change
 
 Annotate
 --------
 
-This takes in the .parquet file, and allow the user to visualise in histogram
-Then annotate - thus returning localisation level labels
+*Run*
+``
+python recipes/annotate.py
+``
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+``
+*Structure*
+
+Data loaded in from
+
+    project_folder/preprocessed/no_gt_label
+
+Data then stored in 
+
+    project_folder/preprocessed/gt_label
+
+*Long description*
+
+Each fov is visualised in a histogram, which is annotated returning localisation level labels
 
 These are added in a separate column to the dataframe called 'gt_label'
 
-The dataframe is saved to parquet file with metadata specifying the mapping from 
-label to integer
+The dataframe is saved as a .parquet file with metadata specifying the mapping from label to integer
 
 
 Featextract
 -----------
 
+*Run*
+
+```
+python recipes/featextract.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+``
+
+*Structure*
+
+Data loaded in from 
+
+    project_folder/preprocessed/gt_label
+
+Feature data for localisations saved in 
+
+    project_directory/preprocessed/featextract/locs
+
+Feature data for clusters saved in
+
+    project_directory/preprocessed/featextract/clusters
+
+*Long description*
+
+For each FOV DBSCAN is used to cluster the data 
+
+Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
+
+PCA for each cluster is calculated (linearity, circularity)
+
+The convex hull for each cluster is calculated (perimeter length, area, length)
+
+The cluster density is calculated (locs/convex hull area)
 
 Process
 -------
+
 
 Train
 -----

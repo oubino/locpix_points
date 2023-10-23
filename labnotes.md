@@ -34,21 +34,30 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
-Process.yaml should have option for locs, clusters or locs+clusters
-Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
-Need decision on how to connect cluster graph
-Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
-Update ReadMe
+
 
 Under preprocessing
 
 1. Clustering and visualisation (feature extraction)
-    a.distance birth, distance death?
-    b. Note papers about cluster size and number of receptors per cluster for DBSCAN
-    c. Also note other things can provide e.g. UMAP on features for each cluster
+    a. Go over the script, check it works and clear up all remaining errors/questions
+    b.distance birth, distance death?
+    c. Note papers about cluster size and number of receptors per cluster for DBSCAN
+    d. Also note other things can provide e.g. UMAP on features for each cluster
     For below two see arXiv:1711.09869v2
-    d. Is length just the eigenvalue for the largest and area one lambda1 x labmda 2
-    e. Do we use the geometric features just as input to embedding or should we add on
+    e. Is length just the eigenvalue for the largest and area one lambda1 x labmda 2
+    f. Do we use the geometric features just as input to embedding or should we add on
+2. Process
+    a. Write this script to load in cluster and localisation features
+    b. Needs to consider the different splits
+    c. Different structure based on model
+    d. Need script which wraps process to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
+    e. datasruc.py define a base class bu tthen overirde the process method for each separate one 
+    f. Process should have option for locs, clusters or locs+clusters
+    g. Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
+    h. Need decision on how to connect cluster graph
+    i. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
+    j. Update ReadMe
+
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
 4. Train small test dataset 3 cancer 3 not cancer with pointtransformer
