@@ -52,11 +52,11 @@ Under preprocessing
     c. Different structure based on model
     d. Need script which wraps process to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
     e. datasruc.py define a base class bu tthen overirde the process method for each separate one 
-    f. Process should have option for locs, clusters or locs+clusters
+    f. Process should have option for locs, clusters or locs+clusters (locdataset, clusterdataset, locclusterdataset)
     g. Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
     h. Need decision on how to connect cluster graph
     i. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
-    j. Update ReadMe
+    j. LoUpdate ReadMe
 
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)

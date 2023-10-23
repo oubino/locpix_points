@@ -200,7 +200,6 @@ def main():
     print("Train set...")
     # create train dataset
     trainset = datastruc.SMLMDataset(
-        config["hetero"],
         os.path.join(project_directory, "preprocessed/gt_label"),
         train_folder,
         transform=None,
@@ -219,7 +218,6 @@ def main():
     print("Val set...")
     # create val dataset
     valset = datastruc.SMLMDataset(
-        config["hetero"],
         os.path.join(project_directory, "preprocessed/gt_label"),
         val_folder,
         transform=None,
@@ -235,7 +233,6 @@ def main():
     print("Test set...")
     # create test dataset
     testset = datastruc.SMLMDataset(
-        config["hetero"],
         os.path.join(project_directory, "preprocessed/gt_label"),
         test_folder,
         transform=None,

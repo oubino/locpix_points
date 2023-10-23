@@ -40,7 +40,6 @@ if __name__ == "__main__":
     # load in test dataset
     test_set = datastruc.SMLMDataset(
         None,
-        None,
         test_folder,
         transform=test_transform,
         pre_transform=None,

@@ -89,7 +89,6 @@ def main():
     # load in train dataset
     train_set = datastruc.SMLMDataset(
         None,
-        None,
         train_folder,
         transform=config['transforms'],
         pre_transform=None,
@@ -99,7 +98,6 @@ def main():
 
     # load in val dataset
     val_set = datastruc.SMLMDataset(
-        None,
         None,
         val_folder,
         transform=config['transforms'],
