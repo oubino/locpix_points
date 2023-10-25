@@ -9,7 +9,8 @@ pos: 'xy'
 
 # what to load into features
 # Options: uniform (ones), xy, ...
-feat: 'xy'
+feat:
+  - 'photons'
 
 # label level
 # graph or node

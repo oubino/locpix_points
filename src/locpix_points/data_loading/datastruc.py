@@ -264,7 +264,12 @@ class ClusterDataset(SMLMDataset):
 
 class ClusterLocDataset(SMLMDataset):
     """Dataset for localisations with localisations connected within clusters.
-    Clusters connected to nearest k neighbours."""
+    Clusters connected to nearest k neighbours.
+    
+    Args:
+
+    kneighbours (int) : Number of neighbours each cluster connected to
+    """
 
     def __init__(self, 
                  raw_loc_dir_root,
@@ -276,7 +281,8 @@ class ClusterLocDataset(SMLMDataset):
                  transform,
                  pre_transform,
                  min_feat,
-                 max_feat
+                 max_feat,
+                 kneighbours,
                  ):
         
         super().__init__(
@@ -289,8 +295,7 @@ class ClusterLocDataset(SMLMDataset):
             transform,
             pre_transform,
             min_feat,
-            max_feat,
-            kneighbours)
+            max_feat)
 
     def process(self):
         """Process the raw data into procesed data.
@@ -336,13 +341,12 @@ class ClusterLocDataset(SMLMDataset):
                                     raw_path)
             cluster_table = pq.read_table(loc_path)
 
-
             # each dataitem is a homogeneous graph
-            data = Data()
+            data = HeteroData()
 
             # load position (if present) and features to data
-            data = features.load_pos_feat(
-                arrow_table, data, self.pos, self.feat, self.min_feat, self.max_feat
+            data = features.load_loc_cluster(
+                data, loc_table, cluster_table, self.min_feat, self.max_feat, self.kneighbours
             )
 
             # load in gt label 

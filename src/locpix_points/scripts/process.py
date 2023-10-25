@@ -192,6 +192,11 @@ def main():
             else:
                 min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
                 max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
+        print(min_vals)
+        print(max_vals)
+        print(config['feat'])
+        input('stop, check that loading in features and correclty calculating min values')
+
     min_vals = dict(zip(config['feat'], min_vals))
     max_vals = dict(zip(config['feat'], max_vals))
 
@@ -208,11 +213,14 @@ def main():
         # T.RadiusGraph(r=0.0000003,
         # max_num_neighbors=1),
         pos=config["pos"],
-        feat=config["feat"],
+        loc_feat=config["loc_feat"],
+        cluster_feat=config["cluster_feat"]
         label_level=config["label_level"],
         pre_filter=train_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
+        min_feat_locs=min_vals,
+        max_feat_locs=max_vals,
+        min_feat_clusters=..,
+        max_feat_clusters=..,
     )
 
     print("Val set...")

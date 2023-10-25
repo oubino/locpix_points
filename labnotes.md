@@ -34,9 +34,17 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
+Give every node features including x, y, and other specified features
 
+Generate html
+Need to save label level, label map, transform, min/max feat
 
-Under preprocessing
+remove all non clusterd points?
+
+create the message parsing network
+
+make edges undirected?
+
 
 1. Clustering and visualisation (feature extraction)
     a. Go over the script, check it works and clear up all remaining errors/questions

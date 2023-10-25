@@ -4,46 +4,115 @@ This module defines some feature representations that are used repeatedly
 """
 
 import torch
+import polars as pl
+import numpy as np
+import itertools
+from torch_geometric.nn import knn_graph
 
-
-def load_pos_feat(arrow_table, data, pos, feat, min_feat, max_feat):
-    """Decided how to load in position and features to each node
+def load_loc_cluster(data, 
+                     loc_table, 
+                     cluster_table, 
+                     loc_feat,
+                     cluster_feat,
+                     min_feat_locs, 
+                     max_feat_locs, 
+                     min_feat_clusters, 
+                     max_feat_clusters,
+                     kneighbours):
+    """Load in position, features and edge index to each node
 
     Args:
-        arrow_table (parquet arrow table) : Data
-            in form of parquet file
         data (torch_geometric data) : Data item to
-            load position and features into
-        pos (string) : How to load in position data
-        feat (string) : How to load in feature data
-        min_feat (dict) : Minimum values of features for the training dataset
-        max_feat (dict) : Maxmimum values of features over training dataset
+            load position, features and edge index into
+        loc_table (parquet arrow table) : Localisation data
+            in form of parquet file
+        cluster_table (parquet arrow table) : Cluster data
+            in form of parquet file
+        loc_feat (list) : List of features to consider in localisation dataset
+        cluster_feat (list) : List of features to consider in cluster dataset
+        min_feat_locs (dict) : Minimum values of features for the locs training dataset
+        max_feat_locs (dict) : Maxmimum values of features over locs training dataset
+        min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
+        max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
+        kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
+            cluster dataset
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
+    
+    # load in positions
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
+    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    data['locs'].pos = loc_coords
 
-    if pos == "xy":
-        coord_data, data = xy_pos(arrow_table, data)
-    elif pos == "xyz":
-        coord_data, data = xyz_pos(arrow_table, data)
-    # define coord data in else if position doesn't use
+    x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
+    y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
+    cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
+    data['clusters'].pos =cluster_coords
 
-    if feat is None:
-        data.x = None
-    elif feat == "uniform":
-        data.x = torch.ones((data.pos.shape[0],1))
-    elif feat == "xy" or feat == "xyz":
-        data.x = coord_data
-    elif (type(feat) is list):
-        # first need to check same features used for max/min calc as loaded in
-        assert list(min_feat.keys()) == feat
-        assert list(max_feat.keys()) == feat
-        feat_data = torch.tensor(arrow_table.select(feat).to_pandas().to_numpy())
-        min_vals = torch.tensor(list(min_feat.values()))
-        max_vals = torch.tensor(list(max_feat.values()))
-        feat_data = (feat_data - min_vals)/(max_vals - min_vals)
-        feat_data = torch.clamp(feat_data, min=0, max=1)
-        data.x = feat_data
+    # load in features
+    assert list(min_feat_locs.keys()) == loc_feat
+    assert list(max_feat_locs.keys()) == loc_feat
+    assert list(min_feat_clusters.keys()) == cluster_feat
+    assert list(max_feat_clusters.keys()) == cluster_feat
+
+    feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
+    min_vals = torch.tensor(list(min_feat_locs.values()))
+    max_vals = torch.tensor(list(max_feat_locs.values()))
+    feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+    feat_data = torch.clamp(feat_data, min=0, max=1)
+    data['locs'].x = feat_data
+
+    feat_data = torch.tensor(cluster_table.select(cluster_feat).to_pandas().to_numpy())
+    min_vals = torch.tensor(list(min_feat_clusters.values()))
+    max_vals = torch.tensor(list(max_feat_clusters.values()))
+    feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+    feat_data = torch.clamp(feat_data, min=0, max=1)
+    data['clusters'].x = feat_data
+
+    # compute edge connections
+
+    # locs with clusterID connected to that cluster clusterID
+    group = loc_table.group_by('clusterID', maintain_order=True).agg(pl.col('x').agg_groups())
+    group = group.with_columns(pl.col('clusterID'), pl.col("x").list.len().alias('count'))
+    count = group['count'].to_numpy()
+    clusterIDlist = [[i]*count[i] for i in range(len(count))]
+    group = group.with_columns(
+        pl.Series('clusterIDlist',clusterIDlist)
+    )
+    loc_indices = group['x'].to_numpy()
+    cluster_indices = group['clusterIDlist'].to_numpy()
+    loc_indices_stack = np.concatenate(loc_indices, axis=0)
+    cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
+    loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
+
+    # locs with same clusterID
+    edges = []
+    for a in loc_indices:
+        combos = list(itertools.combinations(a, 2))
+        combos = np.ascontiguousarray(np.transpose(combos))
+        edges.append(combos)
+    loc_loc_edges = np.concatenate(edges, axis=-1)
+
+    # knn on clusters
+    x = torch.tensor(cluster_table['x_mean'])
+    y = torch.tensor(cluster_table['y_mean'])
+    print(x)
+    print(y)
+    coords = torch.stack([x,y], axis=-1)
+    batch = torch.zeros(len(coords))
+    cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
+
+    data['locs','in','cluster'].edge_index = loc_cluster_edges
+    data['locs', 'clusteredwith', 'locs'].edge_index = loc_loc_edges
+    data['clusters','near','clusters'].edge_index =  cluster_cluster_edges
+
+    # make edges undirected
+    raise NotImplementedError('make edges undirected')
+
+    raise ValueError('need to check correct edges connected')
+        
     return data
 
 
@@ -63,37 +132,6 @@ def xy_pos(arrow_table, data):
             position loaded in now"""
 
     # convert to tensor (Number of points x 2 (dimensions))
-    x = torch.tensor(arrow_table["x"].to_numpy())
-    y = torch.tensor(arrow_table["y"].to_numpy())
-    coord_data = torch.stack((x, y), dim=1)
-    data.pos = coord_data
-
-    return coord_data, data
-
-
-def xyz_pos(arrow_table, data, dimensions):
-    """Load in xyz data to each node as position
-
-    Args:
-        arrow_table (parquet arrow table) : Data
-                    in form of parquet file
-        data (torch_geometric data) : Data item to load
-            position to
-        dimensions (int) : Dimensions of the data
-    Returns:
-        coord_data (tensor) : the coordinates for the
-            data point
-        data (torch geometric data) : Data item with
-            position loaded in now"""
-
-    if dimensions == 2:
-        raise ValueError("Can't load in xyz data as only have two dimensions")
-
-    # convert to tensor (Number of points x 3 (dimensions))
-    x = torch.tensor(arrow_table["x"].to_numpy())
-    y = torch.tensor(arrow_table["y"].to_numpy())
-    z = torch.tensor(arrow_table["z"].to_numpy())
-    coord_data = torch.stack((x, y, z), dim=1)
-    data.pos = coord_data
+    x = 
 
     return coord_data, data
