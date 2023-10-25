@@ -126,3 +126,12 @@ def train_loop(
 
     print("Number of train nodes", num_train_node)
     print("Number of val nodes", num_val_node)
+
+
+def train_loop_updated():
+
+    out = model(
+        train_data.x_dict,
+        train_data.edge_index_dict,
+        train_data['locs','clusters'].edge_label_index
+    )

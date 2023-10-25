@@ -34,10 +34,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
-Give every node features including x, y, and other specified features
 
-Generate html
-Need to save label level, label map, transform, min/max feat
 
 remove all non clusterd points?
 
@@ -65,6 +62,11 @@ make edges undirected?
     h. Need decision on how to connect cluster graph
     i. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
     j. LoUpdate ReadMe
+    k. Remove all non clusterd points?
+    l. Make edges undirected
+3. Test model
+Generate html
+Need to save label level, label map, transform, min/max feat
 
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)

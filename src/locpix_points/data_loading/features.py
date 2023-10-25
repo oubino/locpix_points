@@ -49,7 +49,7 @@ def load_loc_cluster(data,
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
-    data['clusters'].pos =cluster_coords
+    data['clusters'].pos = cluster_coords
 
     # load in features
     assert list(min_feat_locs.keys()) == loc_feat
