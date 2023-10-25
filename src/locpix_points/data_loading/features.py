@@ -1,6 +1,6 @@
 """ Features module
 
-This module defines some feature representations that are used repeatedly
+Extracts features for the data
 """
 
 import torch
@@ -45,12 +45,12 @@ def load_loc_cluster(data,
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
-    data['locs'].pos = loc_coords
+    data['locs'].pos = loc_coords.float()
 
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
-    data['clusters'].pos = cluster_coords
+    data['clusters'].pos = cluster_coords.float()
 
     # load in features
     assert list(min_feat_locs.keys()) == loc_feat
@@ -123,24 +123,3 @@ def load_loc_cluster(data,
     raise ValueError('need to check correct edges connected')
         
     return data
-
-
-def xy_pos(arrow_table, data):
-    """Load in xy data to each node as position
-
-    Args:
-        arrow_table (parquet arrow table) : Data
-                in form of parquet file
-        data (torch_geometric data) : Data item to load
-            position to
-
-    Returns:
-        coord_data (tensor) : the coordinates for the
-            data point
-        data (torch geometric data) : Data item with
-            position loaded in now"""
-
-    # convert to tensor (Number of points x 2 (dimensions))
-    x = 
-
-    return coord_data, data

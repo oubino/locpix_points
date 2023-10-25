@@ -9,9 +9,20 @@ pos: 'xy'
 
 # what to load into features
 # Options: uniform (ones), xy, ...
-feat:
+loc_feat:
   - 'photons'
+cluster_feat:
+  - 'area'
 
 # label level
 # graph or node
 label_level: 'node'
+
+# model type
+model: 'ClusterLoc' # ClusterLoc, Loc or Cluster
+
+# number of nearest neighbours to connect clusters to in graph
+kneighbours: 3
+
+# whether to use gpu (currently irrelevant)
+gpu: True

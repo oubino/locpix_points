@@ -34,10 +34,10 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
-create the message parsing network
-- add warnings/errors everywhere could be errors when scale up with batch and also where need to add new layers etc.
-- also note changes in test that need to be implemented in real code
-
+data_loading/datastruc.py
+    - load_loc_cluster needs correct arguments
+scripts/process.py
+    - need to calculate min and max features for clusters/loc respectively
 
 1. Clustering and visualisation (feature extraction)
     a. Go over the script, check it works and clear up all remaining errors/questions
@@ -62,7 +62,7 @@ create the message parsing network
     l. Make edges undirected
 3. Test model
 Generate html
-Need to save label level, label map, transform, min/max feat
+Need to save label map, transform, min/max feat once got into pytorch geometric
 
 2. Add the above to the readme
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)

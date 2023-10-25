@@ -48,8 +48,6 @@ class SMLMDataset(Dataset):
         transform (dict) : Transforms to be applied to each data point. 
             Keys are the transforms and values are the relevant
             parameters if applicable
-        min_feat (dict) : Minimum values for the features over the training dataset
-        max_feat (dict) : Maximum values for the features over the training dataset
         _data_list (list): Data from the dataset
             so can access via a numerical index later.
     """
@@ -64,8 +62,6 @@ class SMLMDataset(Dataset):
         gpu,
         transform,
         pre_transform,
-        min_feat,
-        max_feat,
     ):
 
         # index the dataitems (idx)
@@ -81,8 +77,6 @@ class SMLMDataset(Dataset):
         self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
         self.label_level = label_level
         self.gpu = gpu
-        self.min_feat = min_feat
-        self.max_feat = max_feat
 
         if transform is None or len(transform) == 0:
             super().__init__(None, None, pre_transform, pre_filter)
@@ -223,9 +217,7 @@ class LocDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform,
-            min_feat,
-            max_feat)
+            pre_transform)
 
     def process(self):
         raise NotImplementedError
@@ -255,9 +247,7 @@ class ClusterDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform,
-            min_feat,
-            max_feat)
+            pre_transform)
 
     def process(self):
         raise NotImplementedError
@@ -267,8 +257,13 @@ class ClusterLocDataset(SMLMDataset):
     Clusters connected to nearest k neighbours.
     
     Args:
-
-    kneighbours (int) : Number of neighbours each cluster connected to
+        loc_feat (list) : List of features to consider in localisation dataset
+        cluster_feat (list) : List of features to consider in cluster dataset  
+        min_feat_locs (dict) : Minimum values of features for the locs training dataset
+        max_feat_locs (dict) : Maxmimum values of features over locs training dataset
+        min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
+        max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
+        kneighbours (int) : Number of neighbours each cluster connected to
     """
 
     def __init__(self, 
@@ -280,8 +275,12 @@ class ClusterLocDataset(SMLMDataset):
                  gpu,
                  transform,
                  pre_transform,
-                 min_feat,
-                 max_feat,
+                 loc_feat,
+                 cluster_feat,
+                 min_feat_locs,
+                 max_feat_locs,
+                 min_feat_clusters,
+                 max_feat_clusters,
                  kneighbours,
                  ):
         
@@ -293,17 +292,18 @@ class ClusterLocDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform,
-            min_feat,
-            max_feat)
+            pre_transform)
+        
+        self.loc_feat = loc_feat
+        self.cluster_feat = cluster_feat
+        self.min_feat_locs = min_feat_locs
+        self.max_feat_locs = max_feat_locs
+        self.min_feat_clusters = min_feat_clusters
+        self.max_feat_clusters = max_feat_clusters
+        self.kneighbours = kneighbours
 
     def process(self):
-        """Process the raw data into procesed data.
-        This currently includes
-            1. For each .parquet create a homogeneous graph
-            2. Then if not pre-filtered the
-            graph is pre-transformed
-            3. Then the graph is saved"""
+        """Process the raw data into heterogeneous graph"""
 
         idx = 0
         idx_to_name = {"idx": [], "file_name": []}
@@ -346,32 +346,34 @@ class ClusterLocDataset(SMLMDataset):
 
             # load position (if present) and features to data
             data = features.load_loc_cluster(
-                data, loc_table, cluster_table, self.min_feat, self.max_feat, self.kneighbours
+                data, 
+                loc_table, 
+                cluster_table,
+                self.loc_feat,
+                self.cluster_feat,
+                self.min_feat_locs,
+                self.max_feat_locs,
+                self.min_feat_clusters,
+                self.max_feat_clusters, 
+                self.kneighbours
             )
 
             # load in gt label 
-            gt_label = arrow_table.schema.metadata[b"gt_label"]
+            gt_label = loc_table.schema.metadata[b"gt_label"]
 
             # load gt label to data
             if self.label_level == "graph":
                 if gt_label is None:
-                    raise ValueError("No gt label for the fov")
-                if 'gt_label' in arrow_table.columns:
+                    raise ValueError("No GT label for the FOV")
+                if 'gt_label' in loc_table.columns:
                     raise ValueError('Should be no gt label column')
                 else:
-                    data.y = int(gt_label)
+                    data.y = torch.long([gt_label], dtype=torch.long)
             elif self.label_level == "node":
-                if 'gt_label' not in arrow_table.columns:
-                    raise ValueError('No gt label column')
-                if gt_label is not None:
-                    raise ValueError("GT label should be none if per loc")
-                else:
-                    data.y = torch.tensor(arrow_table["gt_label"].to_numpy())
-            else:
-                raise ValueError("Label level should be graph or node")
+                raise NotImplementedError()
 
             # assign name to data
-            name = arrow_table.schema.metadata[b"name"]
+            name = loc_table.schema.metadata[b"name"]
             name = str(name.decode("utf-8"))
             data.name = name
 
@@ -394,12 +396,6 @@ class ClusterLocDataset(SMLMDataset):
             # TODO: change/check this and make option in process
             # if self.gpu:
             #    data.cuda()
-            if data.x is not None:
-                data.x = data.x.float()
-            if data.pos is not None:
-                data.pos = data.pos.float()
-            if data.y is not None:
-                data.y = data.y.long()
             torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
 
             # add to index
@@ -410,7 +406,6 @@ class ClusterLocDataset(SMLMDataset):
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
         df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
-
 
 """
 def process_heterogeneous(self):

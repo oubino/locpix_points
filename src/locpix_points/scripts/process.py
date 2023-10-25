@@ -51,6 +51,26 @@ def load_pre_filter(path):
     else:
         raise ValueError("Unknown pre-filter type")
 
+def minmax(config, feat_str, file_directory, train_list):
+    raise ValueError("Check correct")
+    if type(config[feat_str]) is list:
+        for index, file in enumerate(train_list):
+            df = pl.read_parquet(os.path.join(file_directory, file + '.parquet'))
+            min_df = df.select(pl.col(config[feat_str]).min())
+            max_df = df.select(pl.col(config[feat_str]).max())
+            if index == 0:
+                min_vals = min_df.to_numpy()[0]
+                max_vals = max_df.to_numpy()[0]
+            else:
+                min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
+                max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
+    else:
+        raise NotImplementedError
+
+    min_vals = dict(zip(config[feat_str], min_vals))
+    max_vals = dict(zip(config[feat_str], max_vals))
+
+    return min_vals, max_vals
 
 def main():
 
@@ -135,6 +155,7 @@ def main():
 
     # split randomly
     if args.split is None and args.manual_split is None:
+        warnings.warn("Is this the correct file list")
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
@@ -179,84 +200,82 @@ def main():
         os.makedirs(test_folder)
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
+    
+    # calculate min/max features 
+    if config['model'] == 'ClusterLoc':
 
-    # calculate min/max for each column of training data and save to config file
-    if type(config['feat']) is list:
-        for index, file in enumerate(train_list):
-            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/gt_label', file + '.parquet'))
-            min_df = df.select(pl.col(config['feat']).min())
-            max_df = df.select(pl.col(config['feat']).max())
-            if index == 0:
-                min_vals = min_df.to_numpy()[0]
-                max_vals = max_df.to_numpy()[0]
-            else:
-                min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
-                max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
-        print(min_vals)
-        print(max_vals)
-        print(config['feat'])
-        input('stop, check that loading in features and correclty calculating min values')
+        file_directory = os.path.join(project_directory, 'preprocessed/featextract/locs')
+        min_feat_locs, max_feat_locs = minmax(config, 'loc_feat', file_directory, train_list)
+        file_directory = os.path.join(project_directory, 'preprocessed/featextract/clusters')
+        min_feat_clusters, max_feat_clusters = minmax(config, 'cluster_feat', project_directory, train_list)
 
-    min_vals = dict(zip(config['feat'], min_vals))
-    max_vals = dict(zip(config['feat'], max_vals))
+        print("Train set...")
+        # create train dataset
+        trainset = datastruc.ClusterLocDataset(
+            os.path.join(project_directory, 'preprocessed/featextract/locs'),
+            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            train_folder,
+            config['label_level'],
+            train_pre_filter,
+            config['gpu'],
+            None, # transform
+            None, # pre-transform
+            config['loc_feat'],
+            config['cluster_feat'],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config['kneighbours'],
+        )
 
-    # TODO: #3 Add in pre-transforms to process @oubino
+        print("Val set...")
+        # create val dataset
+        valset = datastruc.SMLMDataset(
+            os.path.join(project_directory, 'preprocessed/featextract/locs'),
+            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            val_folder,
+            config['label_level'],
+            val_pre_filter,
+            config['gpu'],
+            None, # transform
+            None, # pre-transform
+            config['loc_feat'],
+            config['cluster_feat'],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config['kneighbours'],
+        )
 
-    print("Train set...")
-    # create train dataset
-    trainset = datastruc.SMLMDataset(
-        os.path.join(project_directory, "preprocessed/gt_label"),
-        train_folder,
-        transform=None,
-        pre_transform=None,
-        # e.g. pre_transform =
-        # T.RadiusGraph(r=0.0000003,
-        # max_num_neighbors=1),
-        pos=config["pos"],
-        loc_feat=config["loc_feat"],
-        cluster_feat=config["cluster_feat"]
-        label_level=config["label_level"],
-        pre_filter=train_pre_filter,
-        min_feat_locs=min_vals,
-        max_feat_locs=max_vals,
-        min_feat_clusters=..,
-        max_feat_clusters=..,
-    )
+        print("Test set...")
+        # create test dataset
+        testset = datastruc.SMLMDataset(
+            os.path.join(project_directory, 'preprocessed/featextract/locs'),
+            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            test_folder,
+            config['label_level'],
+            test_pre_filter,
+            config['gpu'],
+            None, # transform
+            None, # pre-transform
+            config['loc_feat'],
+            config['cluster_feat'],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config['kneighbours'],
+        )
 
-    print("Val set...")
-    # create val dataset
-    valset = datastruc.SMLMDataset(
-        os.path.join(project_directory, "preprocessed/gt_label"),
-        val_folder,
-        transform=None,
-        pre_transform=None,
-        pos=config["pos"],
-        feat=config["feat"],
-        label_level=config["label_level"],
-        pre_filter=val_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
-    )
-
-    print("Test set...")
-    # create test dataset
-    testset = datastruc.SMLMDataset(
-        os.path.join(project_directory, "preprocessed/gt_label"),
-        test_folder,
-        transform=None,
-        pre_transform=None,
-        pos=config["pos"],
-        feat=config["feat"],
-        label_level=config["label_level"],
-        pre_filter=test_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
-    )
-
-    # save yaml file
-    yaml_save_loc = os.path.join(project_directory, "process.yaml")
-    with open(yaml_save_loc, "w") as outfile:
-        yaml.dump(config, outfile)
+        # save yaml file
+        yaml_save_loc = os.path.join(project_directory, "process.yaml")
+        with open(yaml_save_loc, "w") as outfile:
+            yaml.dump(config, outfile)
+    
+    else:
+        raise NotImplementedError
 
 
 if __name__ == "__main__":
