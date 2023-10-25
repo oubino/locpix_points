@@ -54,7 +54,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
     i. Make edges undirected
 3. Run process and check works as expected
 4. Update readme
-5. Write train script
+5. Write train script and update model
 
 
 --------------
