@@ -17,7 +17,9 @@ from torch_geometric.nn import (
     HeteroConv,
     global_max_pool,
 )
+from torch.nn import Linear
 import warnings
+import torch.nn.functional as F
 
 #from scipy.spatial import ConvexHull
 #import dask
@@ -123,9 +125,7 @@ def baa():
     loc_loc_edges = loc_loc_edges.astype(int)
     loc_loc_edges = torch.from_numpy(loc_loc_edges)
     loc_loc_edges = to_undirected(loc_loc_edges)
-
     cluster_cluster_edges = to_undirected(cluster_cluster_edges)
-
     loc_cluster_edges = loc_cluster_edges.astype(int)
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
 
@@ -192,9 +192,7 @@ def baa():
             warnings.warn('This will be wrong axis when have batch')
             out, _ = torch.max(out['clusters'], axis=0)
 
-            print(out)
-
-            print(out.shape)
+            return out
 
     class LocClusterNet(torch.nn.Module):
 
@@ -206,6 +204,7 @@ def baa():
             self.loc_encode = LocEncoder()
             self.loc2cluster = Loc2Cluster()
             self.clusterencoder = ClusterEncoder()
+            self.linear = Linear(4, 1)
 
         def forward(self, x_dict, edge_index_dict):
             
@@ -221,6 +220,13 @@ def baa():
             x_dict['clusters'] = self.clusterencoder(x_dict, edge_index_dict)
             
             # linear layer
+            output = self.linear(x_dict['clusters'])
+
+            print('output')
+            print(output)
+
+            return output
+
 
     model = LocClusterNet()
     
@@ -228,6 +234,11 @@ def baa():
         data.x_dict,
         data.edge_index_dict
     )
+
+    label = torch.tensor([1.0], dtype=torch.float)
+
+    loss = F.mse_loss(out, label)
+    loss.backward()
 
 
     

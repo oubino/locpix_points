@@ -8,6 +8,7 @@ import polars as pl
 import numpy as np
 import itertools
 from torch_geometric.nn import knn_graph
+from torch_geometric.utils import to_undirected
 
 def load_loc_cluster(data, 
                      loc_table, 
@@ -62,14 +63,14 @@ def load_loc_cluster(data,
     max_vals = torch.tensor(list(max_feat_locs.values()))
     feat_data = (feat_data - min_vals)/(max_vals - min_vals)
     feat_data = torch.clamp(feat_data, min=0, max=1)
-    data['locs'].x = feat_data
+    data['locs'].x = feat_data.float() # might not need .float()
 
     feat_data = torch.tensor(cluster_table.select(cluster_feat).to_pandas().to_numpy())
     min_vals = torch.tensor(list(min_feat_clusters.values()))
     max_vals = torch.tensor(list(max_feat_clusters.values()))
     feat_data = (feat_data - min_vals)/(max_vals - min_vals)
     feat_data = torch.clamp(feat_data, min=0, max=1)
-    data['clusters'].x = feat_data
+    data['clusters'].x = feat_data.float() # might not need .float()
 
     # compute edge connections
 
@@ -103,6 +104,14 @@ def load_loc_cluster(data,
     coords = torch.stack([x,y], axis=-1)
     batch = torch.zeros(len(coords))
     cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
+
+    raise ValueError("Do i need below block")
+    loc_loc_edges = loc_loc_edges.astype(int)
+    loc_loc_edges = torch.from_numpy(loc_loc_edges)
+    loc_loc_edges = to_undirected(loc_loc_edges)
+    cluster_cluster_edges = to_undirected(cluster_cluster_edges)
+    loc_cluster_edges = loc_cluster_edges.astype(int)
+    loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
 
     data['locs','in','cluster'].edge_index = loc_cluster_edges
     data['locs', 'clusteredwith', 'locs'].edge_index = loc_loc_edges
