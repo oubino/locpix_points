@@ -52,7 +52,6 @@ class project_info:
 
 
 def main():
-
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -115,9 +114,7 @@ def main():
 
     # check with user
     print("List of files which will be processed")
-    files = [
-        os.path.join(input_folder, f"{file}.parquet") for file in include_files
-    ]
+    files = [os.path.join(input_folder, f"{file}.parquet") for file in include_files]
     # check file not already present
     for file in files:
         file_name = os.path.basename(file)

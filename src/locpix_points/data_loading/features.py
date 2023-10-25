@@ -10,16 +10,19 @@ import itertools
 from torch_geometric.nn import knn_graph
 from torch_geometric.utils import to_undirected
 
-def load_loc_cluster(data, 
-                     loc_table, 
-                     cluster_table, 
-                     loc_feat,
-                     cluster_feat,
-                     min_feat_locs, 
-                     max_feat_locs, 
-                     min_feat_clusters, 
-                     max_feat_clusters,
-                     kneighbours):
+
+def load_loc_cluster(
+    data,
+    loc_table,
+    cluster_table,
+    loc_feat,
+    cluster_feat,
+    min_feat_locs,
+    max_feat_locs,
+    min_feat_clusters,
+    max_feat_clusters,
+    kneighbours,
+):
     """Load in position, features and edge index to each node
 
     Args:
@@ -40,17 +43,17 @@ def load_loc_cluster(data,
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
-    
+
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
-    data['locs'].pos = loc_coords.float()
+    data["locs"].pos = loc_coords.float()
 
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
-    data['clusters'].pos = cluster_coords.float()
+    data["clusters"].pos = cluster_coords.float()
 
     # load in features
     assert list(min_feat_locs.keys()) == loc_feat
@@ -61,29 +64,31 @@ def load_loc_cluster(data,
     feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
     min_vals = torch.tensor(list(min_feat_locs.values()))
     max_vals = torch.tensor(list(max_feat_locs.values()))
-    feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+    feat_data = (feat_data - min_vals) / (max_vals - min_vals)
     feat_data = torch.clamp(feat_data, min=0, max=1)
-    data['locs'].x = feat_data.float() # might not need .float()
+    data["locs"].x = feat_data.float()  # might not need .float()
 
     feat_data = torch.tensor(cluster_table.select(cluster_feat).to_pandas().to_numpy())
     min_vals = torch.tensor(list(min_feat_clusters.values()))
     max_vals = torch.tensor(list(max_feat_clusters.values()))
-    feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+    feat_data = (feat_data - min_vals) / (max_vals - min_vals)
     feat_data = torch.clamp(feat_data, min=0, max=1)
-    data['clusters'].x = feat_data.float() # might not need .float()
+    data["clusters"].x = feat_data.float()  # might not need .float()
 
     # compute edge connections
 
     # locs with clusterID connected to that cluster clusterID
-    group = loc_table.group_by('clusterID', maintain_order=True).agg(pl.col('x').agg_groups())
-    group = group.with_columns(pl.col('clusterID'), pl.col("x").list.len().alias('count'))
-    count = group['count'].to_numpy()
-    clusterIDlist = [[i]*count[i] for i in range(len(count))]
-    group = group.with_columns(
-        pl.Series('clusterIDlist',clusterIDlist)
+    group = loc_table.group_by("clusterID", maintain_order=True).agg(
+        pl.col("x").agg_groups()
     )
-    loc_indices = group['x'].to_numpy()
-    cluster_indices = group['clusterIDlist'].to_numpy()
+    group = group.with_columns(
+        pl.col("clusterID"), pl.col("x").list.len().alias("count")
+    )
+    count = group["count"].to_numpy()
+    clusterIDlist = [[i] * count[i] for i in range(len(count))]
+    group = group.with_columns(pl.Series("clusterIDlist", clusterIDlist))
+    loc_indices = group["x"].to_numpy()
+    cluster_indices = group["clusterIDlist"].to_numpy()
     loc_indices_stack = np.concatenate(loc_indices, axis=0)
     cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
     loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
@@ -97,11 +102,11 @@ def load_loc_cluster(data,
     loc_loc_edges = np.concatenate(edges, axis=-1)
 
     # knn on clusters
-    x = torch.tensor(cluster_table['x_mean'])
-    y = torch.tensor(cluster_table['y_mean'])
+    x = torch.tensor(cluster_table["x_mean"])
+    y = torch.tensor(cluster_table["y_mean"])
     print(x)
     print(y)
-    coords = torch.stack([x,y], axis=-1)
+    coords = torch.stack([x, y], axis=-1)
     batch = torch.zeros(len(coords))
     cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
 
@@ -113,13 +118,13 @@ def load_loc_cluster(data,
     loc_cluster_edges = loc_cluster_edges.astype(int)
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
 
-    data['locs','in','cluster'].edge_index = loc_cluster_edges
-    data['locs', 'clusteredwith', 'locs'].edge_index = loc_loc_edges
-    data['clusters','near','clusters'].edge_index =  cluster_cluster_edges
+    data["locs", "in", "cluster"].edge_index = loc_cluster_edges
+    data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
+    data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 
     # make edges undirected
-    raise NotImplementedError('make edges undirected')
+    raise NotImplementedError("make edges undirected")
 
-    raise ValueError('need to check correct edges connected')
-        
+    raise ValueError("need to check correct edges connected")
+
     return data

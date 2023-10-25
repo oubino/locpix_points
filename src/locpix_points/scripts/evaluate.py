@@ -19,7 +19,6 @@ from torchsummary import summary
 
 
 if __name__ == "__main__":
-
     # load yaml
     with open("recipes/evaluate.yaml", "r") as ymlfile:
         config = yaml.safe_load(ymlfile)

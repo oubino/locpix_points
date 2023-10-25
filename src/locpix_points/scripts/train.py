@@ -25,7 +25,6 @@ import sys
 
 
 def main():
-
     # parse arugments
     parser = argparse.ArgumentParser(description="Training")
 
@@ -90,7 +89,7 @@ def main():
     train_set = datastruc.SMLMDataset(
         None,
         train_folder,
-        transform=config['transforms'],
+        transform=config["transforms"],
         pre_transform=None,
         pre_filter=None,
         gpu=gpu,
@@ -100,7 +99,7 @@ def main():
     val_set = datastruc.SMLMDataset(
         None,
         val_folder,
-        transform=config['transforms'],
+        transform=config["transforms"],
         pre_transform=None,
         pre_filter=None,
         gpu=gpu,
@@ -116,7 +115,7 @@ def main():
         pin_memory = True
     else:
         raise ValueError("gpu should be True or False")
-    
+
     # initialise dataloaders
     train_loader = L.DataLoader(
         train_set,
@@ -132,7 +131,7 @@ def main():
         pin_memory=pin_memory,
         num_workers=num_workers,
     )
-    
+
     # print parameters
     print("\n")
     print("---- Params -----")
@@ -162,7 +161,7 @@ def main():
         config["model"],
         # this should parameterise the chosen model
         config[config["model"]],
-        dim = dim,
+        dim=dim,
     )
 
     # initialise optimiser
@@ -174,8 +173,6 @@ def main():
     # initialise loss function
     if loss_fn == "nll":
         loss_fn = torch.nn.functional.nll_loss
-
-    
 
     # initialise wandb
     # start a new wandb run to track this script
@@ -211,7 +208,7 @@ def main():
     time_o = time.gmtime(time.time())
     time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
     model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time_o}_.pt"
-    model_path = os.path.join(model_folder, model_path)    
+    model_path = os.path.join(model_folder, model_path)
 
     # train loop
     print("\n")
@@ -245,7 +242,13 @@ def main():
     print("---- Predict on train & val set... ----")
     print("\n")
     metrics = evaluate.make_prediction(
-        model, optimiser, train_loader, val_loader, device, label_level, train_set.num_classes
+        model,
+        optimiser,
+        train_loader,
+        val_loader,
+        device,
+        label_level,
+        train_set.num_classes,
     )
 
     wandb.log(metrics)
@@ -257,6 +260,7 @@ def main():
     yaml_save_loc = os.path.join(wandb.run.dir, f"train_{time_o}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
+
 
 if __name__ == "__main__":
     main()

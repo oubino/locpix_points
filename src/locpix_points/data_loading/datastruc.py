@@ -16,6 +16,7 @@ from . import features
 from . import custom_transforms
 import json
 
+
 class SMLMDataset(Dataset):
     """Base SMLM dataset class.
 
@@ -45,7 +46,7 @@ class SMLMDataset(Dataset):
             data should be included in dataset and 0 if it should not
         gpu (boolean): Whether the data should be savedd from the GPU
             or not.
-        transform (dict) : Transforms to be applied to each data point. 
+        transform (dict) : Transforms to be applied to each data point.
             Keys are the transforms and values are the relevant
             parameters if applicable
         _data_list (list): Data from the dataset
@@ -63,7 +64,6 @@ class SMLMDataset(Dataset):
         transform,
         pre_transform,
     ):
-
         # index the dataitems (idx)
         self._raw_loc_dir_root = raw_loc_dir_root
         self._raw_cluster_dir_root = raw_cluster_dir_root
@@ -71,7 +71,9 @@ class SMLMDataset(Dataset):
         if self._raw_loc_dir_root is not None:
             self._raw_loc_file_names = list(sorted(os.listdir(raw_loc_dir_root)))
         if self._raw_cluster_dir_root is not None:
-            self._raw_cluster_file_names = list(sorted(os.listdir(raw_cluster_dir_root)))
+            self._raw_cluster_file_names = list(
+                sorted(os.listdir(raw_cluster_dir_root))
+            )
             if self.raw_loc_dir_root is not None:
                 assert self._raw_cluster_file_names == self._raw_loc_file_names
         self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
@@ -82,47 +84,52 @@ class SMLMDataset(Dataset):
             super().__init__(None, None, pre_transform, pre_filter)
 
         else:
-
             # define transforms
             output_transforms = []
-            
+
             # axis to rotate around i.e. axis=2 rotate around z axis - meaning
             # coordinates are rotated in the xy plane
-            if 'z_rotate' in transform.keys():
+            if "z_rotate" in transform.keys():
                 output_transforms.append(transforms.RandomRotate(degrees=180, axis=2))
 
             # need to either define as constant or allow precision to impact this
-            if 'jitter' in transform.keys():
-                output_transforms.append(transforms.RandomJitter(transform['jitter']))
+            if "jitter" in transform.keys():
+                output_transforms.append(transforms.RandomJitter(transform["jitter"]))
 
             # axis = 0 - means x coordinates are flipped - i.e. reflection
             # in the y axis
-            if 'x_flip' in transform.keys():
+            if "x_flip" in transform.keys():
                 output_transforms.append(transforms.RandomFlip(axis=0))
 
             # axis = 1 - means y coordinates are flipped - i.e. reflection
-            # in the x axis 
-            if 'y_flip' in transform.keys():
+            # in the x axis
+            if "y_flip" in transform.keys():
                 output_transforms.append(transforms.RandomFlip(axis=1))
 
             # need to define scale factor interval in config
-            if 'randscale' in transform.keys():
-                output_transforms.append(transforms.RandomScale(scales=tuple(transform['randscale'])))
+            if "randscale" in transform.keys():
+                output_transforms.append(
+                    transforms.RandomScale(scales=tuple(transform["randscale"]))
+                )
 
             # shear by particular matrix
-            if 'shear' in transform.keys():
-                output_transforms.append(transforms.RandomShear(transform['shear']))
+            if "shear" in transform.keys():
+                output_transforms.append(transforms.RandomShear(transform["shear"]))
 
-            if 'subsample' in transform.keys():
-                output_transforms.append(custom_transforms.Subsample(transform['subsample'][0], transform['subsample'][1]))
+            if "subsample" in transform.keys():
+                output_transforms.append(
+                    custom_transforms.Subsample(
+                        transform["subsample"][0], transform["subsample"][1]
+                    )
+                )
 
-            if 'normalisescale' in transform.keys():
+            if "normalisescale" in transform.keys():
                 output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)
 
             super().__init__(None, output_transforms, pre_transform, pre_filter)
-    
+
     @property
     def has_download(self) -> bool:
         return False
@@ -130,7 +137,7 @@ class SMLMDataset(Dataset):
     @property
     def raw_loc_dir(self) -> str:
         return self._raw_loc_dir_root
-    
+
     @property
     def raw_cluster_dir(self) -> str:
         return self._raw_cluster_dir_root
@@ -138,11 +145,11 @@ class SMLMDataset(Dataset):
     @property
     def raw_loc_file_names(self):
         return self._raw_loc_file_names
-    
+
     @property
     def raw_cluster_file_names(self):
         return self._raw_cluster_file_names
-    
+
     @property
     def processed_dir(self) -> str:
         return self._processed_dir_root
@@ -195,20 +202,21 @@ class SMLMDataset(Dataset):
 class LocDataset(SMLMDataset):
     """Dataset for localisations with no clusters loaded in"""
 
-    def __init__(self, 
-                 raw_loc_dir_root,
-                 raw_cluster_dir_root,
-                 processed_dir_root,
-                 label_level,
-                 pre_filter,
-                 gpu,
-                 transform,
-                 pre_transform,
-                 min_feat,
-                 max_feat,
-                 pos,
-                 feat):
-        
+    def __init__(
+        self,
+        raw_loc_dir_root,
+        raw_cluster_dir_root,
+        processed_dir_root,
+        label_level,
+        pre_filter,
+        gpu,
+        transform,
+        pre_transform,
+        min_feat,
+        max_feat,
+        pos,
+        feat,
+    ):
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -217,28 +225,31 @@ class LocDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform)
+            pre_transform,
+        )
 
     def process(self):
         raise NotImplementedError
-    
+
+
 class ClusterDataset(SMLMDataset):
     """Dataset for clusters"""
 
-    def __init__(self, 
-                 raw_loc_dir_root,
-                 raw_cluster_dir_root,
-                 processed_dir_root,
-                 label_level,
-                 pre_filter,
-                 gpu,
-                 transform,
-                 pre_transform,
-                 min_feat,
-                 max_feat,
-                 pos,
-                 feat):
-        
+    def __init__(
+        self,
+        raw_loc_dir_root,
+        raw_cluster_dir_root,
+        processed_dir_root,
+        label_level,
+        pre_filter,
+        gpu,
+        transform,
+        pre_transform,
+        min_feat,
+        max_feat,
+        pos,
+        feat,
+    ):
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -247,18 +258,20 @@ class ClusterDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform)
+            pre_transform,
+        )
 
     def process(self):
         raise NotImplementedError
+
 
 class ClusterLocDataset(SMLMDataset):
     """Dataset for localisations with localisations connected within clusters.
     Clusters connected to nearest k neighbours.
-    
+
     Args:
         loc_feat (list) : List of features to consider in localisation dataset
-        cluster_feat (list) : List of features to consider in cluster dataset  
+        cluster_feat (list) : List of features to consider in cluster dataset
         min_feat_locs (dict) : Minimum values of features for the locs training dataset
         max_feat_locs (dict) : Maxmimum values of features over locs training dataset
         min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
@@ -266,24 +279,24 @@ class ClusterLocDataset(SMLMDataset):
         kneighbours (int) : Number of neighbours each cluster connected to
     """
 
-    def __init__(self, 
-                 raw_loc_dir_root,
-                 raw_cluster_dir_root,
-                 processed_dir_root,
-                 label_level,
-                 pre_filter,
-                 gpu,
-                 transform,
-                 pre_transform,
-                 loc_feat,
-                 cluster_feat,
-                 min_feat_locs,
-                 max_feat_locs,
-                 min_feat_clusters,
-                 max_feat_clusters,
-                 kneighbours,
-                 ):
-        
+    def __init__(
+        self,
+        raw_loc_dir_root,
+        raw_cluster_dir_root,
+        processed_dir_root,
+        label_level,
+        pre_filter,
+        gpu,
+        transform,
+        pre_transform,
+        loc_feat,
+        cluster_feat,
+        min_feat_locs,
+        max_feat_locs,
+        min_feat_clusters,
+        max_feat_clusters,
+        kneighbours,
+    ):
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -292,8 +305,9 @@ class ClusterLocDataset(SMLMDataset):
             pre_filter,
             gpu,
             transform,
-            pre_transform)
-        
+            pre_transform,
+        )
+
         self.loc_feat = loc_feat
         self.cluster_feat = cluster_feat
         self.min_feat_locs = min_feat_locs
@@ -309,27 +323,27 @@ class ClusterLocDataset(SMLMDataset):
         idx_to_name = {"idx": [], "file_name": []}
 
         # convert raw parquet files to tensors
-        # note that cluster and loc file names should be the same therefore choosing one should 
+        # note that cluster and loc file names should be the same therefore choosing one should
         # have no impact
         for raw_path in self.raw_loc_file_names:
-
             # load in and process localisation data
-            loc_path = os.path.join(self._raw_loc_dir_root,
-                                    raw_path)
+            loc_path = os.path.join(self._raw_loc_dir_root, raw_path)
             loc_table = pq.read_table(loc_path)
 
-            # metadata load in 
+            # metadata load in
             dimensions = loc_table.schema.metadata[b"dim"]
             dimensions = int(dimensions)
 
-            gt_label_scope = loc_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
-            if gt_label_scope == 'loc':
+            gt_label_scope = loc_table.schema.metadata[b"gt_label_scope"].decode(
+                "utf-8"
+            )
+            if gt_label_scope == "loc":
                 assert self.label_level == "node"
-            elif gt_label_scope == 'fov':
+            elif gt_label_scope == "fov":
                 assert self.label_level == "graph"
             else:
                 raise ValueError("No gt label scope")
-            
+
             gt_label_map = json.loads(
                 loc_table.schema.metadata[b"gt_label_map"].decode("utf-8")
             )
@@ -337,8 +351,7 @@ class ClusterLocDataset(SMLMDataset):
             self.gt_label_map = gt_label_map
 
             # load in and process cluster data
-            cluster_path = os.path.join(self._raw_loc_dir_root,
-                                    raw_path)
+            cluster_path = os.path.join(self._raw_loc_dir_root, raw_path)
             cluster_table = pq.read_table(loc_path)
 
             # each dataitem is a homogeneous graph
@@ -346,27 +359,27 @@ class ClusterLocDataset(SMLMDataset):
 
             # load position (if present) and features to data
             data = features.load_loc_cluster(
-                data, 
-                loc_table, 
+                data,
+                loc_table,
                 cluster_table,
                 self.loc_feat,
                 self.cluster_feat,
                 self.min_feat_locs,
                 self.max_feat_locs,
                 self.min_feat_clusters,
-                self.max_feat_clusters, 
-                self.kneighbours
+                self.max_feat_clusters,
+                self.kneighbours,
             )
 
-            # load in gt label 
+            # load in gt label
             gt_label = loc_table.schema.metadata[b"gt_label"]
 
             # load gt label to data
             if self.label_level == "graph":
                 if gt_label is None:
                     raise ValueError("No GT label for the FOV")
-                if 'gt_label' in loc_table.columns:
-                    raise ValueError('Should be no gt label column')
+                if "gt_label" in loc_table.columns:
+                    raise ValueError("Should be no gt label column")
                 else:
                     data.y = torch.long([gt_label], dtype=torch.long)
             elif self.label_level == "node":
@@ -406,6 +419,7 @@ class ClusterLocDataset(SMLMDataset):
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
         df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
+
 
 """
 def process_heterogeneous(self):

@@ -20,11 +20,11 @@ def model_choice(name, *args, **kwargs):
         return PointNetClassification(*args)
     elif name == "pointnetseg":
         return PointNetSegmentation(*args)
-    elif name =="pointtransformerseg":
-        dim = kwargs['dim']
+    elif name == "pointtransformerseg":
+        dim = kwargs["dim"]
         return Segmenter(*args, dim=dim)
     elif name == "pointtransformerclass":
-        dim = kwargs['dim']
+        dim = kwargs["dim"]
         return Classifier(*arg, dim=dim)
     else:
         raise ValueError(f"{name} is not a supported model")

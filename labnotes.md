@@ -32,12 +32,7 @@ python src/locpix_points/scripts/process.py -i ../../output/nieves -c src/locpix
 python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_points/templates/train.yaml
 ```
 
-### 13th October 2023
-
-data_loading/datastruc.py
-    - load_loc_cluster needs correct arguments
-scripts/process.py
-    - need to calculate min and max features for clusters/loc respectively
+### ToDo
 
 1. Clustering and visualisation (feature extraction)
     a. Go over the script, check it works and clear up all remaining errors/questions
@@ -48,23 +43,21 @@ scripts/process.py
     e. Is length just the eigenvalue for the largest and area one lambda1 x labmda 2
     f. Do we use the geometric features just as input to embedding or should we add on
 2. Process
-    a. Write this script to load in cluster and localisation features
-    b. Needs to consider the different splits
-    c. Different structure based on model
-    d. Need script which wraps process to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
-    e. datasruc.py define a base class bu tthen overirde the process method for each separate one 
-    f. Process should have option for locs, clusters or locs+clusters (locdataset, clusterdataset, locclusterdataset)
-    g. Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
-    h. Need decision on how to connect cluster graph
-    i. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
-    j. LoUpdate ReadMe
-    k. Remove all non clusterd points?
-    l. Make edges undirected
-3. Test model
-Generate html
-Need to save label map, transform, min/max feat once got into pytorch geometric
+    a. Needs to consider the different splits
+    b. Different structure based on model
+    c. Need script which wraps process to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
+    d. Process should have option for locs, clusters or locs+clusters (locdataset, clusterdataset, locclusterdataset)
+    e. Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
+    f. Need decision on how to connect cluster graph
+    g. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
+    h. Remove all non clusterd points?
+    i. Make edges undirected
+3. Run process and check works as expected
+4. Update readme
+5. Write train script
 
-2. Add the above to the readme
+
+--------------
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
 4. Train small test dataset 3 cancer 3 not cancer with pointtransformer
 5. Implement leave one out cross validation - i.e. with remaining data train set, validation set, test set for each fold

@@ -12,12 +12,10 @@ import time
 from locpix_points.data_loading import datastruc
 from locpix_points.preprocessing import featextract
 
-def main():
 
+def main():
     # parse arugments
-    parser = argparse.ArgumentParser(
-        description="Extract features"
-    )
+    parser = argparse.ArgumentParser(description="Extract features")
 
     parser.add_argument(
         "-i",
@@ -63,15 +61,17 @@ def main():
 
     # list items
     try:
-        files = os.listdir(
-            os.path.join(project_directory, "preprocessed/gt_label")
-        )
+        files = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
     except FileNotFoundError:
         raise ValueError("There should be some files to open")
 
     # if output directory not present create it
-    output_loc_directory = os.path.join(project_directory, "preprocessed/featextract/locs")
-    output_cluster_directory = os.path.join(project_directory, "preprocessed/featextract/clusters")
+    output_loc_directory = os.path.join(
+        project_directory, "preprocessed/featextract/locs"
+    )
+    output_cluster_directory = os.path.join(
+        project_directory, "preprocessed/featextract/clusters"
+    )
     folders = [output_loc_directory, output_cluster_directory]
     for folder in folders:
         if not os.path.exists(folder):
@@ -81,26 +81,34 @@ def main():
     for file in files:
         item = datastruc.item(None, None, None, None)
         item.load_from_parquet(os.path.join(project_directory, file))
-        
+
         # clustering (clusterID)
-        df = featextract.cluster_data(item.df, eps=config['clustering']['eps'], minpts=config['clustering']['minpts'], x_col='x', y_col='y')
+        df = featextract.cluster_data(
+            item.df,
+            eps=config["clustering"]["eps"],
+            minpts=config["clustering"]["minpts"],
+            x_col="x",
+            y_col="y",
+        )
 
         # basic features (com cluster, locs per cluster, radius of gyration)
         basic_cluster_df = featextract.basic_cluster_feats(df)
 
         # pca on cluster (linearity, circularity see DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS)
         pca_cluster_df = featextract.pca_cluster(df)
-        
+
         # convex hull (perimeter, area, length)
         convex_hull_cluster_df = featextract.convex_hull_cluster(df)
 
         # merge cluster df
-        cluster_df = basic_cluster_df.join(pca_cluster_df, on='clusterID', how='inner')
-        cluster_df = cluster_df.join(convex_hull_cluster_df, on='clusterID', how='inner')
+        cluster_df = basic_cluster_df.join(pca_cluster_df, on="clusterID", how="inner")
+        cluster_df = cluster_df.join(
+            convex_hull_cluster_df, on="clusterID", how="inner"
+        )
         raise ValueError("Need to check this join is okay")
 
         # cluster density do this here
-        cluster_df.with_columns(pl.col('count')/pl.col('area')).alias('density')
+        cluster_df.with_columns(pl.col("count") / pl.col("area")).alias("density")
 
         # cluster skew?
 
@@ -111,25 +119,26 @@ def main():
         # save locs dataframe
         item.df = df
         item.save_to_parquet(
-                output_loc_directory,
-                drop_zero_label=False,
-                drop_pixel_col=False,
-            )
+            output_loc_directory,
+            drop_zero_label=False,
+            drop_pixel_col=False,
+        )
 
-        # save clusters dataframe 
+        # save clusters dataframe
         item.df = cluster_df
         item.save_to_parquet(
-                output_cluster_directory,
-                drop_zero_label=False,
-                drop_pixel_col=False,
-            )
-        
+            output_cluster_directory,
+            drop_zero_label=False,
+            drop_pixel_col=False,
+        )
+
         raise ValueError("Check gt label map and gt label fov")
-    
+
     # save yaml file
     yaml_save_loc = os.path.join(project_directory, "featextract.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
+
 
 if __name__ == "__main__":
     main()

@@ -12,7 +12,6 @@ import argparse
 
 
 def main():
-
     # parse arugments
     parser = argparse.ArgumentParser(description="Annotate the data")
 
@@ -45,9 +44,7 @@ def main():
 
     # list items
     try:
-        files = os.listdir(
-            os.path.join(project_directory, "preprocessed/no_gt_label")
-        )
+        files = os.listdir(os.path.join(project_directory, "preprocessed/no_gt_label"))
     except FileNotFoundError:
         raise ValueError("There should be some preprocessed files to open")
 
@@ -80,10 +77,10 @@ def main():
         # manual segment
         item.manual_segment_per_loc()
 
-        # save df to parquet 
-        item.gt_label_scope = 'loc'
+        # save df to parquet
+        item.gt_label_scope = "loc"
         item.gt_label = None
-        item.gt_label_map = config['gt_label_map']
+        item.gt_label_map = config["gt_label_map"]
         item.save_to_parquet(
             output_directory,
             drop_zero_label=config["drop_zero_label"],

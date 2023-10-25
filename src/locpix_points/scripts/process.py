@@ -36,26 +36,33 @@ def pre_filter(data, inclusion_list=[]):
         return 1
     else:
         return 0
-    
+
+
 def load_pre_filter(path):
     """Load in a pre-filter from previous run
-    
+
     Args:
         path (string) : Path to the pre-filter.pt"""
 
     pre_filter = torch.load(path)
-    if pre_filter.startswith("functools.partial(<function>, inclusion_list=") and pre_filter[-1] == ")":
-        pre_filter = pre_filter.removeprefix("functools.partial(<function>, inclusion_list=")
+    if (
+        pre_filter.startswith("functools.partial(<function>, inclusion_list=")
+        and pre_filter[-1] == ")"
+    ):
+        pre_filter = pre_filter.removeprefix(
+            "functools.partial(<function>, inclusion_list="
+        )
         pre_filter = pre_filter[:-1:]
-        return ast.literal_eval(pre_filter)  
+        return ast.literal_eval(pre_filter)
     else:
         raise ValueError("Unknown pre-filter type")
+
 
 def minmax(config, feat_str, file_directory, train_list):
     raise ValueError("Check correct")
     if type(config[feat_str]) is list:
         for index, file in enumerate(train_list):
-            df = pl.read_parquet(os.path.join(file_directory, file + '.parquet'))
+            df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
             min_df = df.select(pl.col(config[feat_str]).min())
             max_df = df.select(pl.col(config[feat_str]).max())
             if index == 0:
@@ -72,8 +79,8 @@ def minmax(config, feat_str, file_directory, train_list):
 
     return min_vals, max_vals
 
-def main():
 
+def main():
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -115,8 +122,8 @@ def main():
         "-m",
         "--manual_split",
         type=str,
-        nargs='+',
-        action='append',
+        nargs="+",
+        action="append",
         default=None,
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
@@ -168,9 +175,11 @@ def main():
         test_list = file_list[train_length + val_length : len(file_list)]
 
     elif args.split is not None and args.manual_split is None:
-        warnings.warn("Known omission is if pre-transform is done to dataset"
-                      "this is not currently also done to this dataset as well")
-        
+        warnings.warn(
+            "Known omission is if pre-transform is done to dataset"
+            "this is not currently also done to this dataset as well"
+        )
+
         train_list_path = os.path.join(args.split, "processed/train/pre_filter.pt")
         val_list_path = os.path.join(args.split, "processed/val/pre_filter.pt")
         test_list_path = os.path.join(args.split, "processed/test/pre_filter.pt")
@@ -178,7 +187,7 @@ def main():
         train_list = load_pre_filter(train_list_path)
         val_list = load_pre_filter(val_list_path)
         test_list = load_pre_filter(test_list_path)
-    
+
     elif args.split is None and args.manual_split is not None:
         train_list = args.manual_split[0]
         val_list = args.manual_split[1]
@@ -200,80 +209,87 @@ def main():
         os.makedirs(test_folder)
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
-    
-    # calculate min/max features 
-    if config['model'] == 'ClusterLoc':
 
-        file_directory = os.path.join(project_directory, 'preprocessed/featextract/locs')
-        min_feat_locs, max_feat_locs = minmax(config, 'loc_feat', file_directory, train_list)
-        file_directory = os.path.join(project_directory, 'preprocessed/featextract/clusters')
-        min_feat_clusters, max_feat_clusters = minmax(config, 'cluster_feat', project_directory, train_list)
+    # calculate min/max features
+    if config["model"] == "ClusterLoc":
+        file_directory = os.path.join(
+            project_directory, "preprocessed/featextract/locs"
+        )
+        min_feat_locs, max_feat_locs = minmax(
+            config, "loc_feat", file_directory, train_list
+        )
+        file_directory = os.path.join(
+            project_directory, "preprocessed/featextract/clusters"
+        )
+        min_feat_clusters, max_feat_clusters = minmax(
+            config, "cluster_feat", project_directory, train_list
+        )
 
         print("Train set...")
         # create train dataset
         trainset = datastruc.ClusterLocDataset(
-            os.path.join(project_directory, 'preprocessed/featextract/locs'),
-            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
             train_folder,
-            config['label_level'],
+            config["label_level"],
             train_pre_filter,
-            config['gpu'],
-            None, # transform
-            None, # pre-transform
-            config['loc_feat'],
-            config['cluster_feat'],
+            config["gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
             min_feat_locs,
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config['kneighbours'],
+            config["kneighbours"],
         )
 
         print("Val set...")
         # create val dataset
         valset = datastruc.SMLMDataset(
-            os.path.join(project_directory, 'preprocessed/featextract/locs'),
-            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
             val_folder,
-            config['label_level'],
+            config["label_level"],
             val_pre_filter,
-            config['gpu'],
-            None, # transform
-            None, # pre-transform
-            config['loc_feat'],
-            config['cluster_feat'],
+            config["gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
             min_feat_locs,
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config['kneighbours'],
+            config["kneighbours"],
         )
 
         print("Test set...")
         # create test dataset
         testset = datastruc.SMLMDataset(
-            os.path.join(project_directory, 'preprocessed/featextract/locs'),
-            os.path.join(project_directory, 'preprocessed/featextract/clusters'),
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
             test_folder,
-            config['label_level'],
+            config["label_level"],
             test_pre_filter,
-            config['gpu'],
-            None, # transform
-            None, # pre-transform
-            config['loc_feat'],
-            config['cluster_feat'],
+            config["gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
             min_feat_locs,
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config['kneighbours'],
+            config["kneighbours"],
         )
 
         # save yaml file
         yaml_save_loc = os.path.join(project_directory, "process.yaml")
         with open(yaml_save_loc, "w") as outfile:
             yaml.dump(config, outfile)
-    
+
     else:
         raise NotImplementedError
 

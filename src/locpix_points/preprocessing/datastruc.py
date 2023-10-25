@@ -97,24 +97,23 @@ class item:
         self.gt_label = gt_label
         self.gt_label_map = gt_label_map
 
-        if self.gt_label_scope == 'loc':
+        if self.gt_label_scope == "loc":
             if self.gt_label is not None:
-                raise ValueError('Cannot have gt label per fov and loc')
+                raise ValueError("Cannot have gt label per fov and loc")
             if self.gt_label_map is None:
-                raise ValueError('Need a label map')
+                raise ValueError("Need a label map")
         if self.gt_label_scope is None:
             if self.gt_label_map is not None:
-                raise ValueError('Cant have gt label map and no labels')
+                raise ValueError("Cant have gt label map and no labels")
             if self.gt_label is not None:
-                raise ValueError('Cant have no scope and a gt label')
-        if self.gt_label_scope == 'fov':
+                raise ValueError("Cant have no scope and a gt label")
+        if self.gt_label_scope == "fov":
             if self.gt_label is None:
-                raise ValueError('Need a gt label')
-            if 'gt_label' in self.df.columns:
-                raise ValueError('Cannot have gt label column for fov label')
+                raise ValueError("Need a gt label")
+            if "gt_label" in self.df.columns:
+                raise ValueError("Cannot have gt label column for fov label")
             if self.gt_label_map is None:
-                raise ValueError('Need a label map')
-
+                raise ValueError("Need a label map")
 
     def chan_2_label(self, chan):
         """Returns the label associated with the channel specified
@@ -411,7 +410,6 @@ class item:
         """
 
         if self.dim == 2:
-
             # create dataframe
             flatten_mask = np.ravel(self.histo_mask)
             mesh_grid = np.meshgrid(
@@ -550,12 +548,12 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if self.gt_label_scope is 'loc':
+            if self.gt_label_scope is "loc":
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
 
-        if self.gt_label_scope is 'fov':
+        if self.gt_label_scope is "fov":
             raise ValueError(
                 "Have not worked out how to deal with this yet - how should we save"
                 "fov label for .csv"
@@ -614,7 +612,7 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if self.gt_label_scope == 'loc':
+            if self.gt_label_scope == "loc":
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
@@ -628,24 +626,24 @@ class item:
         # convert to bytes
         gt_label_map = json.dumps(self.gt_label_map).encode("utf-8")
 
-        if self.gt_label_scope == 'loc':
+        if self.gt_label_scope == "loc":
             if self.gt_label is not None:
-                raise ValueError('Cannot have gt label per fov and loc')
+                raise ValueError("Cannot have gt label per fov and loc")
             if self.gt_label_map is None:
-                raise ValueError('Need a label map')
+                raise ValueError("Need a label map")
         if self.gt_label_scope is None:
             warnings.warn("No ground truth label or gt label map")
             if self.gt_label_map is not None:
-                raise ValueError('Cant have gt label map and no labels')
+                raise ValueError("Cant have gt label map and no labels")
             if self.gt_label is not None:
-                raise ValueError('Cant have no scope and a gt label')
-        if self.gt_label_scope == 'fov':
+                raise ValueError("Cant have no scope and a gt label")
+        if self.gt_label_scope == "fov":
             if self.gt_label is None:
-                raise ValueError('Need a gt label')
-            if 'gt_label' in self.df.columns:
-                raise ValueError('Cannot have gt label column for fov label')
+                raise ValueError("Need a gt label")
+            if "gt_label" in self.df.columns:
+                raise ValueError("Cannot have gt label column for fov label")
             if self.gt_label_map is None:
-                raise ValueError('Need a label map')
+                raise ValueError("Need a label map")
 
         meta_data = {
             "name": self.name,

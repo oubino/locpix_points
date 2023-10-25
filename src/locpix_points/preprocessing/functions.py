@@ -14,6 +14,7 @@ import warnings
 import pyarrow.parquet as pq
 import json
 
+
 def file_to_datastruc(
     input_file,
     dim,
@@ -93,17 +94,17 @@ def file_to_datastruc(
         column_names.extend(features)
 
     # check what gt labels have been loaded in if any
-    if gt_label_scope == 'loc':
+    if gt_label_scope == "loc":
         assert gt_label_loc is not None
-        gt_label_col = gt_label_loc['gt_label_col']
-        gt_label_map = gt_label_loc['gt_label_map']
+        gt_label_col = gt_label_loc["gt_label_col"]
+        gt_label_map = gt_label_loc["gt_label_map"]
         gt_label = None
         columns.append(gt_label_col)
-        column_names.append('gt_label')
-        print('Per localisation labels')
+        column_names.append("gt_label")
+        print("Per localisation labels")
         arrow_table = pq.read_table(input_file, columns=columns)
-    elif gt_label_scope == 'fov':
-        print('Per fov labels')
+    elif gt_label_scope == "fov":
+        print("Per fov labels")
         arrow_table = pq.read_table(input_file, columns=columns)
         gt_label_map = json.loads(
             arrow_table.schema.metadata[b"gt_label_map"].decode("utf-8")
@@ -111,18 +112,18 @@ def file_to_datastruc(
         gt_label_map = {int(key): value for key, value in gt_label_map.items()}
         gt_label = arrow_table.schema.metadata[b"gt_label"]
         gt_label = int(gt_label)
-        assert 'gt_label' not in arrow_table.columns
+        assert "gt_label" not in arrow_table.columns
     elif gt_label_scope is None:
-        print('No labels')
+        print("No labels")
         arrow_table = pq.read_table(input_file, columns=columns)
         gt_label_map = None
         gt_label = None
     else:
-        raise ValueError('gt_label_scope should be loc, fov or None')
+        raise ValueError("gt_label_scope should be loc, fov or None")
 
     # Load in data
     arrow_table = pq.read_table(input_file, columns=columns)
-        
+
     # check gt labels
     if gt_label_scope == "loc":
         # List of possible values
@@ -135,7 +136,7 @@ def file_to_datastruc(
             warnings.warn(warning)
         if not set(unique_vals).issubset(gt_label_values):
             raise ValueError("Contains gt labels outside of the domain")
-        
+
     # if specified gt label per fov
     # 1. if there is more than one value in the column they MUST be the same!
     # 2. gt label in the scope of values

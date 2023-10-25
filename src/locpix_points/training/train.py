@@ -63,7 +63,6 @@ def train_loop(
         # training data
         model.train()
         for index, data in enumerate(train_loader):
-
             # note set to none is meant to have less memory footprint
             optimiser.zero_grad(set_to_none=True)
 
@@ -94,7 +93,6 @@ def train_loop(
         model.eval()
         for index, data in enumerate(val_loader):
             with torch.no_grad():
-
                 # note set to none is meant to have less memory footprint
                 optimiser.zero_grad(set_to_none=True)
 
@@ -112,7 +110,7 @@ def train_loop(
         # or number of locs
         running_train_loss /= num_train_graph
         running_val_loss /= num_val_graph
-        #elif label_level == "node":
+        # elif label_level == "node":
         #    running_train_loss /= num_train_node
         #    running_val_loss /= num_val_node
 
@@ -129,9 +127,8 @@ def train_loop(
 
 
 def train_loop_updated():
-
     out = model(
         train_data.x_dict,
         train_data.edge_index_dict,
-        train_data['locs','clusters'].edge_label_index
+        train_data["locs", "clusters"].edge_label_index,
     )

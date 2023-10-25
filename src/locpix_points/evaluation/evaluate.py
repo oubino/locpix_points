@@ -5,10 +5,16 @@ This contains functions for evaluating the models
 
 import torch
 from torchmetrics import MetricCollection, Precision, Recall, F1Score, Accuracy
-from torchmetrics.classification import BinaryAccuracy, MulticlassConfusionMatrix, MulticlassJaccardIndex
+from torchmetrics.classification import (
+    BinaryAccuracy,
+    MulticlassConfusionMatrix,
+    MulticlassJaccardIndex,
+)
 
 
-def make_prediction(model, optimiser, train_loader, val_loader, device, label_level, num_classes):
+def make_prediction(
+    model, optimiser, train_loader, val_loader, device, label_level, num_classes
+):
     """Make predictions using the model
 
     Args:
@@ -28,27 +34,26 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
 
     train_metrics = MetricCollection(
         MulticlassConfusionMatrix(num_classes=num_classes),
-        Recall(task="multiclass", num_classes=num_classes, average='none'),
-        Precision(task="multiclass", num_classes=num_classes, average='none'),
-        F1Score(task="multiclass", num_classes=num_classes, average='none'),
-        MulticlassJaccardIndex(num_classes=num_classes, average='none'),
-        Accuracy(task="multiclass", num_classes=num_classes, average='none')
+        Recall(task="multiclass", num_classes=num_classes, average="none"),
+        Precision(task="multiclass", num_classes=num_classes, average="none"),
+        F1Score(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassJaccardIndex(num_classes=num_classes, average="none"),
+        Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     val_metrics = MetricCollection(
         MulticlassConfusionMatrix(num_classes=num_classes),
-        Recall(task="multiclass", num_classes=num_classes, average='none'),
-        Precision(task="multiclass", num_classes=num_classes, average='none'),
-        F1Score(task="multiclass", num_classes=num_classes, average='none'),
-        MulticlassJaccardIndex(num_classes=num_classes, average='none'),
-        Accuracy(task="multiclass", num_classes=num_classes, average='none')
+        Recall(task="multiclass", num_classes=num_classes, average="none"),
+        Precision(task="multiclass", num_classes=num_classes, average="none"),
+        F1Score(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassJaccardIndex(num_classes=num_classes, average="none"),
+        Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     # training data
     model.eval()
     for index, data in enumerate(train_loader):
         with torch.no_grad():
-
             # note set to none is meant to have less memory footprint
             optimiser.zero_grad(set_to_none=True)
 
@@ -65,7 +70,6 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
 
     for index, data in enumerate(val_loader):
         with torch.no_grad():
-
             # note set to none is meant to have less memory footprint
             optimiser.zero_grad(set_to_none=True)
 
@@ -87,7 +91,7 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
     # output metrics
     metrics = {}
 
-    # make into format acceptable to wandb 
+    # make into format acceptable to wandb
     for i in range(num_classes):
         metrics[f"TrainRecall_{i}"] = train_metrics["MulticlassRecall"][i]
         metrics[f"ValRecall_{i}"] = val_metrics["MulticlassRecall"][i]
@@ -100,7 +104,11 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, label_le
         metrics[f"TrainAccuracy_{i}"] = train_metrics["MulticlassAccuracy"][i]
         metrics[f"ValAccuracy_{i}"] = val_metrics["MulticlassAccuracy"][i]
         for j in range(num_classes):
-            metrics[f"train_actual_{i}_pred_{j}"] = train_metrics['MulticlassConfusionMatrix'][i][j] 
-            metrics[f"val_actual_{i}_pred_{j}"] = val_metrics['MulticlassConfusionMatrix'][i][j]
+            metrics[f"train_actual_{i}_pred_{j}"] = train_metrics[
+                "MulticlassConfusionMatrix"
+            ][i][j]
+            metrics[f"val_actual_{i}_pred_{j}"] = val_metrics[
+                "MulticlassConfusionMatrix"
+            ][i][j]
 
     return metrics
