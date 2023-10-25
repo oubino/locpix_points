@@ -34,13 +34,11 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### 13th October 2023
 
-
-
-remove all non clusterd points?
-
 create the message parsing network
-
-make edges undirected?
+- add linear layer
+- add warnings/errors everywhere could be errors when scale up with batch and also where need to add new layers etc.
+- check can backprop through network
+- also note changes in test that need to be implemented in real code
 
 
 1. Clustering and visualisation (feature extraction)
