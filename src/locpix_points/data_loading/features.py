@@ -65,6 +65,7 @@ def load_loc_cluster(
     min_vals = torch.tensor(list(min_feat_locs.values()))
     max_vals = torch.tensor(list(max_feat_locs.values()))
     feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+    # clamp needed if val/test data has min/max greater than train set min/max
     feat_data = torch.clamp(feat_data, min=0, max=1)
     data["locs"].x = feat_data.float()  # might not need .float()
 
@@ -72,6 +73,7 @@ def load_loc_cluster(
     min_vals = torch.tensor(list(min_feat_clusters.values()))
     max_vals = torch.tensor(list(max_feat_clusters.values()))
     feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+    # clamp needed if val/test data has min/max greater than train set min/max
     feat_data = torch.clamp(feat_data, min=0, max=1)
     data["clusters"].x = feat_data.float()  # might not need .float()
 
@@ -104,13 +106,11 @@ def load_loc_cluster(
     # knn on clusters
     x = torch.tensor(cluster_table["x_mean"])
     y = torch.tensor(cluster_table["y_mean"])
-    print(x)
-    print(y)
     coords = torch.stack([x, y], axis=-1)
     batch = torch.zeros(len(coords))
     cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
 
-    raise ValueError("Do i need below block")
+    # edges in correct data format and undirected where relevant
     loc_loc_edges = loc_loc_edges.astype(int)
     loc_loc_edges = torch.from_numpy(loc_loc_edges)
     loc_loc_edges = to_undirected(loc_loc_edges)
@@ -121,9 +121,6 @@ def load_loc_cluster(
     data["locs", "in", "cluster"].edge_index = loc_cluster_edges
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
-
-    # make edges undirected
-    raise NotImplementedError("make edges undirected")
 
     raise ValueError("need to check correct edges connected")
 

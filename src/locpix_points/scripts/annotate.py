@@ -11,7 +11,7 @@ import polars as pl
 import argparse
 
 
-def main():
+def main(argv=None):
     # parse arugments
     parser = argparse.ArgumentParser(description="Annotate the data")
 
@@ -34,7 +34,7 @@ def main():
         required=True,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 

@@ -271,6 +271,7 @@ class ClusterLocDataset(SMLMDataset):
     Clusters connected to nearest k neighbours.
 
     Args:
+        dataset_type (str) : Name identifying the type of dataset
         loc_feat (list) : List of features to consider in localisation dataset
         cluster_feat (list) : List of features to consider in cluster dataset
         min_feat_locs (dict) : Minimum values of features for the locs training dataset
@@ -309,6 +310,7 @@ class ClusterLocDataset(SMLMDataset):
             pre_transform,
         )
 
+        self.dataset_type = 'ClusterLocDataset'
         self.loc_feat = loc_feat
         self.cluster_feat = cluster_feat
         self.min_feat_locs = min_feat_locs
@@ -352,8 +354,8 @@ class ClusterLocDataset(SMLMDataset):
             self.gt_label_map = gt_label_map
 
             # load in and process cluster data
-            cluster_path = os.path.join(self._raw_loc_dir_root, raw_path)
-            cluster_table = pq.read_table(loc_path)
+            cluster_path = os.path.join(self._raw_cluster_dir_root, raw_path)
+            cluster_table = pq.read_table(cluster_path)
 
             # each dataitem is a homogeneous graph
             data = HeteroData()
@@ -371,6 +373,8 @@ class ClusterLocDataset(SMLMDataset):
                 self.max_feat_clusters,
                 self.kneighbours,
             )
+
+            raise ValueError("What happens to unclustered points")
 
             # load in gt label
             gt_label = loc_table.schema.metadata[b"gt_label"]

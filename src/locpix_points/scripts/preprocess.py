@@ -51,7 +51,7 @@ class project_info:
         self.metadata = json.load(path)
 
 
-def main():
+def main(argv=None):
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -85,7 +85,7 @@ def main():
         required=True,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
     input_folder = args.input

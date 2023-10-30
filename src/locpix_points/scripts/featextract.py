@@ -13,7 +13,7 @@ from locpix_points.data_loading import datastruc
 from locpix_points.preprocessing import featextract
 
 
-def main():
+def main(argv=None):
     # parse arugments
     parser = argparse.ArgumentParser(description="Extract features")
 
@@ -36,7 +36,7 @@ def main():
         required=True,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 

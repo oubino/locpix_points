@@ -548,12 +548,12 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if self.gt_label_scope is "loc":
+            if self.gt_label_scope == "loc":
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
 
-        if self.gt_label_scope is "fov":
+        if self.gt_label_scope == "fov":
             raise ValueError(
                 "Have not worked out how to deal with this yet - how should we save"
                 "fov label for .csv"

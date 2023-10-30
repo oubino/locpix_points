@@ -80,7 +80,7 @@ def minmax(config, feat_str, file_directory, train_list):
     return min_vals, max_vals
 
 
-def main():
+def main(argv=None):
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -128,7 +128,7 @@ def main():
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     print(args.manual_split)
 
@@ -234,7 +234,7 @@ def main():
             config["label_level"],
             train_pre_filter,
             config["gpu"],
-            None,  # transform
+            None,  # transform introduced in train script
             None,  # pre-transform
             config["loc_feat"],
             config["cluster_feat"],

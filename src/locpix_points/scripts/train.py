@@ -24,7 +24,7 @@ import sys
 # import torch_geometric.transforms as T
 
 
-def main():
+def main(argv=None):
     # parse arugments
     parser = argparse.ArgumentParser(description="Training")
 
@@ -47,7 +47,7 @@ def main():
         required=True,
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 

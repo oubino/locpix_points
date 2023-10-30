@@ -75,3 +75,6 @@ requirements.txt
 
 # misc code folder for ad hoc stuff
 misc/
+
+# ignore test output
+tests/output

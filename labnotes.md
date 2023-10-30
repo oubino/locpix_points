@@ -34,27 +34,13 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-1. Clustering and visualisation (feature extraction)
-    a. Extra cluster features: distance birth, distance death, cluster skew?
-    b. Note papers about cluster size and number of receptors per cluster for DBSCAN
-    c. Also note other things can provide e.g. UMAP on features for each cluster
-2. Process
-    a. Needs to consider the different splits
-    b. Different structure based on model
-    c. Need script which wraps process to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
-    d. Process should have option for locs, clusters or locs+clusters (locdataset, clusterdataset, locclusterdataset)
-    e. Then need functions process_homogeneous_locs, process_homogeneous_clusters, process_heterogeneous_locs_clusters
-    f. Need decision on how to connect cluster graph
-    g. Then maybe save some thing associated with the dataset saying whether the structure is (loc, cluster or loc+cluster)
-    h. Remove all non clusterd points?
-    i. Make edges undirected
-3. Run process and check works as expected
-4. Add a test file
-4. Update readme
-5. Write train script and update model
+1. Write tests for preprocess, feat extract, process - first need to write configuration files
+2. Update readme
+3. Run preprocess + featextract + process
+4. Write train script and update model
 
 
---------------
+-------------- 
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
 4. Train small test dataset 3 cancer 3 not cancer with pointtransformer
 5. Implement leave one out cross validation - i.e. with remaining data train set, validation set, test set for each fold
@@ -66,6 +52,12 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 11. Update ReadMe so clear how to use
 12. Also add docs
 13. New dataset
+
+1. Clustering and visualisation (feature extraction)
+    a. Extra cluster features: distance birth, distance death, cluster skew?
+    b. Note papers about cluster size and number of receptors per cluster for DBSCAN
+    c. Also note other things can provide e.g. UMAP on features for each cluster
+2. Needs to consider the different splits - script which wraps process + train + performane evaluate to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
 
 Do we use the geometric features just as input to embedding or should we add on
 
