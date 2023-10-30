@@ -101,20 +101,23 @@ def main():
         convex_hull_cluster_df = featextract.convex_hull_cluster(df)
 
         # merge cluster df
-        cluster_df = basic_cluster_df.join(pca_cluster_df, on="clusterID", how="inner")
+        cluster_df = basic_cluster_df.join(
+            pca_cluster_df, on="clusterID", how="inner"
+        ) 
+        print('post first join ', len(cluster_df))
         cluster_df = cluster_df.join(
             convex_hull_cluster_df, on="clusterID", how="inner"
         )
+        print('post second join ', len(cluster_df))
+        print('basic/pca/convex hull length')
+        print(len(basic_cluster_df))
+        print(len(pca_cluster_df))
+        print(len(convex_hull_cluster_df))
+
         raise ValueError("Need to check this join is okay")
 
         # cluster density do this here
         cluster_df.with_columns(pl.col("count") / pl.col("area")).alias("density")
-
-        # cluster skew?
-
-        # cluster length should i be using pca or length of convex hull?
-
-        # distance birth/death ?
 
         # save locs dataframe
         item.df = df

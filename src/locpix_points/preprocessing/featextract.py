@@ -34,7 +34,6 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
     dbscan = DBSCAN(eps=eps, min_samples=minpts)
     dbscan.fit(dataframe)
 
-    raise ValueError("Is this correctly implemented need to check")
     df = df.with_columns(
         pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
     )
@@ -59,9 +58,6 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
         ]
     )
 
-    # number of rows = number of clusters
-    raise ValueError("Check radius of gyration correctly calculated")
-
     return cluster_df
 
 
@@ -69,12 +65,25 @@ def pca_fn(X):
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
-    components = pca.components_
+    # eigenvalues in order of size: variance[0], variance[1] 
     variance = pca.explained_variance_
-    variance_ratio = pca.explained_variance_
-    singular_values = pca.singular_values_
-    raise ValueError("Which features of PCA do we want?")
-    return components, variance, variance_ratio, singular_values
+    # from 10.5194/isprsarchives-XXXVIII-5-W12-97-2011
+    linearity = (variance[0] - variance[1])/variance[0]
+    planarity = variance[1]/variance[0]
+    #components = pca.components_
+    #variance_ratio = pca.explained_variance_ratio
+    #singular_values = pca.singular_values_
+    # trial pca length: 99.7% data falls within 3x S.D of 
+    # mean and x2 to get both sides of distribution
+    # = 6 * vairance[0]
+    length_pca = 6*variance[0]
+    width_pca = 6*variance[1]
+
+    print('pca length', length_pca)
+    print('pca area', length_pca*width_pca)
+    test = variance[2]
+    raise ValueError('Above should fail')
+    return linearity, planarity
 
 
 def pca_cluster(df, col_name="clusterID"):
@@ -93,7 +102,7 @@ def pca_cluster(df, col_name="clusterID"):
     array_list = [df.drop(col_name).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
-    client = Client()
+    _ = Client()
 
     for arr in array_list:
         lazy_result = dask.delayed(pca_fn)(arr)
@@ -102,22 +111,16 @@ def pca_cluster(df, col_name="clusterID"):
     results = dask.compute(*lazy_results)
 
     array = np.array(results)
-    comps = array[:, 0]
-    vars = array[:, 1]
-    var_ratio = array[:, 2]
-    sing_vals = array[:, 3]
+    linearities = array[:, 0]
+    planarities = array[:, 1]
 
     cluster_df = pl.DataFrame(
         {
             "clusterID": cluster_id,
-            "components": comps,
-            "variances": vars,
-            "variance_ratios": var_ratio,
-            "singular_values": sing_vals,
+            "linearity": linearities,
+            "planarity":planarities,
         }
     )
-
-    raise ValueError("Is it normalised correctly? Need to check against known result?")
 
     return cluster_df
 
@@ -129,8 +132,8 @@ def convex_hull(array):
         array (numpy array) : Input array
 
     Returns:
-        hull.area (float) : Perimeter of the 2D convex hull
-        hull.volume (float) : Area of the 3D convex hull
+        perimieter (float) : Perimeter of the 2D convex hull
+        area (float) : Area of the convex hull
         np.max(neigh_dist) : Maximum length of the convex hull"""
 
     hull = ConvexHull(array)
@@ -138,7 +141,12 @@ def convex_hull(array):
     neigh = NearestNeighbors(n_neighbors=len(vertices))
     neigh.fit(array[vertices])
     neigh_dist, _ = neigh.kneighbors(array[vertices], return_distance=True)
-    return hull.area, hull.volume, np.max(neigh_dist)
+    perimeter = hull.area
+    area = hull.volume
+    length = np.max(neigh_dist)
+    print('length via convex hull', length)
+    input('stop after convex hull length')
+    return perimeter, area, length
 
 
 def convex_hull_cluster(df, col_name="clusterID"):
@@ -157,7 +165,7 @@ def convex_hull_cluster(df, col_name="clusterID"):
     array_list = [df.drop(col_name).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
-    client = Client()
+    _ = Client()
 
     for arr in array_list:
         lazy_result = dask.delayed(convex_hull)(arr)
@@ -165,13 +173,12 @@ def convex_hull_cluster(df, col_name="clusterID"):
 
     results = dask.compute(*lazy_results)
     array = np.array(results)
-    areas = array[:, 0]
-    lengths = array[:, 1]
+    perimeters = array[:, 0]
+    areas = array[:, 1]
+    lengths = array[:, 2]
 
     cluster_df = pl.DataFrame(
-        {"clusterID": cluster_id, "area": areas, "length": lengths}
+        {"clusterID": cluster_id, "perimeter":perimeters, "area": areas, "length": lengths}
     )
-
-    raise ValueError("Is it normalised correctly? Need to check against known result?")
 
     return cluster_df

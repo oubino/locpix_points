@@ -35,13 +35,9 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 1. Clustering and visualisation (feature extraction)
-    a. Go over the script, check it works and clear up all remaining errors/questions
-    b.distance birth, distance death?
-    c. Note papers about cluster size and number of receptors per cluster for DBSCAN
-    d. Also note other things can provide e.g. UMAP on features for each cluster
-    For below two see arXiv:1711.09869v2
-    e. Is length just the eigenvalue for the largest and area one lambda1 x labmda 2
-    f. Do we use the geometric features just as input to embedding or should we add on
+    a. Extra cluster features: distance birth, distance death, cluster skew?
+    b. Note papers about cluster size and number of receptors per cluster for DBSCAN
+    c. Also note other things can provide e.g. UMAP on features for each cluster
 2. Process
     a. Needs to consider the different splits
     b. Different structure based on model
@@ -53,6 +49,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
     h. Remove all non clusterd points?
     i. Make edges undirected
 3. Run process and check works as expected
+4. Add a test file
 4. Update readme
 5. Write train script and update model
 
@@ -69,6 +66,8 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 11. Update ReadMe so clear how to use
 12. Also add docs
 13. New dataset
+
+Do we use the geometric features just as input to embedding or should we add on
 
 Different models to try
 
