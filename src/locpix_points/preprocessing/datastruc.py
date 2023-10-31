@@ -526,6 +526,8 @@ class item:
 
         Returns:
             None"""
+        
+        raise NotImplementedError
 
         save_df = self.df
 
@@ -709,17 +711,11 @@ class item:
         gt_label = arrow_table.schema.metadata[b"gt_label"]
         gt_label = int(gt_label)
         gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
-        print(
-            "channel label is now a dictionary which changes below line so need to change"
-        )
-        exit()
         channel_label = arrow_table.schema.metadata[b"channel_label"]
         channel_label = ast.literal_eval(channel_label.decode("utf-8"))
         bin_sizes = arrow_table.schema.metadata[b"bin_sizes"]
         bin_sizes = ast.literal_eval(bin_sizes.decode("utf-8"))
         df = pl.from_arrow(arrow_table)
-
-        # print("channel label", channel_label)
 
         self.__init__(
             name=name,

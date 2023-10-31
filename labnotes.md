@@ -52,6 +52,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 11. Update ReadMe so clear how to use
 12. Also add docs
 13. New dataset
+14. Trial making one environment combining both
 
 1. Clustering and visualisation (feature extraction)
     a. Extra cluster features: distance birth, distance death, cluster skew?

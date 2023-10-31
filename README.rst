@@ -44,8 +44,12 @@ Environment 2
 ``
 micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
 micromamba activate feat_extract
-pip install dask dask-ml polars
+pip install dask dask-ml polars pytest
+pip install -e .
+pip install torch-geometric
 ``
+
+Note need to install locpix points as well
 
 Layout
 ======

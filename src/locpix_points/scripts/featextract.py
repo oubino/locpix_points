@@ -9,7 +9,7 @@ from locpix_points.preprocessing import functions
 import argparse
 import json
 import time
-from locpix_points.data_loading import datastruc
+from locpix_points.preprocessing import datastruc
 from locpix_points.preprocessing import featextract
 
 
@@ -79,8 +79,8 @@ def main(argv=None):
             os.makedirs(folder)
 
     for file in files:
-        item = datastruc.item(None, None, None, None)
-        item.load_from_parquet(os.path.join(project_directory, file))
+        item = datastruc.item(None, None, None, None, None)
+        item.load_from_parquet(os.path.join(project_directory, f"preprocessed/gt_label/{file}"))
 
         # clustering (clusterID)
         df = featextract.cluster_data(

@@ -62,6 +62,7 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
 
 
 def pca_fn(X):
+    print('pca array', X)
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
@@ -81,16 +82,16 @@ def pca_fn(X):
 
     print('pca length', length_pca)
     print('pca area', length_pca*width_pca)
-    test = variance[2]
-    raise ValueError('Above should fail')
     return linearity, planarity
 
 
-def pca_cluster(df, col_name="clusterID"):
+def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     """Calculate pca for each cluster
 
     Args:
         df (polars df) : Input dataframe
+        x_col (string) : Name of the x column
+        y_col (string) : Name of the y column
         col_name (string) : Name for the cluster column
 
     Returns:
@@ -99,7 +100,7 @@ def pca_cluster(df, col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [df.drop(col_name).to_numpy() for df in df_split]  # slow
+    array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
     _ = Client()
@@ -118,7 +119,7 @@ def pca_cluster(df, col_name="clusterID"):
         {
             "clusterID": cluster_id,
             "linearity": linearities,
-            "planarity":planarities,
+            "planarity": planarities,
         }
     )
 
@@ -136,6 +137,7 @@ def convex_hull(array):
         area (float) : Area of the convex hull
         np.max(neigh_dist) : Maximum length of the convex hull"""
 
+    print('convex hull array', array)
     hull = ConvexHull(array)
     vertices = hull.vertices
     neigh = NearestNeighbors(n_neighbors=len(vertices))
@@ -149,12 +151,14 @@ def convex_hull(array):
     return perimeter, area, length
 
 
-def convex_hull_cluster(df, col_name="clusterID"):
+def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     """Calculate convex hull for each cluster
 
     Args:
         df (polars df) : Input dataframe
         col_name (string) : Name for the cluster column
+        x_col (string) : Name for the x column
+        y_col (string) : Name for the y column
 
     Returns:
         cluster_df (polars df) : Dataframe detailing the cluster details"""
@@ -162,7 +166,7 @@ def convex_hull_cluster(df, col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [df.drop(col_name).to_numpy() for df in df_split]  # slow
+    array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
     _ = Client()

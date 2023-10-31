@@ -23,7 +23,7 @@ fi
 micromamba activate rapids=23.10
 
 # Test feat extract
-if pytest tests/feat_extract.py
+if pytest tests/featextract.py
 then
     echo "feat extract successful"
 else
