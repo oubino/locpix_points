@@ -1,5 +1,5 @@
 # which features to extract
 clustering:
-  eps: 2 # nm
+  eps: 100 # nm
   minpts: 15
 

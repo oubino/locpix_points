@@ -11,6 +11,8 @@ import json
 import time
 from locpix_points.preprocessing import datastruc
 from locpix_points.preprocessing import featextract
+import polars as pl
+from dask.distributed import Client
 
 
 def main(argv=None):
@@ -78,7 +80,10 @@ def main(argv=None):
             print("Making folder")
             os.makedirs(folder)
 
-    for file in files:
+    # start client for dask
+    _ = Client()
+
+    for index, file in enumerate(files):
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(os.path.join(project_directory, f"preprocessed/gt_label/{file}"))
 
@@ -91,12 +96,15 @@ def main(argv=None):
             y_col="y",
         )
 
+        # drop locs not clustered
+        df = df.filter(pl.col('clusterID') != -1)
+
         # basic features (com cluster, locs per cluster, radius of gyration)
         basic_cluster_df = featextract.basic_cluster_feats(df)
 
         # pca on cluster (linearity, circularity see DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS)
         pca_cluster_df = featextract.pca_cluster(df)
-
+        
         # convex hull (perimeter, area, length)
         convex_hull_cluster_df = featextract.convex_hull_cluster(df)
 
@@ -104,20 +112,13 @@ def main(argv=None):
         cluster_df = basic_cluster_df.join(
             pca_cluster_df, on="clusterID", how="inner"
         ) 
-        print('post first join ', len(cluster_df))
         cluster_df = cluster_df.join(
             convex_hull_cluster_df, on="clusterID", how="inner"
         )
-        print('post second join ', len(cluster_df))
-        print('basic/pca/convex hull length')
-        print(len(basic_cluster_df))
-        print(len(pca_cluster_df))
-        print(len(convex_hull_cluster_df))
-
-        raise ValueError("Need to check this join is okay")
 
         # cluster density do this here
-        cluster_df.with_columns(pl.col("count") / pl.col("area")).alias("density")
+        cluster_df.with_columns((pl.col("count") / pl.col("area_convex_hull")).alias("density_convex_hull"))
+        cluster_df.with_columns((pl.col("count") / pl.col("area_pca")).alias("density_pca"))
 
         # save locs dataframe
         item.df = df
@@ -134,8 +135,6 @@ def main(argv=None):
             drop_zero_label=False,
             drop_pixel_col=False,
         )
-
-        raise ValueError("Check gt label map and gt label fov")
 
     # save yaml file
     yaml_save_loc = os.path.join(project_directory, "featextract.yaml")

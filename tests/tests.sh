@@ -39,5 +39,5 @@ micromamba activate locpix-points
 pytest tests/process.py
 
 # remove files regardless of last script success
-echo "removing output"
-rm -r tests/output
+#echo "removing output end"
+#rm -r tests/output

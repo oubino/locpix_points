@@ -5,7 +5,6 @@ This module contains functions to extract features from the data
 
 import dask
 import dask.array as da
-from dask.distributed import Client
 from dask_ml.decomposition import PCA
 import polars as pl
 from scipy.spatial import ConvexHull
@@ -34,6 +33,8 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
     dbscan = DBSCAN(eps=eps, min_samples=minpts)
     dbscan.fit(dataframe)
 
+    print('dbscan labels', dbscan.labels_)
+
     df = df.with_columns(
         pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
     )
@@ -43,7 +44,7 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
 
 def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
     # take in loc df with cluster id per cluster
-    cluster_df = df.groupby(col_name).agg(
+    cluster_df = df.group_by(col_name).agg(
         [
             pl.count(),
             pl.col(x_name).mean().suffix("_mean"),
@@ -62,7 +63,6 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
 
 
 def pca_fn(X):
-    print('pca array', X)
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
@@ -80,9 +80,8 @@ def pca_fn(X):
     length_pca = 6*variance[0]
     width_pca = 6*variance[1]
 
-    print('pca length', length_pca)
-    print('pca area', length_pca*width_pca)
-    return linearity, planarity
+    area_pca = length_pca*width_pca
+    return linearity, planarity, length_pca, area_pca
 
 
 def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
@@ -103,7 +102,6 @@ def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
-    _ = Client()
 
     for arr in array_list:
         lazy_result = dask.delayed(pca_fn)(arr)
@@ -114,12 +112,16 @@ def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     array = np.array(results)
     linearities = array[:, 0]
     planarities = array[:, 1]
+    lengths = array[:, 2]
+    areas = array[:, 3]
 
     cluster_df = pl.DataFrame(
         {
             "clusterID": cluster_id,
             "linearity": linearities,
             "planarity": planarities,
+            "length_pca": lengths,
+            "area_pca": areas,
         }
     )
 
@@ -137,7 +139,6 @@ def convex_hull(array):
         area (float) : Area of the convex hull
         np.max(neigh_dist) : Maximum length of the convex hull"""
 
-    print('convex hull array', array)
     hull = ConvexHull(array)
     vertices = hull.vertices
     neigh = NearestNeighbors(n_neighbors=len(vertices))
@@ -147,7 +148,6 @@ def convex_hull(array):
     area = hull.volume
     length = np.max(neigh_dist)
     print('length via convex hull', length)
-    input('stop after convex hull length')
     return perimeter, area, length
 
 
@@ -169,7 +169,6 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
 
     lazy_results = []
-    _ = Client()
 
     for arr in array_list:
         lazy_result = dask.delayed(convex_hull)(arr)
@@ -182,7 +181,10 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     lengths = array[:, 2]
 
     cluster_df = pl.DataFrame(
-        {"clusterID": cluster_id, "perimeter":perimeters, "area": areas, "length": lengths}
+        {"clusterID": cluster_id, 
+         "perimeter": perimeters, 
+         "area_convex_hull": areas, 
+         "length_convex_hull": lengths}
     )
 
     return cluster_df

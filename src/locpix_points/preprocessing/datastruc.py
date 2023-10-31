@@ -784,7 +784,7 @@ class item:
             df = self.df.filter(pl.col("channel") == chan)
 
             histo = np.zeros((x_bins, y_bins))
-            df = df.groupby(by=["x_pixel", "y_pixel"]).count()
+            df = df.group_by(by=["x_pixel", "y_pixel"]).count()
             x_pixels = df["x_pixel"].to_numpy()
             y_pixels = df["y_pixel"].to_numpy()
             counts = df["count"].to_numpy()
