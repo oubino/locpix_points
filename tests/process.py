@@ -1,6 +1,6 @@
 """Test pipeline"""
 
-from locpix_points.scripts.featextract import main
+from locpix_points.scripts.process import main
 
 def test_pipeline():
     # run preprocess on data
@@ -9,6 +9,6 @@ def test_pipeline():
             "-i",
             "tests/output",
             "-c",
-            "tests/templates/featextract.yaml",
+            "tests/templates/process.yaml",
         ]
     )

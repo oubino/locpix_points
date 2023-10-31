@@ -34,12 +34,11 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-1. Write tests for preprocess, feat extract, process - first need to write configuration files
-2. Update readme
-3. Run preprocess + featextract + process
-4. Write train script and update model
-5. Run tests using bash tests/tests.sh - note how to do this
-6. Need to drop clusters that have clusterid -1
+1. Test process and debug it
+2. Update readme (include how to run tests using bash tests/tests.sh)
+3. Write train script and update model
+
+make decision on which length/area to use
 
 -------------- 
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)

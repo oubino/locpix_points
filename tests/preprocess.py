@@ -1,10 +1,10 @@
 """Test pipeline"""
 
-from locpix_points.scripts.preprocess import main as main_preprocess
+from locpix_points.scripts.preprocess import main 
 
 def test_pipeline():
     # run preprocess on data
-    main_preprocess(
+    main(
         [
             "-i",
             "../../../../mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/code/tma/data/raw/locs",
