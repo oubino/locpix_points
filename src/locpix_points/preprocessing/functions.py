@@ -122,7 +122,7 @@ def file_to_datastruc(
         raise ValueError("gt_label_scope should be loc, fov or None")
 
     # Load in data
-    arrow_table = pq.read_table(input_file, columns=columns)
+    df = pl.from_arrow(arrow_table)
 
     # check gt labels
     if gt_label_scope == "loc":

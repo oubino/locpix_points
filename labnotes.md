@@ -38,7 +38,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 2. Update readme
 3. Run preprocess + featextract + process
 4. Write train script and update model
-
+5. Run tests using bash tests/tests.sh - note how to do this
 
 -------------- 
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
