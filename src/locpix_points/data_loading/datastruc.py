@@ -74,7 +74,7 @@ class SMLMDataset(Dataset):
             self._raw_cluster_file_names = list(
                 sorted(os.listdir(raw_cluster_dir_root))
             )
-            if self.raw_loc_dir_root is not None:
+            if self._raw_loc_dir_root is not None:
                 assert self._raw_cluster_file_names == self._raw_loc_file_names
         self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
         self.label_level = label_level
@@ -218,6 +218,7 @@ class LocDataset(SMLMDataset):
         pos,
         feat,
     ):
+        
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -250,7 +251,7 @@ class ClusterDataset(SMLMDataset):
         max_feat,
         pos,
         feat,
-    ):
+    ):        
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -299,6 +300,15 @@ class ClusterLocDataset(SMLMDataset):
         max_feat_clusters,
         kneighbours,
     ):
+        self.dataset_type = 'ClusterLocDataset'
+        self.loc_feat = loc_feat
+        self.cluster_feat = cluster_feat
+        self.min_feat_locs = min_feat_locs
+        self.max_feat_locs = max_feat_locs
+        self.min_feat_clusters = min_feat_clusters
+        self.max_feat_clusters = max_feat_clusters
+        self.kneighbours = kneighbours
+
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -309,16 +319,7 @@ class ClusterLocDataset(SMLMDataset):
             transform,
             pre_transform,
         )
-
-        self.dataset_type = 'ClusterLocDataset'
-        self.loc_feat = loc_feat
-        self.cluster_feat = cluster_feat
-        self.min_feat_locs = min_feat_locs
-        self.max_feat_locs = max_feat_locs
-        self.min_feat_clusters = min_feat_clusters
-        self.max_feat_clusters = max_feat_clusters
-        self.kneighbours = kneighbours
-
+        
     def process(self):
         """Process the raw data into heterogeneous graph"""
 
@@ -341,9 +342,11 @@ class ClusterLocDataset(SMLMDataset):
                 "utf-8"
             )
             if gt_label_scope == "loc":
-                assert self.label_level == "node"
+                if self.label_level != "node":
+                    raise ValueError("You cannot specify graph level label when the gt label is per loc/node. Amend process configuration file")
             elif gt_label_scope == "fov":
-                assert self.label_level == "graph"
+                if self.label_level != "graph":
+                    raise ValueError("You cannot specify node level label when dataset has per fov/graph labels. Amend process config file")
             else:
                 raise ValueError("No gt label scope")
 

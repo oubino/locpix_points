@@ -59,7 +59,6 @@ def load_pre_filter(path):
 
 
 def minmax(config, feat_str, file_directory, train_list):
-    raise ValueError("Check correct")
     if type(config[feat_str]) is list:
         for index, file in enumerate(train_list):
             df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
@@ -222,7 +221,7 @@ def main(argv=None):
             project_directory, "preprocessed/featextract/clusters"
         )
         min_feat_clusters, max_feat_clusters = minmax(
-            config, "cluster_feat", project_directory, train_list
+            config, "cluster_feat", file_directory, train_list
         )
 
         print("Train set...")
@@ -247,7 +246,7 @@ def main(argv=None):
 
         print("Val set...")
         # create val dataset
-        valset = datastruc.SMLMDataset(
+        valset = datastruc.ClusterLocDataset(
             os.path.join(project_directory, "preprocessed/featextract/locs"),
             os.path.join(project_directory, "preprocessed/featextract/clusters"),
             val_folder,
@@ -267,7 +266,7 @@ def main(argv=None):
 
         print("Test set...")
         # create test dataset
-        testset = datastruc.SMLMDataset(
+        testset = datastruc.ClusterLocDataset(
             os.path.join(project_directory, "preprocessed/featextract/locs"),
             os.path.join(project_directory, "preprocessed/featextract/clusters"),
             test_folder,

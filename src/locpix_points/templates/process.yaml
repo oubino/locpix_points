@@ -10,13 +10,22 @@ pos: 'xy'
 # what to load into features
 # Options: uniform (ones), xy, ...
 loc_feat:
-  - 'photons'
+  - 'duration[]'
+  - 'variance_x[nm^2]'
 cluster_feat:
-  - 'area'
+  - 'count'
+  - 'RGyration'
+  - 'linearity'
+  - 'planarity'
+  - 'length_pca'
+  - 'area_pca'
+  - 'perimeter'
+  - 'area_convex_hull'
+  - 'length_convex_hull'
 
 # label level
 # graph or node
-label_level: 'node'
+label_level: 'graph'
 
 # model type
 model: 'ClusterLoc' # ClusterLoc, Loc or Cluster
