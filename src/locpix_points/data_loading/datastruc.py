@@ -15,6 +15,7 @@ import polars as pl
 from . import features
 from . import custom_transforms
 import json
+import warnings
 
 
 class SMLMDataset(Dataset):
@@ -380,10 +381,9 @@ class ClusterLocDataset(SMLMDataset):
                 self.kneighbours,
             )
 
-            raise ValueError("What happens to unclustered points")
-
             # load in gt label
             gt_label = loc_table.schema.metadata[b"gt_label"]
+            gt_label = int(gt_label)
 
             # load gt label to data
             if self.label_level == "graph":
@@ -392,14 +392,15 @@ class ClusterLocDataset(SMLMDataset):
                 if "gt_label" in loc_table.columns:
                     raise ValueError("Should be no gt label column")
                 else:
-                    data.y = torch.long([gt_label], dtype=torch.long)
+                    print("gt label", gt_label)
+                    data.y = torch.tensor([gt_label], dtype=torch.long)
             elif self.label_level == "node":
                 raise NotImplementedError()
 
             # assign name to data
-            name = loc_table.schema.metadata[b"name"]
-            name = str(name.decode("utf-8"))
-            data.name = name
+            # name = loc_table.schema.metadata[b"name"]
+            # name = str(name.decode("utf-8"))
+            # data.name = name
 
             # if pre filter skips it then skip this item
             # if pre_filter is 0 - data should not be included
@@ -427,6 +428,11 @@ class ClusterLocDataset(SMLMDataset):
             idx_to_name["file_name"].append(file_name)
             idx += 1
 
+        warnings.warn("Need to check values are correct for data, positions, features")
+        warnings.warn("Check graph correctly connected")
+        warnings.warn(
+            "Consider what else may want to save for each dataitem: name of each feature? gt label map? scope? name? a lot of this is in the config files so would become redundant"
+        )
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
         df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))

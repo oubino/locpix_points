@@ -13,6 +13,7 @@ from locpix_points.preprocessing import datastruc
 from locpix_points.preprocessing import featextract
 import polars as pl
 from dask.distributed import Client
+import warnings
 
 
 def main(argv=None):
@@ -99,6 +100,7 @@ def main(argv=None):
         )
 
         # drop locs not clustered
+        warnings.warn("Drop all unclustered points")
         df = df.filter(pl.col("clusterID") != -1)
 
         # basic features (com cluster, locs per cluster, radius of gyration)

@@ -9,6 +9,7 @@ import numpy as np
 import itertools
 from torch_geometric.nn import knn_graph
 from torch_geometric.utils import to_undirected
+import warnings
 
 
 def load_loc_cluster(
@@ -77,7 +78,8 @@ def load_loc_cluster(
     feat_data = torch.clamp(feat_data, min=0, max=1)
     data["clusters"].x = feat_data.float()  # might not need .float()
 
-    # compute edge connections
+    # compute edge connections - use polars for loc table
+    loc_table = pl.from_arrow(loc_table)
 
     # locs with clusterID connected to that cluster clusterID
     group = loc_table.group_by("clusterID", maintain_order=True).agg(
@@ -104,8 +106,8 @@ def load_loc_cluster(
     loc_loc_edges = np.concatenate(edges, axis=-1)
 
     # knn on clusters
-    x = torch.tensor(cluster_table["x_mean"])
-    y = torch.tensor(cluster_table["y_mean"])
+    x = torch.tensor(cluster_table["x_mean"].to_numpy())
+    y = torch.tensor(cluster_table["y_mean"].to_numpy())
     coords = torch.stack([x, y], axis=-1)
     batch = torch.zeros(len(coords))
     cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
@@ -122,6 +124,6 @@ def load_loc_cluster(
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 
-    raise ValueError("need to check correct edges connected")
+    warnings.warn("Need to check that graph is connected correctly")
 
     return data
