@@ -33,7 +33,7 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
     dbscan = DBSCAN(eps=eps, min_samples=minpts)
     dbscan.fit(dataframe)
 
-    print('dbscan labels', dbscan.labels_)
+    print("dbscan labels", dbscan.labels_)
 
     df = df.with_columns(
         pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
@@ -66,21 +66,21 @@ def pca_fn(X):
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
-    # eigenvalues in order of size: variance[0], variance[1] 
+    # eigenvalues in order of size: variance[0], variance[1]
     variance = pca.explained_variance_
     # from 10.5194/isprsarchives-XXXVIII-5-W12-97-2011
-    linearity = (variance[0] - variance[1])/variance[0]
-    planarity = variance[1]/variance[0]
-    #components = pca.components_
-    #variance_ratio = pca.explained_variance_ratio
-    #singular_values = pca.singular_values_
-    # trial pca length: 99.7% data falls within 3x S.D of 
+    linearity = (variance[0] - variance[1]) / variance[0]
+    planarity = variance[1] / variance[0]
+    # components = pca.components_
+    # variance_ratio = pca.explained_variance_ratio
+    # singular_values = pca.singular_values_
+    # trial pca length: 99.7% data falls within 3x S.D of
     # mean and x2 to get both sides of distribution
     # = 6 * vairance[0]
-    length_pca = 6*variance[0]
-    width_pca = 6*variance[1]
+    length_pca = 6 * variance[0]
+    width_pca = 6 * variance[1]
 
-    area_pca = length_pca*width_pca
+    area_pca = length_pca * width_pca
     return linearity, planarity, length_pca, area_pca
 
 
@@ -99,7 +99,9 @@ def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
+    array_list = [
+        df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
+    ]  # slow
 
     lazy_results = []
 
@@ -147,7 +149,7 @@ def convex_hull(array):
     perimeter = hull.area
     area = hull.volume
     length = np.max(neigh_dist)
-    print('length via convex hull', length)
+    print("length via convex hull", length)
     return perimeter, area, length
 
 
@@ -166,7 +168,9 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split]  # slow
+    array_list = [
+        df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
+    ]  # slow
 
     lazy_results = []
 
@@ -181,10 +185,12 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     lengths = array[:, 2]
 
     cluster_df = pl.DataFrame(
-        {"clusterID": cluster_id, 
-         "perimeter": perimeters, 
-         "area_convex_hull": areas, 
-         "length_convex_hull": lengths}
+        {
+            "clusterID": cluster_id,
+            "perimeter": perimeters,
+            "area_convex_hull": areas,
+            "length_convex_hull": lengths,
+        }
     )
 
     return cluster_df

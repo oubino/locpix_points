@@ -124,7 +124,7 @@ class SMLMDataset(Dataset):
                 )
 
             if "normalisescale" in transform.keys():
-                raise ValueError('Check this normalises all features')
+                raise ValueError("Check this normalises all features")
                 output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)
@@ -218,7 +218,6 @@ class LocDataset(SMLMDataset):
         pos,
         feat,
     ):
-        
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -251,7 +250,7 @@ class ClusterDataset(SMLMDataset):
         max_feat,
         pos,
         feat,
-    ):        
+    ):
         super().__init__(
             raw_loc_dir_root,
             raw_cluster_dir_root,
@@ -300,7 +299,7 @@ class ClusterLocDataset(SMLMDataset):
         max_feat_clusters,
         kneighbours,
     ):
-        self.dataset_type = 'ClusterLocDataset'
+        self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
         self.cluster_feat = cluster_feat
         self.min_feat_locs = min_feat_locs
@@ -319,7 +318,7 @@ class ClusterLocDataset(SMLMDataset):
             transform,
             pre_transform,
         )
-        
+
     def process(self):
         """Process the raw data into heterogeneous graph"""
 
@@ -343,10 +342,14 @@ class ClusterLocDataset(SMLMDataset):
             )
             if gt_label_scope == "loc":
                 if self.label_level != "node":
-                    raise ValueError("You cannot specify graph level label when the gt label is per loc/node. Amend process configuration file")
+                    raise ValueError(
+                        "You cannot specify graph level label when the gt label is per loc/node. Amend process configuration file"
+                    )
             elif gt_label_scope == "fov":
                 if self.label_level != "graph":
-                    raise ValueError("You cannot specify node level label when dataset has per fov/graph labels. Amend process config file")
+                    raise ValueError(
+                        "You cannot specify node level label when dataset has per fov/graph labels. Amend process config file"
+                    )
             else:
                 raise ValueError("No gt label scope")
 

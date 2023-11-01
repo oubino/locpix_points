@@ -526,7 +526,7 @@ class item:
 
         Returns:
             None"""
-        
+
         raise NotImplementedError
 
         save_df = self.df
