@@ -34,11 +34,21 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-1. Test process and debug it
-2. Update readme (include how to run tests using bash tests/tests.sh)
-3. Write train script and update model
+Visualise requires new environment to use python 3.10 - micromamba activate 
+    - Visualise should either take in a parquet file or the data from pytorch geometric
+    - Visualise should show the edges between points 
+    - Then visualise can start showing the features - colour coded or on the z axis maybe?
 
+1. Update readme (include how to run tests using bash tests/tests.sh); also include visualise
+2. Write train script and update model
+3. Address all warnings in code
+4. Implement script which analyses features of data - i.e. UMAP of user defined features, histograms all comparing the two classes etc.; this script should then also be able to take in the features we will derive from our graph neural network
+
+Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
 make decision on which length/area to use
+
+
+
 
 -------------- 
 3. Create a template notebook for each experiment (each experiment different architecture, prediction (outcome, cancernotcancer), etc.)
