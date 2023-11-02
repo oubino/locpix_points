@@ -79,7 +79,13 @@ def visualise_parquet(
             df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds
         )
 
-    visualise(pcds, unique_chans, channel_labels, cmap)
+    visualise(pcds, 
+              None,
+              None,
+              None,
+              unique_chans, 
+              channel_labels, 
+              cmap)
 
 
 def visualise_torch_geometric(
@@ -234,8 +240,10 @@ def visualise(
     if 3 in unique_chans:
         print(f"Channel 3 is ... is colour {cmap[3]} to remove use Y")
 
-    pcds.append(locs_to_clusters)
-    pcds.append(clusters_to_clusters)
+    if locs_to_clusters is not None:
+        pcds.append(locs_to_clusters)
+    if clusters_to_clusters is not None:
+        pcds.append(clusters_to_clusters)
     if locs_to_locs is not None:
         pcds.append(locs_to_locs)
     o3d.visualization.draw_geometries_with_key_callbacks(pcds, key_to_callback)
@@ -326,18 +334,6 @@ def main(argv=None):
     
     else:
         raise ValueError('Should be .parquet or .pt file')
-
-def bob():
-    visualise_torch_geometric("tests/output/processed/train/0.pt")
-    visualise_parquet(
-        "tests/output/preprocessed/featextract/locs/cancer_2.parquet",
-        "x",
-        "y",
-        None,
-        "channel",
-        {0: "ereg"},
-    )  # channels
-
 
 if __name__ == "__main__":
     main()
