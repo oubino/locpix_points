@@ -150,7 +150,6 @@ class Present:
     def __init__(self):
         self.chan_present = [True, True, True, True]
 
-
 def visualise_parquet(
     file_loc,
     x_name,
@@ -170,7 +169,7 @@ def visualise_parquet(
             assumes data is 2D
         channel_name (str) : Name of the channel column in the data
         channel_labels (dict) : Dictionary mapping channel label to name"""
-
+    
     df, unique_chans = load_file(file_loc, x_name, y_name, z_name, channel_name)
 
     pcds = []
@@ -179,6 +178,22 @@ def visualise_parquet(
 
     for key in channel_labels.keys():
         pcds = add_pcd_parquet(df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds)
+    
+    visualise(pcds, unique_chans, channel_labels, cmap)
+
+def visualise(
+    pcds,
+    unique_chans,
+    channel_labels,
+    cmap
+):
+    """Visualise point cloud data
+
+    Args:
+        pcds (list) : List of point cloud data files
+        unique_chans (list) : List of unique channels
+        channel_labels (dict) : Dictionary mapping channel index to real name
+        cmap (list) : Colours to plot in"""
 
     assert len(pcds) == len(unique_chans)
 
