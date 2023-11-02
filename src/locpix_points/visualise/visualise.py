@@ -4,6 +4,7 @@ import open3d as o3d
 import numpy as np
 import matplotlib.colors as cl
 import torch
+import time
 
 def visualise_pca(
     csv_path,
@@ -138,6 +139,10 @@ def add_pcd_parquet(df, chan, x_name, y_name, z_name, chan_name, unique_chans, c
                 .to_numpy()
             )
         
+        print(coords.shape)
+        print(coords.dtype)
+        print(type(coords))
+        
         pcd.points = o3d.utility.Vector3dVector(coords)
         pcd.paint_uniform_color(cl.to_rgb(cmap[chan]))
         pcds.append(pcd)
@@ -184,29 +189,83 @@ def visualise_parquet(
 def visualise_torch_geometric(
         file_loc,
 ):
-    """Visualise pytorch geometric object
+    """Visualise pytorch geometric object.
+    Assumes that all locs are from the same channel and that there are also clusters present, plots these
+    in two colours
     
     Args:
         file_loc (str) : Location of the pytorch geometric file"""
     
     x = torch.load(file_loc)
-    print(x.y)
+
+    cmap = ["r", "darkorange", "b", "y"]
+
+    locs = x['locs'].pos.numpy()
+    clusters = x['clusters'].pos.numpy()
+
+    pcds = [locs, clusters]
+
+    
+
+    # convert 2d to 3d if required
+    for index, pcd in enumerate(pcds):
+        if pcd.shape[1] == 2:
+            z = np.ones(pcd.shape[0])
+            z = np.expand_dims(z, axis=1)
+            pcds[index] = np.concatenate([pcd, z], axis=1)
+
+    locstoclusters = np.swapaxes(x['locs','in','cluster'].edge_index,0,1)
+    # need one set of coordinates with all points in it 
+    # add cluster coords at elocs nd of locs
+    # increase index of cluster edge index by the number of locs
+    coords = np.concatenate([pcds[0],pcds[1]],axis=0)
+    index = locstoclusters[1185][1]
+    locstoclusters[:,1] += len(locs)
+    lines = locstoclusters
+
+    colors = [[0, 0, 1] for i in range(len(lines))]
+    lineset = o3d.geometry.LineSet()
+    lineset.points = o3d.utility.Vector3dVector(coords)
+    lineset.lines = o3d.utility.Vector2iVector(lines)
+    lineset.colors = o3d.utility.Vector3dVector(colors)
+
+    for index, pcd in enumerate(pcds):
+        point_cloud = o3d.geometry.PointCloud()
+        point_cloud.points = o3d.utility.Vector3dVector(pcd)
+        point_cloud.paint_uniform_color(cl.to_rgb(cmap[index]))
+        pcds[index] = point_cloud
+    
+    visualise(
+        pcds,
+        lineset,
+        [0,1],
+        {0:'locs', 1:'clusters'},
+        cmap,
+
+    )
+
     
 
 
 def visualise(
     pcds,
+    lineset,
     unique_chans,
     channel_labels,
-    cmap
+    cmap,
 ):
     """Visualise point cloud data
 
     Args:
         pcds (list) : List of point cloud data files
+        lineset (list) : Lines to draw
         unique_chans (list) : List of unique channels
         channel_labels (dict) : Dictionary mapping channel index to real name
         cmap (list) : Colours to plot in"""
+
+
+    vis = o3d.visualization.Visualizer()
+    
 
     assert len(pcds) == len(unique_chans)
 
@@ -264,16 +323,34 @@ def visualise(
     if 3 in channel_labels.keys():
         print(f"Channel 3 is ... is colour {cmap[3]} to remove use Y")
 
+    pcds.append(lineset)
     o3d.visualization.draw_geometries_with_key_callbacks(pcds, key_to_callback)
-
+    
+    """
+    vis.create_window()
+    vis.add_geometry(pcds[0])
+    vis.add_geometry(pcds[1])
+    # Alternatively, you can set the camera parameters directly
+    # For example:
+    view_control = vis.get_view_control()
+    view_control.set_lookat([fov_x, fov_y, -2000])  # Set the look-at point
+    #view_control.set_up([0, 1, 0])    # Set the up direction
+    #view_control.set_front([0, 0, 1]) # Set the camera front direction       
+    view_control.set_zoom(0.2)
+    # v the renderer
+    #vis.update_renderer()
+    # Run the visualizer
+    vis.run()
+    vis.destroy_window()
+    """
 
 def main():
     visualise_torch_geometric(
         "tests/output/processed/train/0.pt"
     )
-    #visualise_parquet(
-    #    "tests/output/preprocessed/featextract/locs/cancer_2.parquet", "x", "y", None, "channel", {0: "ereg"}
-    #)  # channels
+    visualise_parquet(
+        "tests/output/preprocessed/featextract/locs/cancer_2.parquet", "x", "y", None, "channel", {0: "ereg"}
+    )  # channels
 
 
 if __name__ == "__main__":
