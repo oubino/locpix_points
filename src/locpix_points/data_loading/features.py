@@ -82,25 +82,30 @@ def load_loc_cluster(
     loc_table = pl.from_arrow(loc_table)
 
     # locs with clusterID connected to that cluster clusterID
-    group = loc_table.group_by("clusterID", maintain_order=True).agg(
-        pl.col("x").agg_groups()
-    )
-    group = group.with_columns(
-        pl.col("clusterID"), pl.col("x").list.len().alias("count")
-    )
-    count = group["count"].to_numpy()
-    clusterIDlist = [[i] * count[i] for i in range(len(count))]
-    group = group.with_columns(pl.Series("clusterIDlist", clusterIDlist))
-    loc_indices = group["x"].to_numpy()
-    cluster_indices = group["clusterIDlist"].to_numpy()
-    loc_indices_stack = np.concatenate(loc_indices, axis=0)
-    cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
-    loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
+    #group = loc_table.group_by("clusterID", maintain_order=True).agg(
+    #    pl.col("x").agg_groups()
+    #)
+    #group = group.with_columns(
+    #    pl.col("clusterID"), pl.col("x").list.len().alias("count")
+    #)
+    #count = group["count"].to_numpy()
+    #clusterIDlist = [[i] * count[i] for i in range(len(count))]
+    #group = group.with_columns(pl.Series("clusterIDlist", clusterIDlist))
+    #loc_indices = group["x"].to_numpy()
+    #cluster_indices = group["clusterIDlist"].to_numpy()
+    #loc_indices_stack = np.concatenate(loc_indices, axis=0)
+    #cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
+    #loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
+    loc_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table['clusterID']])
 
     # locs with same clusterID
     edges = []
-    for a in loc_indices:
-        combos = list(itertools.combinations(a, 2))
+    print(loc_cluster_edges[1])
+    # iterate through clusters
+    for i in range(np.max(loc_cluster_edges[1])):
+        # get the loc indices for the clusters
+        loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1]==i)]
+        combos = list(itertools.combinations(loc_indices, 2))
         combos = np.ascontiguousarray(np.transpose(combos))
         edges.append(combos)
     loc_loc_edges = np.concatenate(edges, axis=-1)

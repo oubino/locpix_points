@@ -32,8 +32,6 @@ def pre_filter(data, inclusion_list=[]):
         inclusion_list (list) : List of names
             indicating which data should be included"""
 
-    print('bob')
-    print9d
     if data.name in inclusion_list:
         return 1
     else:
