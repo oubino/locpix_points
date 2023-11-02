@@ -398,9 +398,9 @@ class ClusterLocDataset(SMLMDataset):
                 raise NotImplementedError()
 
             # assign name to data
-            # name = loc_table.schema.metadata[b"name"]
-            # name = str(name.decode("utf-8"))
-            # data.name = name
+            name = loc_table.schema.metadata[b"name"]
+            name = str(name.decode("utf-8"))
+            data.name = name
 
             # if pre filter skips it then skip this item
             # if pre_filter is 0 - data should not be included

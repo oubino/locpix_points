@@ -3,7 +3,7 @@ import polars as pl
 import open3d as o3d
 import numpy as np
 import matplotlib.colors as cl
-
+import torch
 
 def visualise_pca(
     csv_path,
@@ -181,6 +181,19 @@ def visualise_parquet(
     
     visualise(pcds, unique_chans, channel_labels, cmap)
 
+def visualise_torch_geometric(
+        file_loc,
+):
+    """Visualise pytorch geometric object
+    
+    Args:
+        file_loc (str) : Location of the pytorch geometric file"""
+    
+    x = torch.load(file_loc)
+    print(x.y)
+    
+
+
 def visualise(
     pcds,
     unique_chans,
@@ -255,9 +268,12 @@ def visualise(
 
 
 def main():
-    visualise_parquet(
-        "tests/output/preprocessed/featextract/locs/cancer_2.parquet", "x", "y", None, "channel", {0: "ereg"}
-    )  # channels
+    visualise_torch_geometric(
+        "tests/output/processed/train/0.pt"
+    )
+    #visualise_parquet(
+    #    "tests/output/preprocessed/featextract/locs/cancer_2.parquet", "x", "y", None, "channel", {0: "ereg"}
+    #)  # channels
 
 
 if __name__ == "__main__":
