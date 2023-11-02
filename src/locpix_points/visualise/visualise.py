@@ -118,7 +118,7 @@ def load_file(file, x_name, y_name, z_name, channel_name):
     return df, df[channel_name].unique()
 
 
-def add_pcd(df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcds):
+def add_pcd_parquet(df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcds):
     if chan in unique_chans:
         pcd = o3d.geometry.PointCloud()
 
@@ -141,16 +141,14 @@ def add_pcd(df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcd
         pcd.points = o3d.utility.Vector3dVector(coords)
         pcd.paint_uniform_color(cl.to_rgb(cmap[chan]))
         pcds.append(pcd)
+    return pcds
 
 
 class Present:
     """Required for visualising the parquet file"""
 
     def __init__(self):
-        self.chan_zero_present = True
-        self.chan_one_present = True
-        self.chan_two_present = True
-        self.chan_three_present = True
+        self.chan_present = [True, True, True, True]
 
 
 def visualise_parquet(
@@ -180,7 +178,7 @@ def visualise_parquet(
     cmap = ["r", "darkorange", "b", "y"]
 
     for key in channel_labels.keys():
-        add_pcd(df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds)
+        pcds = add_pcd_parquet(df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds)
 
     assert len(pcds) == len(unique_chans)
 
@@ -189,36 +187,36 @@ def visualise_parquet(
     present = Present()
 
     def visualise_chan_0(vis):
-        if present.chan_zero_present:
+        if present.chan_present[0]:
             vis.remove_geometry(pcds[0], False)
-            present.chan_zero_present = False
+            present.chan_present[0] = False
         else:
             vis.add_geometry(pcds[0], False)
-            present.chan_zero_present = True
+            present.chan_present[0] = True
 
     def visualise_chan_1(vis):
-        if present.chan_one_present:
+        if present.chan_present[1]:
             vis.remove_geometry(pcds[1], False)
-            present.chan_one_present = False
+            present.chan_present[1] = False
         else:
             vis.add_geometry(pcds[1], False)
-            present.chan_one_present = True
+            present.chan_present[1] = True
 
     def visualise_chan_2(vis):
-        if present.chan_two_present:
+        if present.chan_present[2]:
             vis.remove_geometry(pcds[2], False)
-            present.chan_two_present = False
+            present.chan_present[2] = False
         else:
             vis.add_geometry(pcds[2], False)
-            present.chan_two_present = True
+            present.chan_present[2] = True
 
     def visualise_chan_3(vis):
-        if present.chan_three_present:
+        if present.chan_present[3]:
             vis.remove_geometry(pcds[3], False)
-            present.chan_three_present = False
+            present.chan_present[3] = False
         else:
             vis.add_geometry(pcds[3], False)
-            present.chan_three_present = True
+            present.chan_present[3] = True
 
     # reverse pcds for visualisation
     pcds.reverse()
