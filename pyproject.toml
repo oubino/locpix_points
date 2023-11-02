@@ -34,6 +34,7 @@ dependencies = [
     "flake8",
     "tox",
     "pytest",
+    "seaborn",
 
     # "torchvision",  check actually need this
     # conda install pyg -c pyg

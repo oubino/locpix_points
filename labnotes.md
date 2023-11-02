@@ -35,7 +35,6 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Visualisation
-    - Add this to readme
     - Check that loclisations are correctly connected to each other
     - visualise can start showing the features - colour coded or on the z axis maybe?
 
@@ -43,6 +42,9 @@ Feature analysis
     - script which analyses features of data - i.e. UMAP of user defined features
     - histograms all comparing the two classes etc.
     - this script should then also be able to take in the features we will derive from our graph neural network
+    - aggregate cluster features into collated df - can then use pandas to plot this per cluster/and per patient (box plot)
+    - umap of features 
+
 
 ReadME
     - Visualise requires new environment to use python 3.10 - micromamba activate 
