@@ -34,19 +34,29 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-Check that KNN graph correctly connects clusters
-Also check that loclisations are correctly connected to each other
+Visualisation
+    - Check that loclisations are correctly connected to each other
+    - visualise can start showing the features - colour coded or on the z axis maybe?
 
-Visualise requires new environment to use python 3.10 - micromamba activate 
-    - Then visualise can start showing the features - colour coded or on the z axis maybe?
+ReadME
+    - Visualise requires new environment to use python 3.10 - micromamba activate 
+    - include how to run tests using bash tests/tests.sh 
+    - also include visualise
 
-1. Update readme (include how to run tests using bash tests/tests.sh); also include visualise
-2. Write train script and update model
-3. Address all warnings in code
-4. Implement script which analyses features of data - i.e. UMAP of user defined features, histograms all comparing the two classes etc.; this script should then also be able to take in the features we will derive from our graph neural network
+Train
+    - Write train script and update model
 
-Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
-make decision on which length/area to use
+Misc
+    - Address all warnings in code
+
+Feature analysis
+    - script which analyses features of data - i.e. UMAP of user defined features
+    - histograms all comparing the two classes etc.
+    - this script should then also be able to take in the features we will derive from our graph neural network
+
+Experiments
+    - Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
+    - make decision on which length/area to use
 
 
 
