@@ -4,6 +4,7 @@ import open3d as o3d
 import numpy as np
 import matplotlib.colors as cl
 import torch
+import argparse
 
 def load_file(file, x_name, y_name, z_name, channel_name):
     if z_name is None:
@@ -33,10 +34,6 @@ def add_pcd_parquet(
                 .select([x_name, y_name, z_name])
                 .to_numpy()
             )
-
-        print(coords.shape)
-        print(coords.dtype)
-        print(type(coords))
 
         pcd.points = o3d.utility.Vector3dVector(coords)
         pcd.paint_uniform_color(cl.to_rgb(cmap[chan]))
@@ -228,13 +225,13 @@ def visualise(
     key_to_callback[ord("T")] = visualise_chan_2
     key_to_callback[ord("Y")] = visualise_chan_3
 
-    if 0 in channel_labels.keys():
+    if 0 in unique_chans:
         print(f"Channel 0 is {channel_labels[0]} is colour {cmap[0]} to remove use K")
-    if 1 in channel_labels.keys():
+    if 1 in unique_chans:
         print(f"Channel 1 is {channel_labels[1]} is colour {cmap[1]} to remove use R")
-    if 2 in channel_labels.keys():
+    if 2 in unique_chans:
         print(f"Channel 2 is ... is colour {cmap[2]} to remove use T")
-    if 3 in channel_labels.keys():
+    if 3 in unique_chans:
         print(f"Channel 3 is ... is colour {cmap[3]} to remove use Y")
 
     pcds.append(locs_to_clusters)
@@ -261,8 +258,76 @@ def visualise(
     vis.destroy_window()
     """
 
+def main(argv=None):
+    # parse arugments
+    parser = argparse.ArgumentParser(
+        description="Visualise the data - either from parquet or pytorch geometric"
+    )
 
-def main():
+    parser.add_argument(
+        "-i",
+        "--input_file",
+        action="store",
+        type=str,
+        help="location of the input file (either .parquet or .pt)",
+        required=True,
+    )
+
+    parser.add_argument(
+        "-x",
+        "--x_name",
+        action="store",
+        type=str,
+        help="Name of x column in the data if .parquet file",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-y",
+        "--y_name",
+        action="store",
+        type=str,
+        help="Name of y column in the data if .parquet file",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-z",
+        "--z_name",
+        action="store",
+        type=str,
+        help="Name of z column in the data if .parquet file and if 3D",
+        required=False,
+        default=None
+    )
+
+    parser.add_argument(
+        "-c",
+        "--channel_name",
+        action="store",
+        type=str,
+        help="Name of channel column in the data if .parquet file",
+        required=False,
+    )
+
+    args = parser.parse_args(argv)
+
+    if args.input_file.endswith('.parquet'):
+        visualise_parquet(
+        args.input_file,
+        args.x_name,
+        args.y_name,
+        args.z_name,
+        args.channel_name,
+        {0: 'channel_0', 1:'channel_1', 2:'channel_2', 3:'channel_3'},
+    )
+    elif args.input_file.endswith('.pt'):
+        visualise_torch_geometric(args.input_file)
+    
+    else:
+        raise ValueError('Should be .parquet or .pt file')
+
+def bob():
     visualise_torch_geometric("tests/output/processed/train/0.pt")
     visualise_parquet(
         "tests/output/preprocessed/featextract/locs/cancer_2.parquet",
