@@ -34,9 +34,10 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
+Check that KNN graph correctly connects clusters
+Also check that loclisations are correctly connected to each other
+
 Visualise requires new environment to use python 3.10 - micromamba activate 
-    - Visualise should either take in a parquet file or the data from pytorch geometric
-    - Visualise should show the edges between points 
     - Then visualise can start showing the features - colour coded or on the z axis maybe?
 
 1. Update readme (include how to run tests using bash tests/tests.sh); also include visualise

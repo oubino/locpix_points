@@ -6,6 +6,7 @@ import matplotlib.colors as cl
 import torch
 import time
 
+
 def visualise_pca(
     csv_path,
     x_name,
@@ -119,15 +120,15 @@ def load_file(file, x_name, y_name, z_name, channel_name):
     return df, df[channel_name].unique()
 
 
-def add_pcd_parquet(df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcds):
+def add_pcd_parquet(
+    df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcds
+):
     if chan in unique_chans:
         pcd = o3d.geometry.PointCloud()
 
         if z_name is None:
             coords = (
-                df.filter(pl.col(chan_name) == chan)
-                .select([x_name, y_name])
-                .to_numpy()
+                df.filter(pl.col(chan_name) == chan).select([x_name, y_name]).to_numpy()
             )
             z = np.ones(coords.shape[0])
             z = np.expand_dims(z, axis=1)
@@ -138,11 +139,11 @@ def add_pcd_parquet(df, chan, x_name, y_name, z_name, chan_name, unique_chans, c
                 .select([x_name, y_name, z_name])
                 .to_numpy()
             )
-        
+
         print(coords.shape)
         print(coords.dtype)
         print(type(coords))
-        
+
         pcd.points = o3d.utility.Vector3dVector(coords)
         pcd.paint_uniform_color(cl.to_rgb(cmap[chan]))
         pcds.append(pcd)
@@ -154,6 +155,7 @@ class Present:
 
     def __init__(self):
         self.chan_present = [True, True, True, True]
+
 
 def visualise_parquet(
     file_loc,
@@ -174,7 +176,7 @@ def visualise_parquet(
             assumes data is 2D
         channel_name (str) : Name of the channel column in the data
         channel_labels (dict) : Dictionary mapping channel label to name"""
-    
+
     df, unique_chans = load_file(file_loc, x_name, y_name, z_name, channel_name)
 
     pcds = []
@@ -182,26 +184,29 @@ def visualise_parquet(
     cmap = ["r", "darkorange", "b", "y"]
 
     for key in channel_labels.keys():
-        pcds = add_pcd_parquet(df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds)
-    
+        pcds = add_pcd_parquet(
+            df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds
+        )
+
     visualise(pcds, unique_chans, channel_labels, cmap)
 
+
 def visualise_torch_geometric(
-        file_loc,
+    file_loc,
 ):
     """Visualise pytorch geometric object.
     Assumes that all locs are from the same channel and that there are also clusters present, plots these
     in two colours
-    
+
     Args:
         file_loc (str) : Location of the pytorch geometric file"""
-    
+
     x = torch.load(file_loc)
 
     cmap = ["r", "darkorange", "b", "y"]
 
-    locs = x['locs'].pos.numpy()
-    clusters = x['clusters'].pos.numpy()
+    locs = x["locs"].pos.numpy()
+    clusters = x["clusters"].pos.numpy()
 
     pcds = [locs, clusters]
 
@@ -213,12 +218,12 @@ def visualise_torch_geometric(
             pcds[index] = np.concatenate([pcd, z], axis=1)
 
     # loc to cluster edges
-    lines = np.swapaxes(x['locs','in','cluster'].edge_index,0,1)
-    # need one set of coordinates with all points in it 
+    lines = np.swapaxes(x["locs", "in", "cluster"].edge_index, 0, 1)
+    # need one set of coordinates with all points in it
     # add cluster coords at elocs nd of locs
     # increase index of cluster edge index by the number of locs
-    coords = np.concatenate([pcds[0],pcds[1]],axis=0)
-    lines[:,1] += len(locs)
+    coords = np.concatenate([pcds[0], pcds[1]], axis=0)
+    lines[:, 1] += len(locs)
 
     colors = [[0, 0, 1] for i in range(len(lines))]
     locs_to_clusters = o3d.geometry.LineSet()
@@ -227,16 +232,16 @@ def visualise_torch_geometric(
     locs_to_clusters.colors = o3d.utility.Vector3dVector(colors)
 
     # loc to loc edges
-    lines = np.swapaxes(x['locs','clusteredwith','locs'].edge_index,0,1)
-    lines = lines[10000:20000,:]
-    colors = [[0, 1, 0] for i in range(len(lines))]
-    locs_to_locs = o3d.geometry.LineSet()
-    locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
-    locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
-    locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
+    # lines = np.swapaxes(x['locs','clusteredwith','locs'].edge_index,0,1)
+    # colors = [[0, 1, 0] for i in range(len(lines))]
+    # locs_to_locs = o3d.geometry.LineSet()
+    # locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
+    # locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
+    # locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
+    locs_to_locs = None
 
     # cluster to cluster edges
-    lines = np.swapaxes(x['clusters','near','clusters'].edge_index,0,1)
+    lines = np.swapaxes(x["clusters", "near", "clusters"].edge_index, 0, 1)
     colors = [[1, 1, 0] for i in range(len(lines))]
     clusters_to_clusters = o3d.geometry.LineSet()
     clusters_to_clusters.points = o3d.utility.Vector3dVector(pcds[1])
@@ -248,18 +253,16 @@ def visualise_torch_geometric(
         point_cloud.points = o3d.utility.Vector3dVector(pcd)
         point_cloud.paint_uniform_color(cl.to_rgb(cmap[index]))
         pcds[index] = point_cloud
-    
+
     visualise(
         pcds,
         locs_to_locs,
         locs_to_clusters,
         clusters_to_clusters,
-        [0,1],
-        {0:'locs', 1:'clusters'},
+        [0, 1],
+        {0: "locs", 1: "clusters"},
         cmap,
-
     )
-
 
 
 def visualise(
@@ -282,9 +285,7 @@ def visualise(
         channel_labels (dict) : Dictionary mapping channel index to real name
         cmap (list) : Colours to plot in"""
 
-
     vis = o3d.visualization.Visualizer()
-    
 
     assert len(pcds) == len(unique_chans)
 
@@ -344,9 +345,10 @@ def visualise(
 
     pcds.append(locs_to_clusters)
     pcds.append(clusters_to_clusters)
-    pcds.append(locs_to_locs)
+    if locs_to_locs is not None:
+        pcds.append(locs_to_locs)
     o3d.visualization.draw_geometries_with_key_callbacks(pcds, key_to_callback)
-    
+
     """
     vis.create_window()
     vis.add_geometry(pcds[0])
@@ -365,12 +367,16 @@ def visualise(
     vis.destroy_window()
     """
 
+
 def main():
-    visualise_torch_geometric(
-        "tests/output/processed/train/0.pt"
-    )
+    visualise_torch_geometric("tests/output/processed/train/0.pt")
     visualise_parquet(
-        "tests/output/preprocessed/featextract/locs/cancer_2.parquet", "x", "y", None, "channel", {0: "ereg"}
+        "tests/output/preprocessed/featextract/locs/cancer_2.parquet",
+        "x",
+        "y",
+        None,
+        "channel",
+        {0: "ereg"},
     )  # channels
 
 
