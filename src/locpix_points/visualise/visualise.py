@@ -205,8 +205,6 @@ def visualise_torch_geometric(
 
     pcds = [locs, clusters]
 
-    
-
     # convert 2d to 3d if required
     for index, pcd in enumerate(pcds):
         if pcd.shape[1] == 2:
@@ -214,20 +212,36 @@ def visualise_torch_geometric(
             z = np.expand_dims(z, axis=1)
             pcds[index] = np.concatenate([pcd, z], axis=1)
 
-    locstoclusters = np.swapaxes(x['locs','in','cluster'].edge_index,0,1)
+    # loc to cluster edges
+    lines = np.swapaxes(x['locs','in','cluster'].edge_index,0,1)
     # need one set of coordinates with all points in it 
     # add cluster coords at elocs nd of locs
     # increase index of cluster edge index by the number of locs
     coords = np.concatenate([pcds[0],pcds[1]],axis=0)
-    index = locstoclusters[1185][1]
-    locstoclusters[:,1] += len(locs)
-    lines = locstoclusters
+    lines[:,1] += len(locs)
 
     colors = [[0, 0, 1] for i in range(len(lines))]
-    lineset = o3d.geometry.LineSet()
-    lineset.points = o3d.utility.Vector3dVector(coords)
-    lineset.lines = o3d.utility.Vector2iVector(lines)
-    lineset.colors = o3d.utility.Vector3dVector(colors)
+    locs_to_clusters = o3d.geometry.LineSet()
+    locs_to_clusters.points = o3d.utility.Vector3dVector(coords)
+    locs_to_clusters.lines = o3d.utility.Vector2iVector(lines)
+    locs_to_clusters.colors = o3d.utility.Vector3dVector(colors)
+
+    # loc to loc edges
+    lines = np.swapaxes(x['locs','clusteredwith','locs'].edge_index,0,1)
+    lines = lines[10000:20000,:]
+    colors = [[0, 1, 0] for i in range(len(lines))]
+    locs_to_locs = o3d.geometry.LineSet()
+    locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
+    locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
+    locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
+
+    # cluster to cluster edges
+    lines = np.swapaxes(x['clusters','near','clusters'].edge_index,0,1)
+    colors = [[1, 1, 0] for i in range(len(lines))]
+    clusters_to_clusters = o3d.geometry.LineSet()
+    clusters_to_clusters.points = o3d.utility.Vector3dVector(pcds[1])
+    clusters_to_clusters.lines = o3d.utility.Vector2iVector(lines)
+    clusters_to_clusters.colors = o3d.utility.Vector3dVector(colors)
 
     for index, pcd in enumerate(pcds):
         point_cloud = o3d.geometry.PointCloud()
@@ -237,19 +251,22 @@ def visualise_torch_geometric(
     
     visualise(
         pcds,
-        lineset,
+        locs_to_locs,
+        locs_to_clusters,
+        clusters_to_clusters,
         [0,1],
         {0:'locs', 1:'clusters'},
         cmap,
 
     )
 
-    
 
 
 def visualise(
     pcds,
-    lineset,
+    locs_to_locs,
+    locs_to_clusters,
+    clusters_to_clusters,
     unique_chans,
     channel_labels,
     cmap,
@@ -258,7 +275,9 @@ def visualise(
 
     Args:
         pcds (list) : List of point cloud data files
-        lineset (list) : Lines to draw
+        locs_to_locs (list) : Lines to draw between localisations
+        loc_to_clusters (list) : Lines to draw from localisations to clusters
+        clusters_to_clusters (list) : Lines to draw between clusters
         unique_chans (list) : List of unique channels
         channel_labels (dict) : Dictionary mapping channel index to real name
         cmap (list) : Colours to plot in"""
@@ -323,7 +342,9 @@ def visualise(
     if 3 in channel_labels.keys():
         print(f"Channel 3 is ... is colour {cmap[3]} to remove use Y")
 
-    pcds.append(lineset)
+    pcds.append(locs_to_clusters)
+    pcds.append(clusters_to_clusters)
+    pcds.append(locs_to_locs)
     o3d.visualization.draw_geometries_with_key_callbacks(pcds, key_to_callback)
     
     """
