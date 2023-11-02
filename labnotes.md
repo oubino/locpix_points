@@ -35,8 +35,15 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Visualisation
+    - Make it a main script with arguments
+    - Add this to readme
     - Check that loclisations are correctly connected to each other
     - visualise can start showing the features - colour coded or on the z axis maybe?
+
+Feature analysis
+    - script which analyses features of data - i.e. UMAP of user defined features
+    - histograms all comparing the two classes etc.
+    - this script should then also be able to take in the features we will derive from our graph neural network
 
 ReadME
     - Visualise requires new environment to use python 3.10 - micromamba activate 
@@ -48,11 +55,6 @@ Train
 
 Misc
     - Address all warnings in code
-
-Feature analysis
-    - script which analyses features of data - i.e. UMAP of user defined features
-    - histograms all comparing the two classes etc.
-    - this script should then also be able to take in the features we will derive from our graph neural network
 
 Experiments
     - Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters

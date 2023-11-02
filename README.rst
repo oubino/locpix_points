@@ -221,6 +221,53 @@ The cluster density is calculated (locs/convex hull area)
 Process
 -------
 
+*Run*
+
+```
+python recipes/process.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-r If you want to copy the data split of another project then include this argument with
+   the location of the project folder
+-m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
+``
+
+*Structure*
+
+Data loaded in from 
+
+    project_folder/preprocessed/featextract/locs 
+
+And 
+
+    project_folder/preprocessed/featextact/clusters
+
+Processed files then saved in 
+
+    project_directory/processed/train/
+    project_directory/processed/val/
+    project_directory/processed/test/
+
+*Long description*
+
+A heterodataitem for each FOV is created.
+
+This has two types of nodes: localisations and clusters.
+
+The features for the localisations and clusters are loaded into these nodes.
+
+Then edges are added between
+
+    Localisations to localisations within the same cluster
+    Localisations to the cluster they are in
+    Clusters to nearest clusters
+
+This is then ready for training
+
 
 Featanalyse
 -----------
