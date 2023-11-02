@@ -276,7 +276,26 @@ Featanalyse
 Visualise
 ---------
 
+*Run*
 
+```
+python recipes/visualise.py
+```
+
+*Arguments*
+``
+-i Path to the file to visualise (either .parquet or .pt pytorch geometric object) 
+-x If .parquet file then name of the x column
+-y If .parquet file then name of the y column
+-z If .parquet and 3D then name of the z column
+-c If .parquet name of the channel column
+``
+
+*Long description*
+
+Can either load in .parquet file and visualise just the points.
+
+Or can load in .pt pytorch geometric file and visualise the nodes and edges
 
 Train
 -----

@@ -35,7 +35,6 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Visualisation
-    - Make it a main script with arguments
     - Add this to readme
     - Check that loclisations are correctly connected to each other
     - visualise can start showing the features - colour coded or on the z axis maybe?
