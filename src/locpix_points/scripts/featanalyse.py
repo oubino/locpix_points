@@ -11,6 +11,10 @@ import polars as pl
 import time
 import seaborn as sns
 import matplotlib.pyplot as plt
+import umap
+from sklearn.preprocessing import StandardScaler
+import numpy as np
+import matplotlib.patches as mpatches
 
 def main(argv=None):
     # parse arugments
@@ -125,6 +129,77 @@ def main(argv=None):
     plt.show()
     # sns.pairplot(df, hue='type')
     # plt.show()
+
+    reducer = umap.UMAP()
+    data = df[[
+        "RGyration",
+        "linearity",
+        "planarity",
+        "length_pca",
+        "area_pca",
+        "perimeter",
+        "area_convex_hull",
+        "length_convex_hull",
+    ]
+    ].values
+    scaled_data = StandardScaler().fit_transform(data)
+    embedding = reducer.fit_transform(scaled_data)
+    #print(embedding.shape)
+    #print(df.type.map({"normal":0, "cancer":1}))
+    #fig, ax = plt.subplots()
+    #c=[sns.color_palette()[x] for x in df.type.map({"normal":0, "cancer":1})]
+    #print(sns.color_palette()[0])
+    #print(sns.color_palette()[1])
+    #c = np.array(c)
+    #print(np.unique(c))
+    plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=[sns.color_palette()[x] for x in df.type.map({"normal":0, "cancer":1})],
+        label = [x for x in df.type.map({"normal":0, "cancer":1})])
+    normal_patch = mpatches.Patch(color=sns.color_palette()[0], label='Normal')
+    cancer_patch = mpatches.Patch(color=sns.color_palette()[1], label='Cancer')
+    plt.legend(handles=[normal_patch, cancer_patch])
+    plt.gca().set_aspect('equal', 'datalim')
+    plt.title('UMAP projection of the dataset', fontsize=24)
+    plt.show()
+
+    print(df.file_name.map({"cancer_0.parquet":0, 
+                            "cancer_1.parquet":1,
+                            "cancer_2.parquet":2,
+                            "normal_0.parquet":3,
+                            "normal_1.parquet":4,
+                            "normal_2.parquet":5}))
+    plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=[sns.color_palette()[x] for x in df.file_name.map({"cancer_0.parquet":0, 
+                                                             "cancer_1.parquet":1,
+                                                             "cancer_2.parquet":2,
+                                                             "normal_0.parquet":3,
+                                                             "normal_1.parquet":4,
+                                                             "normal_2.parquet":5})],
+        label = [x for x in df.type.map({"cancer_0.parquet":0, 
+                                        "cancer_1.parquet":1,
+                                        "cancer_2.parquet":2,
+                                        "normal_0.parquet":3,
+                                        "normal_1.parquet":4,
+                                        "normal_2.parquet":5})])
+    cancer_patch_0 = mpatches.Patch(color=sns.color_palette()[0], label='Cancer 0')
+    cancer_patch_1 = mpatches.Patch(color=sns.color_palette()[1], label='Cancer 1')
+    cancer_patch_2 = mpatches.Patch(color=sns.color_palette()[2], label='Cancer 2')
+    normal_patch_0 = mpatches.Patch(color=sns.color_palette()[3], label='Normal 0')
+    normal_patch_1 = mpatches.Patch(color=sns.color_palette()[4], label='Normal 1')
+    normal_patch_2 = mpatches.Patch(color=sns.color_palette()[5], label='Normal 2')
+    plt.legend(handles=[cancer_patch_0, 
+                        cancer_patch_1, 
+                        cancer_patch_2, 
+                        normal_patch_0, 
+                        normal_patch_1, 
+                        normal_patch_2])
+    plt.gca().set_aspect('equal', 'datalim')
+    plt.title('UMAP projection of the dataset', fontsize=24)
+    plt.show()
 
     # save yaml file
     yaml_save_loc = os.path.join(project_directory, "featextract.yaml")
