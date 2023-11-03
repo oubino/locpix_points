@@ -8,7 +8,7 @@ don't have to specify the location
 of the model in models/ just the name!
 """
 
-from .simple_gcn_1 import SimpleGCN1
+#from .simple_gcn_1 import SimpleGCN1
 from .point_net import PointNetClassification, PointNetSegmentation
 from .point_transformer import Segmenter, Classifier
 from .loc_cluster_net import LocClusterNet

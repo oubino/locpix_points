@@ -125,7 +125,6 @@ class SMLMDataset(Dataset):
                 )
 
             if "normalisescale" in transform.keys():
-                raise ValueError("Check this normalises all features")
                 output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)

@@ -90,7 +90,7 @@ def main(argv=None):
         None, # raw_loc_dir_root
         None, # raw_cluster_dir_root
         train_folder, # processed_dir_root
-        label_level=config['label_level']# label_level
+        label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
         gpu=gpu, # gpu
         transform=config["transforms"], # transform
@@ -109,7 +109,7 @@ def main(argv=None):
         None, # raw_loc_dir_root
         None, # raw_cluster_dir_root
         val_folder, # processed_dir_root
-        label_level=config['label_level']# label_level
+        label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
         gpu=gpu, # gpu
         transform=config["transforms"], # transform
