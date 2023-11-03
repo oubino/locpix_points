@@ -36,8 +36,15 @@ fi
 # Activate correct environment
 micromamba activate locpix-points
 
-# Test preprocess
-pytest tests/process.py
+# Test train
+if pytest tests/train.py
+then
+    echo "trained model"
+else
+    echo "removing output"
+    rm -r tests/output
+    exit
+fi
 
 # remove files regardless of last script success
 #echo "removing output end"

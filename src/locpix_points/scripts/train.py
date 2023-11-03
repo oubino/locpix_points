@@ -86,26 +86,42 @@ def main(argv=None):
     test_folder = os.path.join(processed_directory, "test")
 
     # load in train dataset
-    train_set = datastruc.SMLMDataset(
-        None,
-        train_folder,
-        transform=config["transforms"],
-        pre_transform=None,
-        pre_filter=None,
-        gpu=gpu,
-    )
+    train_set = datastruc.ClusterLocDataset(
+        None, # raw_loc_dir_root
+        None, # raw_cluster_dir_root
+        train_folder, # processed_dir_root
+        label_level=config['label_level']# label_level
+        pre_filter=None, # pre_filter
+        gpu=gpu, # gpu
+        transform=config["transforms"], # transform
+        pre_transform=None, # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighbours=None,
+        )
 
     # load in val dataset
-    val_set = datastruc.SMLMDataset(
-        None,
-        val_folder,
-        transform=config["transforms"],
-        pre_transform=None,
-        pre_filter=None,
-        gpu=gpu,
+    val_set = datastruc.ClusterLocDataset(
+        None, # raw_loc_dir_root
+        None, # raw_cluster_dir_root
+        val_folder, # processed_dir_root
+        label_level=config['label_level']# label_level
+        pre_filter=None, # pre_filter
+        gpu=gpu, # gpu
+        transform=config["transforms"], # transform
+        pre_transform=None, # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighbours=None,
     )
-
-    # TODO: #5 configuration for dataloaders
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
@@ -171,7 +187,7 @@ def main(argv=None):
         )
 
     # initialise loss function
-    if loss_fn == "nll":
+    if loss_fn == "nll":# CHANGE
         loss_fn = torch.nn.functional.nll_loss
 
     # initialise wandb
@@ -214,7 +230,7 @@ def main(argv=None):
     print("\n")
     print("---- Training... ----")
     print("\n")
-    train.train_loop(
+    train.train_loop(# CHANGE
         epochs,
         model,
         optimiser,

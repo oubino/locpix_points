@@ -11,6 +11,7 @@ of the model in models/ just the name!
 from .simple_gcn_1 import SimpleGCN1
 from .point_net import PointNetClassification, PointNetSegmentation
 from .point_transformer import Segmenter, Classifier
+from .loc_cluster_net import LocClusterNet
 
 
 def model_choice(name, *args, **kwargs):
@@ -25,6 +26,8 @@ def model_choice(name, *args, **kwargs):
         return Segmenter(*args, dim=dim)
     elif name == "pointtransformerclass":
         dim = kwargs["dim"]
-        return Classifier(*arg, dim=dim)
+        return Classifier(*args, dim=dim)
+    elif name == "locclusternet":
+        return LocClusterNet(*args)
     else:
         raise ValueError(f"{name} is not a supported model")
