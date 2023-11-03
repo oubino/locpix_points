@@ -62,6 +62,7 @@ Small dataset
     - Train pointtransformer
 
 Experiments
+    - I think we should simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset - use Daniel Nieves dataset - this can also help us to validate if made any mistakes in the code
     - Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
     - make decision on which length/area to use
     - GraphNet: node located at each cluster - CONSIDER HOW TO NORMALISE - MAKE SURE DOESNT JUST CONSIDER # OF POINTS + COORDINATES NEED TO BE PART OF NODE'S FEATURE I.E. X/Y MUST BE CONSIDEERED
