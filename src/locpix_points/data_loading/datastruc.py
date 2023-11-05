@@ -97,31 +97,31 @@ class SMLMDataset(Dataset):
             # axis to rotate around i.e. axis=2 rotate around z axis - meaning
             # coordinates are rotated in the xy plane
             if "z_rotate" in transform.keys():
-                output_transforms.append(transforms.RandomRotate(degrees=180, axis=2))
+                output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
 
             # need to either define as constant or allow precision to impact this
             if "jitter" in transform.keys():
-                output_transforms.append(transforms.RandomJitter(transform["jitter"]))
+                output_transforms.append(custom_transforms.RandomJitter(transform["jitter"]))
 
             # axis = 0 - means x coordinates are flipped - i.e. reflection
             # in the y axis
             if "x_flip" in transform.keys():
-                output_transforms.append(transforms.RandomFlip(axis=0))
+                output_transforms.append(custom_transforms.RandomFlip(axis=0))
 
             # axis = 1 - means y coordinates are flipped - i.e. reflection
             # in the x axis
             if "y_flip" in transform.keys():
-                output_transforms.append(transforms.RandomFlip(axis=1))
+                output_transforms.append(custom_transforms.RandomFlip(axis=1))
 
             # need to define scale factor interval in config
             if "randscale" in transform.keys():
                 output_transforms.append(
-                    transforms.RandomScale(scales=tuple(transform["randscale"]))
+                    custom_transforms.RandomScale(scales=tuple(transform["randscale"]))
                 )
 
             # shear by particular matrix
             if "shear" in transform.keys():
-                output_transforms.append(transforms.RandomShear(transform["shear"]))
+                output_transforms.append(custom_transforms.RandomShear(transform["shear"]))
 
             if "subsample" in transform.keys():
                 output_transforms.append(

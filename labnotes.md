@@ -36,15 +36,15 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 Important
     - Check using visualisation that scaling done correctly for cooridnates
-    - For below normalise scale should be just for me as I need for all data points
     - For below ones Rotate-->Shear have option which does individual or joint option if isinstance(data, HeteroData)
     - Rewrite all the transforms for heterogeneous data  - define in this otherwise will get overwritten by future changes 
         - make sure clusters are transformed in same way so don't lose relationship between them
-        - Random Rotate
-        - Radom Jitter
-        - Random Flip
-        - Random Scale
-        - Random Shear
+        - Random Rotate x
+        - Radom Jitter x (NOTE implications of jittering cluster will not be in same position relative to it )
+        - Random Flip x
+        - Random Scale x
+        - Random Shear ?
+        - Check each of these individually and check they preserve clusteres location
 
 Train
     - Write train script and update model
