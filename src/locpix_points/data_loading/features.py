@@ -59,6 +59,7 @@ def load_loc_cluster(
         warnings.warn(f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}")
         x_locs = (x_locs - x_locs.min())/x_range # scale from 0 to 1
         x_locs = 2*x_locs - 1
+        print(f'1 unit in new space (x) == {x_range/2} in original units')
         assert x_locs.min() == -1.0
         assert x_locs.max() == 1.0
     
@@ -67,6 +68,7 @@ def load_loc_cluster(
         warnings.warn(f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}")
         y_locs = (y_locs - y_locs.min())/y_range # scale from 0 to 1
         y_locs = 2*y_locs - 1
+        print(f'1 unit in new space (y) == {y_range/2} in original units')
         assert y_locs.min() == -1.0
         assert y_locs.max() == 1.0
 
