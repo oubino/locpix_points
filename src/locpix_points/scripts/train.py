@@ -102,6 +102,8 @@ def main(argv=None):
         min_feat_clusters=None,
         max_feat_clusters=None,
         kneighbours=None,
+        fov_x=None,
+        fov_y=None,
         )
 
     # load in val dataset
@@ -121,6 +123,8 @@ def main(argv=None):
         min_feat_clusters=None,
         max_feat_clusters=None,
         kneighbours=None,
+        fov_x=None,
+        fov_y=None,
     )
 
     # if data is on gpu then don't need to pin memory

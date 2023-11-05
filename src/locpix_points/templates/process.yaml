@@ -35,3 +35,7 @@ kneighbours: 3
 
 # whether to use gpu (currently irrelevant)
 gpu: True
+
+# size of fov
+fov_x: 50000.0
+fov_y: 80000.0

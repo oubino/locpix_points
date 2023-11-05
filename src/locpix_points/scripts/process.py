@@ -242,6 +242,8 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighbours"],
+            config['fov_x'],
+            config['fov_y'],
         )
 
         print("Val set...")
@@ -262,6 +264,8 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighbours"],
+            config['fov_x'],
+            config['fov_y'],
         )
 
         print("Test set...")
@@ -282,6 +286,8 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighbours"],
+            config['fov_x'],
+            config['fov_y'],
         )
 
         # save yaml file

@@ -23,6 +23,8 @@ def load_loc_cluster(
     min_feat_clusters,
     max_feat_clusters,
     kneighbours,
+    fov_x,
+    fov_y,
 ):
     """Load in position, features and edge index to each node
 
@@ -41,6 +43,8 @@ def load_loc_cluster(
         max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
         kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
             cluster dataset
+        fov_x (float) : Size of fov (x) in units of data
+        fov_y (float) : Size of fov (y) in units of data
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
@@ -48,11 +52,34 @@ def load_loc_cluster(
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
+
+    # scale position
+    x_range = x_locs.max() - x_locs.min()
+    if x_range < 0.95*fov_x:
+        warnings.warn(f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}")
+        x_locs = (x_locs - x_locs.min())/x_range # scale from 0 to 1
+        x_locs = 2*x_locs - 1
+        assert x_locs.min() == -1.0
+        assert x_locs.max() == 1.0
+    
+    y_range = y_locs.max() - y_locs.min()
+    if y_range < 0.95*fov_y:
+        warnings.warn(f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}")
+        y_locs = (y_locs - y_locs.min())/y_range # scale from 0 to 1
+        y_locs = 2*y_locs - 1
+        assert y_locs.min() == -1.0
+        assert y_locs.max() == 1.0
+
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
     data["locs"].pos = loc_coords.float()
 
+    # scale cluster coordinates
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
+    x_clusters = (x_clusters - x_locs.min())/x_range # scale from 0 to 1
+    x_clusters = 2*x_clusters - 1
+    y_clusters = (y_clusters - y_locs.min())/y_range # scale from 0 to 1
+    y_clusters = 2*y_clusters - 1
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
     data["clusters"].pos = cluster_coords.float()
 

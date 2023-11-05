@@ -35,7 +35,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Important
-    - Scale data myself to between -1 and 1 don't let pytorch geometric do this
+    - Check using visualisation that scaling done correctly for cooridnates
     - For below normalise scale should be just for me as I need for all data points
     - For below ones Rotate-->Shear have option which does individual or joint option if isinstance(data, HeteroData)
     - Rewrite all the transforms for heterogeneous data  - define in this otherwise will get overwritten by future changes 

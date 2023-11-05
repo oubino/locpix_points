@@ -52,6 +52,8 @@ class SMLMDataset(Dataset):
             parameters if applicable
         _data_list (list): Data from the dataset
             so can access via a numerical index later.
+        fov_x (float) : Size of fov in units for data (x)
+        fov_y (float) : Size of fov in units for data (y)
     """
 
     def __init__(
@@ -64,6 +66,8 @@ class SMLMDataset(Dataset):
         gpu,
         transform,
         pre_transform,
+        fov_x,
+        fov_y,
     ):
         # index the dataitems (idx)
         self._raw_loc_dir_root = raw_loc_dir_root
@@ -80,6 +84,8 @@ class SMLMDataset(Dataset):
         self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
         self.label_level = label_level
         self.gpu = gpu
+        self.fov_x = fov_x
+        self.fov_y = fov_y
 
         if transform is None or len(transform) == 0:
             super().__init__(None, None, pre_transform, pre_filter)
@@ -280,6 +286,8 @@ class ClusterLocDataset(SMLMDataset):
         min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
         max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
         kneighbours (int) : Number of neighbours each cluster connected to
+        fov_x (float) : Size of fov in units for data (x)
+        fov_y (float) : Size of fov in units for data (y)
     """
 
     def __init__(
@@ -299,6 +307,8 @@ class ClusterLocDataset(SMLMDataset):
         min_feat_clusters,
         max_feat_clusters,
         kneighbours,
+        fov_x,
+        fov_y,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -318,6 +328,8 @@ class ClusterLocDataset(SMLMDataset):
             gpu,
             transform,
             pre_transform,
+            fov_x,
+            fov_y,
         )
 
     def process(self):
@@ -379,6 +391,8 @@ class ClusterLocDataset(SMLMDataset):
                 self.min_feat_clusters,
                 self.max_feat_clusters,
                 self.kneighbours,
+                self.fov_x,
+                self.fov_y,
             )
 
             # load in gt label
