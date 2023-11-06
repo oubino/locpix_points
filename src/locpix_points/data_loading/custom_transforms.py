@@ -66,7 +66,7 @@ class Subsample(BaseTransform):
     def __repr__(self) -> str:
         return f"{self.__class__.__name__}(x: {self.x} y: {self.y})"
 
-@functional_transform('random_rotate')
+@functional_transform('random_rotate_loccluster')
 class RandomRotate(BaseTransform):
     r"""Rotates node positions around a specific axis by a randomly sampled
     factor within a given interval. Also rotates cluster locations simulateneously.
@@ -120,7 +120,7 @@ class RandomRotate(BaseTransform):
         return (f'{self.__class__.__name__}({self.degrees}, '
                 f'axis={self.axis})')
     
-@functional_transform('random_jitter')
+@functional_transform('random_jitter_loccluster')
 class RandomJitter(BaseTransform):
     r"""Translates node positions by randomly sampled translation values
     within a given interval (functional name: :obj:`random_jitter`).
@@ -159,7 +159,7 @@ class RandomJitter(BaseTransform):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.translate})'
     
-@functional_transform('random_flip')
+@functional_transform('random_flip_loccluster')
 class RandomFlip(BaseTransform):
     """Flips node positions along a given axis randomly with a given
     probability (functional name: :obj:`random_flip`).
@@ -189,7 +189,7 @@ class RandomFlip(BaseTransform):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}(axis={self.axis}, p={self.p})'
     
-@functional_transform('random_scale')
+@functional_transform('random_scale_loccluster')
 class RandomScale(BaseTransform):
     r"""Scales node positions by a randomly sampled factor :math:`s` within a
     given interval, *e.g.*, resulting in the transformation matrix
@@ -226,7 +226,7 @@ class RandomScale(BaseTransform):
     def __repr__(self) -> str:
         return f'{self.__class__.__name__}({self.scales})'
     
-@functional_transform('random_shear')
+@functional_transform('random_shear_loccluster')
 class RandomShear(BaseTransform):
     r"""Shears node positions by randomly sampled factors :math:`s` within a
     given interval, *e.g.*, resulting in the transformation matrix

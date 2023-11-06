@@ -132,7 +132,6 @@ class SMLMDataset(Dataset):
 
             if "normalisescale" in transform.keys():
                 raise ValueError('Normalise and sacle the data myself to bewteen -1 nad 1 or 0 and 1; dont use this + make sure clusters scaled correctly')
-                output_transforms.append(transforms.NormalizeScale())
 
             output_transforms = transforms.Compose(output_transforms)
 

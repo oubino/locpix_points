@@ -1,29 +1,48 @@
 import polars as pl
 import numpy as np
+from torch_geometric import transforms
+from locpix_points.data_loading import custom_transforms
+import torch
 
-loc_table = pl.read_parquet('tests/output/preprocessed/featextract/locs/cancer_2.parquet')
+data = torch.load('tests/output/processed/train/0.pt')
 
-locs_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table['clusterID']])
-print(locs_cluster_edges)
-print(locs_cluster_edges.shape)
 
-"""
+torch.save(data, 'sandpit/output/pre_transform.pt')
 
-print(loc_table)
-group = loc_table.group_by("clusterID", maintain_order=True).agg(
-    pl.col("x").agg_groups()
-)
-group = group.with_columns(
-    pl.col("clusterID"), pl.col("x").list.len().alias("count")
-)
+output_transforms = []
 
-count = group["count"].to_numpy()
-clusterIDlist = [[i] * count[i] for i in range(len(count))]
-group = group.with_columns(pl.Series("clusterIDlist", clusterIDlist))
-loc_indices = group["x"].to_numpy()
-cluster_indices = group["clusterIDlist"].to_numpy()
-loc_indices_stack = np.concatenate(loc_indices, axis=0)
-cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
-loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
+# axis to rotate around i.e. axis=2 rotate around z axis - meaning
+# coordinates are rotated in the xy plane
+output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
 
-"""
+# need to either define as constant or allow precision to impact this
+#output_transforms.append(custom_transforms.RandomJitter(0.1))
+
+# axis = 0 - means x coordinates are flipped - i.e. reflection
+# in the y axis
+#output_transforms.append(custom_transforms.RandomFlip(axis=0))
+
+# axis = 1 - means y coordinates are flipped - i.e. reflection
+# in the x axis
+#output_transforms.append(custom_transforms.RandomFlip(axis=1))
+
+# need to define scale factor interval in config
+#output_transforms.append(
+#    custom_transforms.RandomScale(scales=tuple([0.5, 0.2]))
+#)
+
+# shear by particular matrix
+#output_transforms.append(custom_transforms.RandomShear(0.3))
+
+#output_transforms.append(
+#    custom_transforms.Subsample(
+#            transform["subsample"][0], transform["subsample"][1]
+#        )
+#    )
+
+output_transforms = transforms.Compose(output_transforms)
+
+data = output_transforms(data)
+
+# save data
+torch.save(data, 'sandpit/output/post_transform.pt')

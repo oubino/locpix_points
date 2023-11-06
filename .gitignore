@@ -78,3 +78,4 @@ misc/
 
 # ignore test output
 tests/output
+sandpit/output
