@@ -272,6 +272,34 @@ This is then ready for training
 Featanalyse
 -----------
 
+*Requirements*
+
+The packages required are not installed in any current environment. These include 
+- polars
+- seaborn
+- matplotlib
+- umap
+- sklearn
+- numpy
+
+*Run*
+
+```
+python recipes/featanalyse.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+``
+
+*Long description*
+
+Loads in .parquet files for clusters and localisations and visualises the extracted features.
+Including
+- box plots 
+- UMAPs
 
 Visualise
 ---------

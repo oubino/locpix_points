@@ -35,6 +35,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Important
+    - Feat analysis is currently done in anaconda - make note of this; and make sure script is identical between both
     - Check using visualisation that scaling done correctly for cooridnates
     - For below ones Rotate-->Shear have option which does individual or joint option if isinstance(data, HeteroData)
     - Rewrite all the transforms for heterogeneous data  - define in this otherwise will get overwritten by future changes 

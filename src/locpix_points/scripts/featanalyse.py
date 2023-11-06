@@ -105,12 +105,8 @@ def main(argv=None):
 
     # aggregate dfs into one big df
     df = pl.concat(dfs)
-
     df = df.to_pandas()
 
-    print(df)
-
-    
     sns.boxplot(data=df, x="RGyration", y="type")
     plt.show()
     sns.boxplot(data=df, x="linearity", y="type")
@@ -144,14 +140,8 @@ def main(argv=None):
     ].values
     scaled_data = StandardScaler().fit_transform(data)
     embedding = reducer.fit_transform(scaled_data)
-    #print(embedding.shape)
-    #print(df.type.map({"normal":0, "cancer":1}))
-    #fig, ax = plt.subplots()
-    #c=[sns.color_palette()[x] for x in df.type.map({"normal":0, "cancer":1})]
-    #print(sns.color_palette()[0])
-    #print(sns.color_palette()[1])
-    #c = np.array(c)
-    #print(np.unique(c))
+
+    # Plot UMAP - normal vs cancer
     plt.scatter(
         embedding[:, 0],
         embedding[:, 1],
@@ -164,12 +154,7 @@ def main(argv=None):
     plt.title('UMAP projection of the dataset', fontsize=24)
     plt.show()
 
-    print(df.file_name.map({"cancer_0.parquet":0, 
-                            "cancer_1.parquet":1,
-                            "cancer_2.parquet":2,
-                            "normal_0.parquet":3,
-                            "normal_1.parquet":4,
-                            "normal_2.parquet":5}))
+    # Plot UMAP patients
     plt.scatter(
         embedding[:, 0],
         embedding[:, 1],
@@ -185,6 +170,7 @@ def main(argv=None):
                                         "normal_0.parquet":3,
                                         "normal_1.parquet":4,
                                         "normal_2.parquet":5})])
+    # lgened
     cancer_patch_0 = mpatches.Patch(color=sns.color_palette()[0], label='Cancer 0')
     cancer_patch_1 = mpatches.Patch(color=sns.color_palette()[1], label='Cancer 1')
     cancer_patch_2 = mpatches.Patch(color=sns.color_palette()[2], label='Cancer 2')
