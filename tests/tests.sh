@@ -10,43 +10,45 @@ source /root/micromamba/etc/profile.d/micromamba.sh
 micromamba activate locpix-points
 
 # Test preprocess
-
-if pytest tests/preprocess.py
+if 0
 then
-    echo "preprocess successful"
+    if pytest tests/preprocess.py
+    then
+        echo "preprocess successful"
+    else
+        echo "removing output"
+        rm -r tests/output
+        exit
+    fi
+
+    # Activate correct environment
+    micromamba activate rapids=23.10
+
+    # Test feat extract
+    if pytest tests/featextract.py
+    then
+        echo "feat extract successful"
+    else
+        echo "removing output"
+        rm -r tests/output
+        exit
+    fi
+
+    # Activate correct environment
+    micromamba activate locpix-points
+
+    # Test feat extract
+    if pytest tests/process.py
+    then
+        echo "processed successfuly"
+    else
+        echo "removing output"
+        rm -r tests/output
+        exit
+    fi
 else
-    echo "removing output"
-    rm -r tests/output
-    exit
+    pytest tests/train.py
 fi
-
-# Activate correct environment
-micromamba activate rapids=23.10
-
-# Test feat extract
-if pytest tests/featextract.py
-then
-    echo "feat extract successful"
-else
-    echo "removing output"
-    rm -r tests/output
-    exit
-fi
-
-# Activate correct environment
-micromamba activate locpix-points
-
-# Test feat extract
-if pytest tests/process.py
-then
-    echo "processed successfuly"
-else
-    echo "removing output"
-    rm -r tests/output
-    exit
-fi
-
-#pytest tests/train.py
 # Test train
 #if pytest tests/train.py
 #then

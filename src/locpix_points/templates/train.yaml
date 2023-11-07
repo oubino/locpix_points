@@ -1,5 +1,6 @@
 # device to train on (gpu or cpu)
-gpu: True
+train_on_gpu: True
+load_data_from_gpu: False
 
 # model parameters
 model: pointnetclass

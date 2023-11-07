@@ -45,7 +45,7 @@ class SMLMDataset(Dataset):
             have graph label and node label
         pre_filter (function) : Takes in data object and returns 1 if
             data should be included in dataset and 0 if it should not
-        gpu (boolean): Whether the data should be savedd from the GPU
+        save_on_gpu (boolean): Whether the data should be savedd to the GPU
             or not.
         transform (dict) : Transforms to be applied to each data point.
             Keys are the transforms and values are the relevant
@@ -63,7 +63,7 @@ class SMLMDataset(Dataset):
         processed_dir_root,
         label_level,
         pre_filter,
-        gpu,
+        save_on_gpu,
         transform,
         pre_transform,
         fov_x,
@@ -83,7 +83,7 @@ class SMLMDataset(Dataset):
                 assert self._raw_cluster_file_names == self._raw_loc_file_names
         self._processed_file_names = list(sorted(os.listdir(processed_dir_root)))
         self.label_level = label_level
-        self.gpu = gpu
+        self.save_on_gpu = save_on_gpu
         self.fov_x = fov_x
         self.fov_y = fov_y
 
@@ -217,7 +217,7 @@ class LocDataset(SMLMDataset):
         processed_dir_root,
         label_level,
         pre_filter,
-        gpu,
+        save_on_gpu,
         transform,
         pre_transform,
         min_feat,
@@ -231,7 +231,7 @@ class LocDataset(SMLMDataset):
             processed_dir_root,
             label_level,
             pre_filter,
-            gpu,
+            save_on_gpu,
             transform,
             pre_transform,
         )
@@ -250,7 +250,7 @@ class ClusterDataset(SMLMDataset):
         processed_dir_root,
         label_level,
         pre_filter,
-        gpu,
+        save_on_gpu,
         transform,
         pre_transform,
         min_feat,
@@ -264,7 +264,7 @@ class ClusterDataset(SMLMDataset):
             processed_dir_root,
             label_level,
             pre_filter,
-            gpu,
+            save_on_gpu,
             transform,
             pre_transform,
         )
@@ -297,7 +297,7 @@ class ClusterLocDataset(SMLMDataset):
         processed_dir_root,
         label_level,
         pre_filter,
-        gpu,
+        save_on_gpu,
         transform,
         pre_transform,
         loc_feat,
@@ -325,7 +325,7 @@ class ClusterLocDataset(SMLMDataset):
             processed_dir_root,
             label_level,
             pre_filter,
-            gpu,
+            save_on_gpu,
             transform,
             pre_transform,
             fov_x,
@@ -433,7 +433,7 @@ class ClusterLocDataset(SMLMDataset):
             _, tail = os.path.split(raw_path)
             file_name = tail.strip(extension)
             # TODO: change/check this and make option in process
-            # if self.gpu:
+            # if self.save_on_gpu:
             #    data.cuda()
             torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
 
@@ -534,7 +534,7 @@ def process_heterogeneous(self):
             _, tail = os.path.split(raw_path)
             file_name = tail.strip(extension)
             # TODO: change/check this
-            # if self.gpu:
+            # if self.save_on_gpu:
             #    data.cuda()
             if data.x is not None:
                 data.x = data.x.float()

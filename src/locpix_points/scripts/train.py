@@ -58,7 +58,8 @@ def main(argv=None):
     # load in config
     batch_size = config["batch_size"]
     epochs = config["epochs"]
-    gpu = config["gpu"]
+    train_on_gpu = config["train_on_gpu"]
+    load_data_from_gpu = config["load_data_from_gpu"]
     optimiser = config["optimiser"]
     lr = config["lr"]
     weight_decay = config["weight_decay"]
@@ -67,14 +68,14 @@ def main(argv=None):
     label_level = config["label_level"]
 
     # define device
-    if gpu is True and not torch.cuda.is_available():
+    if train_on_gpu is True and not torch.cuda.is_available():
         raise ValueError(
             "No gpu available, can run on cpu\
                          instead"
         )
-    elif gpu is True and torch.cuda.is_available():
+    elif train_on_gpu is True and torch.cuda.is_available():
         device = torch.device("cuda")
-    elif gpu is False:
+    elif train_on_gpu is False:
         device = torch.device("cpu")
     else:
         raise ValueError("Specify cpu or gpu !")
@@ -92,7 +93,7 @@ def main(argv=None):
         train_folder, # processed_dir_root
         label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
-        gpu=gpu, # gpu
+        load_data_from_gpu=load_data_from_gpu, # gpu
         transform=config["transforms"], # transform
         pre_transform=None, # pre_transform
         loc_feat=None,
@@ -113,7 +114,7 @@ def main(argv=None):
         val_folder, # processed_dir_root
         label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
-        gpu=gpu, # gpu
+        load_data_from_gpu=load_data_from_gpu, # gpu
         transform=config["transforms"], # transform
         pre_transform=None, # pre_transform
         loc_feat=None,
@@ -129,12 +130,12 @@ def main(argv=None):
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
-    if gpu is True:
+    if load_data_from_gpu is True:
         pin_memory = False
-    elif gpu is False:
+    elif load_data_from_gpu is False:
         pin_memory = True
     else:
-        raise ValueError("gpu should be True or False")
+        raise ValueError("load_data_from_gpu should be True or False")
 
     # initialise dataloaders
     train_loader = L.DataLoader(

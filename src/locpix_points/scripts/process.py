@@ -232,7 +232,7 @@ def main(argv=None):
             train_folder,
             config["label_level"],
             train_pre_filter,
-            config["gpu"],
+            config["save_on_gpu"],
             None,  # transform introduced in train script
             None,  # pre-transform
             config["loc_feat"],
@@ -254,7 +254,7 @@ def main(argv=None):
             val_folder,
             config["label_level"],
             val_pre_filter,
-            config["gpu"],
+            config["save_on_gpu"],
             None,  # transform
             None,  # pre-transform
             config["loc_feat"],
@@ -276,7 +276,7 @@ def main(argv=None):
             test_folder,
             config["label_level"],
             test_pre_filter,
-            config["gpu"],
+            config["save_on_gpu"],
             None,  # transform
             None,  # pre-transform
             config["loc_feat"],

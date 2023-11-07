@@ -34,7 +34,7 @@ model: 'ClusterLoc' # ClusterLoc, Loc or Cluster
 kneighbours: 3
 
 # whether to use gpu (currently irrelevant)
-gpu: True
+save_on_gpu: True
 
 # size of fov
 fov_x: 50000.0
