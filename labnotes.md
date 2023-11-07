@@ -34,8 +34,12 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
+Important
+    - Implement leave one out cross validation - Needs to consider the different splits - script which wraps process + train + performane evaluate to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
+
 Train
-    - Write train script and update model
+    - Improve model
+    - check model doing what we think its doing
     
 Visualisation
     - Check that loclisations are correctly connected to each other
@@ -51,7 +55,6 @@ ReadME
     - also include visualise
 
 Misc
-    - Implement leave one out cross validation - Needs to consider the different splits - script which wraps process + train + performane evaluate to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
     - Address all warnings in code
     - Need an entry script:
         1. Args: Name of experiment/Location for experiment/location of data for experiment
