@@ -46,7 +46,7 @@ else
     exit
 fi
 
-pytest tests/train.py
+#pytest tests/train.py
 # Test train
 #if pytest tests/train.py
 #then

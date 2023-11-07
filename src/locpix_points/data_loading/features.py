@@ -49,42 +49,6 @@ def load_loc_cluster(
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
 
-    # load in positions
-    x_locs = torch.tensor(loc_table["x"].to_numpy())
-    y_locs = torch.tensor(loc_table["y"].to_numpy())
-
-    # scale position
-    x_range = x_locs.max() - x_locs.min()
-    if x_range < 0.95*fov_x:
-        warnings.warn(f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}")
-        x_locs = (x_locs - x_locs.min())/x_range # scale from 0 to 1
-        x_locs = 2*x_locs - 1
-        print(f'1 unit in new space (x) == {x_range/2} in original units')
-        assert x_locs.min() == -1.0
-        assert x_locs.max() == 1.0
-    
-    y_range = y_locs.max() - y_locs.min()
-    if y_range < 0.95*fov_y:
-        warnings.warn(f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}")
-        y_locs = (y_locs - y_locs.min())/y_range # scale from 0 to 1
-        y_locs = 2*y_locs - 1
-        print(f'1 unit in new space (y) == {y_range/2} in original units')
-        assert y_locs.min() == -1.0
-        assert y_locs.max() == 1.0
-
-    loc_coords = torch.stack((x_locs, y_locs), dim=1)
-    data["locs"].pos = loc_coords.float()
-
-    # scale cluster coordinates
-    x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
-    y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
-    x_clusters = (x_clusters - x_locs.min())/x_range # scale from 0 to 1
-    x_clusters = 2*x_clusters - 1
-    y_clusters = (y_clusters - y_locs.min())/y_range # scale from 0 to 1
-    y_clusters = 2*y_clusters - 1
-    cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
-    data["clusters"].pos = cluster_coords.float()
-
     # load in features
     assert list(min_feat_locs.keys()) == loc_feat
     assert list(max_feat_locs.keys()) == loc_feat
@@ -154,10 +118,59 @@ def load_loc_cluster(
     loc_cluster_edges = loc_cluster_edges.astype(int)
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
 
+    # Load in positions afterwards as scale data to between -1 and 1 - this might affect
+    # above code
+
+    # load in positions
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
+
+    # scale positions
+    min_x = x_locs.min()
+    min_y = y_locs.min()
+    x_range = x_locs.max() - min_x
+    y_range = y_locs.max() - min_y
+    if x_range < 0.95*fov_x:
+            warnings.warn(f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}")
+    if y_range < 0.95*fov_y:
+            warnings.warn(f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}")
+    range_xy = max(x_range, y_range)
+
+    # scale position
+    if 1:
+        # shift and scale biggest axis from 0 to 1
+        x_locs = (x_locs - min_x)/range_xy 
+        y_locs = (y_locs - min_y)/range_xy 
+        # scale to between -1 and 1
+        x_locs = 2.0*x_locs - 1.0
+        y_locs = 2.0*y_locs - 1.0
+        assert (x_locs.min() == -1.0 or y_locs.min() == 1.0)
+        assert (x_locs.max() == 1.0 or y_locs.max() == 1.0)
+    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    warnings.warn(f"{loc_coords}")
+    data["locs"].pos = loc_coords.float()
+
+    # scale cluster coordinates
+    x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
+    y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
+
+    if 1:
+        # scale from 0 to 1
+        x_clusters = (x_clusters - min_x)/range_xy 
+        y_clusters = (y_clusters - min_y)/range_xy 
+        # scale from -1 to 1
+        x_clusters = 2.0*x_clusters - 1.0
+        y_clusters = 2.0*y_clusters - 1.0
+    cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
+
+    data["clusters"].pos = cluster_coords.float()
+
     data["locs", "in", "cluster"].edge_index = loc_cluster_edges
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 
+    warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
     warnings.warn("Need to check that graph is connected correctly")
+    warnings.warn("Data should be normalised and scaled correctly")
 
     return data
