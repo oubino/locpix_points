@@ -86,7 +86,7 @@ def train_loop(
 
             # update scale for next iteration
             scaler.update()
-
+        
         # val data
         # TODO: make sure torch.no_grad() somewhere
         # make sure model in eval mode

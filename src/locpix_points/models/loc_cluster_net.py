@@ -14,6 +14,7 @@ from torch_geometric.nn import (
     HeteroConv,
     conv,
 )
+from torch_geometric.nn.pool import global_max_pool
 from torch.nn import Linear
 
 
@@ -45,7 +46,6 @@ class Loc2Cluster(torch.nn.Module):
         #raise ValueError("is dimension concatenating in correct")
         out["clusters"] = torch.squeeze(out["clusters"])
         x_dict["clusters"] = torch.cat((x_dict["clusters"], out["clusters"]), dim=-1)
-
         return x_dict["clusters"]
 
 
@@ -57,10 +57,10 @@ class ClusterEncoder(torch.nn.Module):
             {("clusters", "near", "clusters"): conv.SAGEConv((-1, -1), 4)}, aggr="max"
         )
 
-    def forward(self, x_dict, edge_index_dict):
+    def forward(self, x_dict, edge_index_dict, cluster_batch):
         out = self.conv(x_dict, edge_index_dict)
         #raise ValueError("Wrong axis when have batch")
-        out, _ = torch.max(out["clusters"], axis=0)
+        out = global_max_pool(out['clusters'], cluster_batch)
         return out
 
 
@@ -86,9 +86,7 @@ class LocClusterNet(torch.nn.Module):
         x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict)
 
         # operate graph net on clusters, finish with pooling step
-        x_dict["clusters"] = self.clusterencoder(x_dict, edge_index_dict)
-
-        print('cluster dict shape', x_dict['clusters'].shape)
+        x_dict["clusters"] = self.clusterencoder(x_dict, edge_index_dict, data['clusters'].batch)
 
         # linear layer
         output = self.linear(x_dict["clusters"]).log_softmax(dim=-1)
