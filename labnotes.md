@@ -36,12 +36,6 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 Important
     - Check using visualisation that normalise and scale done correctly for cooridnates
-    - Check trasnforms for following (note clusters need to be transformed same way)
-        - Random Rotate 
-        - Radom Jitter  (NOTE implications of jittering cluster will not be in same position relative to it )
-        - Random Flip 
-        - Random Scale 
-        - Random Shear ?
 
 Train
     - Write train script and update model

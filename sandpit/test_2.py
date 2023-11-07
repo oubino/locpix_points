@@ -13,10 +13,10 @@ output_transforms = []
 
 # axis to rotate around i.e. axis=2 rotate around z axis - meaning
 # coordinates are rotated in the xy plane
-output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
+#output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
 
 # need to either define as constant or allow precision to impact this
-#output_transforms.append(custom_transforms.RandomJitter(0.1))
+#output_transforms.append(custom_transforms.RandomJitter(0.02)) # 0.02/2 = 1% in x
 
 # axis = 0 - means x coordinates are flipped - i.e. reflection
 # in the y axis
@@ -32,7 +32,7 @@ output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
 #)
 
 # shear by particular matrix
-#output_transforms.append(custom_transforms.RandomShear(0.3))
+output_transforms.append(custom_transforms.RandomShear(0.3))
 
 #output_transforms.append(
 #    custom_transforms.Subsample(

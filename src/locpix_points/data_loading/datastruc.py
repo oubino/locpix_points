@@ -124,6 +124,7 @@ class SMLMDataset(Dataset):
                 output_transforms.append(custom_transforms.RandomShear(transform["shear"]))
 
             if "subsample" in transform.keys():
+                raise ValueError('Not implemented for cluster/locs yet')
                 output_transforms.append(
                     custom_transforms.Subsample(
                         transform["subsample"][0], transform["subsample"][1]

@@ -262,11 +262,10 @@ class RandomShear(BaseTransform):
                 else:
                     assert store.pos.size(-1) == dim
         
-        matrix = data.pos.new_empty(dim, dim).uniform_(-self.shear, self.shear)
-        raise ValueError(f'{matrix.shape} not sure what shape this is and how to approach this one')
+        matrix = 2 * torch.rand(dim,dim) - 1
         eye = torch.arange(dim, dtype=torch.long)
         matrix[eye, eye] = 1
-
+        
         return LinearTransformation(matrix)(data)
 
     def __repr__(self) -> str:
