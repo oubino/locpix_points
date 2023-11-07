@@ -106,6 +106,8 @@ def main(argv=None):
         fov_x=None,
         fov_y=None,
         )
+    
+    print(f"Length of train dataset {len(train_set)}")
 
     # load in val dataset
     val_set = datastruc.ClusterLocDataset(
@@ -127,6 +129,8 @@ def main(argv=None):
         fov_x=None,
         fov_y=None,
     )
+
+    print(f"Length of validation dataset {len(val_set)}")
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try

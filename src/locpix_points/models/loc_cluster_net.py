@@ -72,9 +72,13 @@ class LocClusterNet(torch.nn.Module):
         self.loc_encode = LocEncoder()
         self.loc2cluster = Loc2Cluster()
         self.clusterencoder = ClusterEncoder()
-        self.linear = Linear(4, 1)
+        self.linear = Linear(4, 2)
 
-    def forward(self, x_dict, edge_index_dict):
+    def forward(self, data):
+
+        x_dict = data.x_dict
+        edge_index_dict = data.edge_index_dict
+
         # embed each cluster, finish with pooling step
         x_dict["locs"] = self.loc_encode(x_dict, edge_index_dict)
 
@@ -84,7 +88,9 @@ class LocClusterNet(torch.nn.Module):
         # operate graph net on clusters, finish with pooling step
         x_dict["clusters"] = self.clusterencoder(x_dict, edge_index_dict)
 
+        print('cluster dict shape', x_dict['clusters'].shape)
+
         # linear layer
-        output = self.linear(x_dict["clusters"])
+        output = self.linear(x_dict["clusters"]).log_softmax(dim=-1)
 
         return output
