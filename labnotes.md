@@ -34,9 +34,6 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-Important
-    - Check using visualisation that normalise and scale done correctly for cooridnates
-
 Train
     - Write train script and update model
     
