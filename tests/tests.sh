@@ -10,7 +10,7 @@ source /root/micromamba/etc/profile.d/micromamba.sh
 micromamba activate locpix-points
 
 # Test preprocess
-if 0
+if 0:
 then
     if pytest tests/preprocess.py
     then
@@ -49,6 +49,7 @@ then
 else
     pytest tests/train.py
 fi
+
 # Test train
 #if pytest tests/train.py
 #then

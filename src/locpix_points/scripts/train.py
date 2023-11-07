@@ -93,7 +93,7 @@ def main(argv=None):
         train_folder, # processed_dir_root
         label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
-        load_data_from_gpu=load_data_from_gpu, # gpu
+        save_on_gpu=load_data_from_gpu, # gpu
         transform=config["transforms"], # transform
         pre_transform=None, # pre_transform
         loc_feat=None,
@@ -114,7 +114,7 @@ def main(argv=None):
         val_folder, # processed_dir_root
         label_level=config['label_level'],# label_level
         pre_filter=None, # pre_filter
-        load_data_from_gpu=load_data_from_gpu, # gpu
+        save_on_gpu=load_data_from_gpu, # gpu
         transform=config["transforms"], # transform
         pre_transform=None, # pre_transform
         loc_feat=None,
@@ -136,7 +136,7 @@ def main(argv=None):
         pin_memory = True
     else:
         raise ValueError("load_data_from_gpu should be True or False")
-
+    
     # initialise dataloaders
     train_loader = L.DataLoader(
         train_set,
@@ -172,10 +172,11 @@ def main(argv=None):
     if label_level == "node":
         assert label.shape[0] == nodes
     elif label_level == "graph":
-        assert label.shape == 1
+        assert label.shape == torch.Size([1])
     else:
         raise ValueError("Label level not defined")
-    dim = first_train_item.pos.shape[-1]
+    dim = first_train_item['locs'].pos.shape[-1]
+    print('Dim', dim)
 
     # initialise model
     model = model_choice(
@@ -195,6 +196,8 @@ def main(argv=None):
     if loss_fn == "nll":# CHANGE
         loss_fn = torch.nn.functional.nll_loss
 
+    wandb.login()
+
     # initialise wandb
     # start a new wandb run to track this script
     wandb.init(
@@ -210,17 +213,17 @@ def main(argv=None):
     )
 
     # model summary
-    print("\n")
-    print("---- Model summary (estimate) ----")
-    print("\n")
-    number_nodes = nodes * len(
-        train_set
-    )  # this is just for summary, has no bearing on training
-    summary(
-        model,
-        input_size=(train_set.num_node_features, number_nodes),
-        batch_size=batch_size,
-    )
+    #print("\n")
+    #print("---- Model summary (estimate) ----")
+    #print("\n")
+    #number_nodes = nodes * len(
+    #    train_set
+    #)  # this is just for summary, has no bearing on training
+    #summary(
+    #    model,
+    #    input_size=(train_set.num_node_features, number_nodes),
+    #    batch_size=batch_size,
+    #)
 
     # define save location for model
     model_folder = os.path.join(project_directory, "models")

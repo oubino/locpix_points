@@ -20,11 +20,11 @@ from torch.nn import Linear
 class LocEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        raise ValueError("Need to define how many channels custom")
+        #raise ValueError("Need to define how many channels custom")
         self.conv = SAGEConv((-1, -1), 7)
 
     def forward(self, x_dict, edge_index_dict):
-        raise ValueError("check + do we need a relu?")
+        #raise ValueError("check + do we need a relu?")
         loc_x = self.conv(
             x_dict["locs"], edge_index_dict["locs", "clusteredwith", "locs"]
         ).relu()
@@ -34,15 +34,15 @@ class LocEncoder(torch.nn.Module):
 class Loc2Cluster(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        raise ValueError("Max or sum?")
+        #raise ValueError("Max or sum?")
         self.conv = HeteroConv(
             {("locs", "in", "clusters"): conv.SimpleConv(aggr="max")}, aggr=None
         )
 
     def forward(self, x_dict, edge_index_dict):
         out = self.conv(x_dict, edge_index_dict)
-        raise ValueError("Do I need torch.squeeze")
-        raise ValueError("is dimension concatenating in correct")
+        #raise ValueError("Do I need torch.squeeze")
+        #raise ValueError("is dimension concatenating in correct")
         out["clusters"] = torch.squeeze(out["clusters"])
         x_dict["clusters"] = torch.cat((x_dict["clusters"], out["clusters"]), dim=-1)
 
@@ -52,22 +52,23 @@ class Loc2Cluster(torch.nn.Module):
 class ClusterEncoder(torch.nn.Module):
     def __init__(self):
         super().__init__()
-        raise ValueError("Is number of channels correct, and max or average aggregate")
+        #raise ValueError("Is number of channels correct, and max or average aggregate")
         self.conv = HeteroConv(
             {("clusters", "near", "clusters"): conv.SAGEConv((-1, -1), 4)}, aggr="max"
         )
 
     def forward(self, x_dict, edge_index_dict):
         out = self.conv(x_dict, edge_index_dict)
-        raise ValueError("Wrong axis when have batch")
+        #raise ValueError("Wrong axis when have batch")
         out, _ = torch.max(out["clusters"], axis=0)
         return out
 
 
 class LocClusterNet(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, foo):
         super().__init__()
         self.name = "loc_cluster_net"
+        self.foo = foo
         self.loc_encode = LocEncoder()
         self.loc2cluster = Loc2Cluster()
         self.clusterencoder = ClusterEncoder()

@@ -115,7 +115,7 @@ def visualise_torch_geometric(
             pcds[index] = np.concatenate([pcd, z], axis=1)
 
     # loc to cluster edges
-    lines = np.swapaxes(x["locs", "in", "cluster"].edge_index, 0, 1)
+    lines = np.swapaxes(x["locs", "in", "clusters"].edge_index, 0, 1)
     # need one set of coordinates with all points in it
     # add cluster coords at elocs nd of locs
     # increase index of cluster edge index by the number of locs

@@ -165,7 +165,7 @@ def load_loc_cluster(
 
     data["clusters"].pos = cluster_coords.float()
 
-    data["locs", "in", "cluster"].edge_index = loc_cluster_edges
+    data["locs", "in", "clusters"].edge_index = loc_cluster_edges
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 
