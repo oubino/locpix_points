@@ -34,12 +34,15 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-Train
-    - Improve model
-    - check model doing what we think its doing
+Apply PointNet
+    - Construct my own PointNet which doesn't calculate nearest neighbours instead it considers all neighbours within a cluster - attempt to emulate pointnet in notes but directly write network using PointNetConv
 
 To do
-    -- I think we should simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset - use Daniel Nieves dataset - this can also help us to validate if made any mistakes in the code
+    - Improve model
+        - take point net and apply this to each cluster
+        - better graph net on top 
+        - check model doing what we think its doing
+    - Simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset OR use Daniel Nieves dataset - this can help us to validate if there are mistakes in the code
     
 Visualisation
     - Check that loclisations are correctly connected to each other
