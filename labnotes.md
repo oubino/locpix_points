@@ -34,6 +34,13 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
+K-fold
+    - k_fold script
+    - 5. Remove all files from process apart from if there is a pre-filter file - check this as this file can tell us the k fold split without having to save it ourselves
+
+Add in test to process and train
+Update ReadME for process/train and k-fold
+
 Important
     - Implement leave one out cross validation - Needs to consider the different splits - script which wraps process + train + performane evaluate to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
 

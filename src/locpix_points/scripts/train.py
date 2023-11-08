@@ -47,6 +47,26 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-p",
+        "--processed_directory",
+        action="store",
+        type=str,
+        help="the location of the processed files\
+                if not specified then defaults to\
+                project_directory/processed",
+    )
+
+    parser.add_argument(
+        "-m",
+        "--model_folder",
+        action="store",
+        type=str,
+        help="where to store the models if not specified\
+                defaults to project_directory/models",
+    )
+
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -81,7 +101,10 @@ def main(argv=None):
         raise ValueError("Specify cpu or gpu !")
 
     # folder
-    processed_directory = os.path.join(project_directory, "processed")
+    if args.processed_directory is not None:
+        processed_directory = os.path.join(project_directory, args.processed_directory)
+    else:
+        processed_directory = os.path.join(project_directory, "processed")
     train_folder = os.path.join(processed_directory, "train")
     val_folder = os.path.join(processed_directory, "val")
     test_folder = os.path.join(processed_directory, "test")
@@ -230,7 +253,10 @@ def main(argv=None):
     #)
 
     # define save location for model
-    model_folder = os.path.join(project_directory, "models")
+    if args.model_folder is not None:
+        model_folder = os.path.join(project_directory, args.model_folder)
+    else:
+        model_folder = os.path.join(project_directory, "models")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
     time_o = time.gmtime(time.time())
@@ -280,6 +306,13 @@ def main(argv=None):
     )
 
     wandb.log(metrics)
+
+    print("\n")
+    print("----- Saving model... ------")
+    if args.processed_directory is not None:
+        processed_directory = os.path.join(project_directory, args.processed_directory)
+    else:
+        processed_directory = os.path.join(project_directory, "processed")
 
     # save config file to folder and wandb
     yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")

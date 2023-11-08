@@ -1,0 +1,34 @@
+splits:
+  test:
+  - - cancer_2.parquet
+    - normal_2.parquet
+  - - normal_1.parquet
+  - - normal_0.parquet
+  - - cancer_0.parquet
+  - - cancer_1.parquet
+  train:
+  - - normal_1.parquet
+    - cancer_0.parquet
+    - cancer_1.parquet
+  - - cancer_0.parquet
+    - cancer_1.parquet
+    - cancer_2.parquet
+  - - normal_1.parquet
+    - cancer_0.parquet
+    - cancer_1.parquet
+    - cancer_2.parquet
+  - - normal_1.parquet
+    - cancer_1.parquet
+    - cancer_2.parquet
+  - - normal_1.parquet
+    - cancer_0.parquet
+    - cancer_2.parquet
+  val:
+  - - normal_0.parquet
+  - - normal_0.parquet
+    - normal_2.parquet
+  - - normal_2.parquet
+  - - normal_0.parquet
+    - normal_2.parquet
+  - - normal_0.parquet
+    - normal_2.parquet

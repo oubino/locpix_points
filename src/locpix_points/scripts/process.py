@@ -105,6 +105,15 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-o",
+        "--output_folder",
+        action="store",
+        type=str,
+        help="location of the output folder, if not specified defaults\
+                to project_directory/procseed",
+    )
+
     group = parser.add_mutually_exclusive_group()
 
     group.add_argument(
@@ -155,7 +164,10 @@ def main(argv=None):
     # Directory of the .parquet files have been
     # preprocessed by preprocessing module but
     # are raw with respect to pytorch/analysis
-    processed_dir_root = os.path.join(project_directory, "processed")
+    if args.output_folder is not None:
+        processed_dir_root = os.path.join(project_directory, args.output_folder)
+    else:
+        processed_dir_root = os.path.join(project_directory, "processed")
 
     # split into train/val/test using pre filter
 
