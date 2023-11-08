@@ -396,13 +396,13 @@ And
 
     project_folder/preprocessed/featextact/clusters
 
-Processed files then saved in 
+Temporary processed files are saved in 
 
     project_directory/processed/fold_{index}/train/
     project_directory/processed/fold_{index}/val/
     project_directory/processed/fold_{index}/test/
 
-However, these files are cleaned and only files remaining are: filter_map.csv, pre_filter.pt and pre_transform.pt in these folders.
+However, these files are removed afterwards.
 
 The final models are saved in 
 
