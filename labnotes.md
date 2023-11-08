@@ -34,10 +34,6 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-K-fold
-    - k_fold script
-    - 5. Remove all files from process apart from if there is a pre-filter file - check this as this file can tell us the k fold split without having to save it ourselves
-
 Add in test to process and train
 Update ReadME for process/train and k-fold
 

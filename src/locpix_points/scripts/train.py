@@ -155,6 +155,29 @@ def main(argv=None):
 
     print(f"Length of validation dataset {len(val_set)}")
 
+    # load in test dataset
+    test_set = datastruc.ClusterLocDataset(
+        None, # raw_loc_dir_root
+        None, # raw_cluster_dir_root
+        test_folder, # processed_dir_root
+        label_level=config['label_level'],# label_level
+        pre_filter=None, # pre_filter
+        save_on_gpu=load_data_from_gpu, # gpu
+        transform=None, # transform
+        pre_transform=None, # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighbours=None,
+        fov_x=None,
+        fov_y=None,
+    )
+
+    print(f"Length of validation dataset {len(val_set)}")
+
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
     if load_data_from_gpu is True:
@@ -185,7 +208,8 @@ def main(argv=None):
     print("---- Params -----")
     print("\n")
     print("Input features: ", train_set.num_node_features)
-    print("Num classes: ", train_set.num_classes)
+    num_classes = max(train_set.num_classes, val_set.num_classes, test_set.num_classes)
+    print("Num classes: ", num_classes)
     print("Batch size: ", batch_size)
     print("Epochs: ", epochs)
     num_train_graph = len(train_set)
@@ -302,7 +326,7 @@ def main(argv=None):
         val_loader,
         device,
         label_level,
-        train_set.num_classes,
+        num_classes,
     )
 
     wandb.log(metrics)
