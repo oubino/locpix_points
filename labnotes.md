@@ -34,15 +34,12 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-Add in test to process and train
-Update ReadME for process/train and k-fold
-
-Important
-    - Implement leave one out cross validation - Needs to consider the different splits - script which wraps process + train + performane evaluate to do for 5-fold - create the 5 splits- pass as arugments to process which then saves as processed/fold/train, processed/fold/val, processed/fold/test after each fold clean up but keep model and splits
-
 Train
     - Improve model
     - check model doing what we think its doing
+
+To do
+    -- I think we should simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset - use Daniel Nieves dataset - this can also help us to validate if made any mistakes in the code
     
 Visualisation
     - Check that loclisations are correctly connected to each other
@@ -58,6 +55,7 @@ ReadME
     - also include visualise
 
 Misc
+    - Update evaluate so it evaluates on the test set 
     - Address all warnings in code
     - Need an entry script:
         1. Args: Name of experiment/Location for experiment/location of data for experiment

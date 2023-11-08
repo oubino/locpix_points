@@ -231,6 +231,7 @@ python recipes/process.py
 ``
 -i Path to the project folder
 -c Path to configuration .yaml file
+-o (Optional) Specify output folder if not provided defaults to project_directory/processed
 -r If you want to copy the data split of another project then include this argument with
    the location of the project folder
 -m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
@@ -252,6 +253,12 @@ Processed files then saved in
     project_directory/processed/val/
     project_directory/processed/test/
 
+or 
+
+    project_directory/{args.output_folder}/train/
+    project_directory/{args.output_folder}/val/
+    project_directory/{args.output_folder}/test/
+
 *Long description*
 
 A heterodataitem for each FOV is created.
@@ -267,7 +274,6 @@ Then edges are added between
     Clusters to nearest clusters
 
 This is then ready for training
-
 
 Featanalyse
 -----------
@@ -327,6 +333,88 @@ Or can load in .pt pytorch geometric file and visualise the nodes and edges
 
 Train
 -----
+
+*Run*
+
+```
+python recipes/train.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-p (Optional) Location of processed files, if not specified defaults to project_directory/processed
+-m (Optional) Where to store the models, if not specified defaults to project_directory/models
+``
+
+*Structure*
+
+Data loaded in from 
+
+    project_folder/processed
+
+or 
+
+    project_folder/{args.processed_directory}
+
+Output model is then saved in 
+
+    project_directory/models/
+
+or 
+
+    project_directory/{args.model_folder}
+
+*Long description*
+
+The data is loaded in, the specified model is trained and saved.
+
+k-fold
+------
+
+*Run*
+
+```
+python recipes/k_fold.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-r (Optional) If specified this integer defines the number of random splits to perform
+``
+
+*Structure*
+
+Data loaded in from 
+
+    project_folder/preprocessed/featextract/locs 
+
+And 
+
+    project_folder/preprocessed/featextact/clusters
+
+Processed files then saved in 
+
+    project_directory/processed/fold_{index}/train/
+    project_directory/processed/fold_{index}/val/
+    project_directory/processed/fold_{index}/test/
+
+However, these files are cleaned and only files remaining are: filter_map.csv, pre_filter.pt and pre_transform.pt in these folders.
+
+The final models are saved in 
+
+    project_folder/models/fold_{index}/
+
+*Long description*
+
+If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+
+For each fold, the data is processed and trained using the train and validation folds.
+
+After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
 
 
 Clean up

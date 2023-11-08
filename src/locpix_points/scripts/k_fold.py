@@ -141,7 +141,8 @@ def main(argv=None):
         print('Cleaning up')
 
         # clean up process folder check it first during debugging
-        keep_files = ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']
+        #keep_files = ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']
+        keep_files = []
         train_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/train')
         val_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/val')
         test_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/test')
@@ -156,6 +157,12 @@ def main(argv=None):
             os.remove(file)
         for file in test_files:
             os.remove(file)
+        
+        # remove directories
+        os.rmdir(f'{args.project_directory}/processed/fold_{index}/train')
+        os.rmdir(f'{args.project_directory}/processed/fold_{index}/val')
+        os.rmdir(f'{args.project_directory}/processed/fold_{index}/test')
+        os.rmdir(f'{args.project_directory}/processed/fold_{index}')
 
     # save config file to folder and wandb
     yaml_save_loc = os.path.join(project_directory, f"k_fold.yaml")
