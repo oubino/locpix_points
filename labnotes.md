@@ -37,6 +37,7 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 Apply PointNet
     - Construct my own PointNet which doesn't calculate nearest neighbours instead it considers all neighbours within a cluster - attempt to emulate pointnet in notes but directly write network using PointNetConv
     - Reduce network size by only connecting points in clusters which are near neighbours not all neighbours
+    - Increase number of layers for all - especially graph network
 
 To do
     - Improve model
