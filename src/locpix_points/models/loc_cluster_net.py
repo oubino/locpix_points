@@ -10,24 +10,25 @@ Helped using https://github.com/pyg-team/pytorch_geometric/blob/master/examples/
 
 import torch
 from torch_geometric.nn import (
-    SAGEConv,
+    PointNetConv,
     HeteroConv,
     conv,
+    MLP,
 )
 from torch_geometric.nn.pool import global_max_pool
 from torch.nn import Linear
 
 
 class LocEncoder(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, nn):
         super().__init__()
         #raise ValueError("Need to define how many channels custom")
-        self.conv = SAGEConv((-1, -1), 7)
+        self.conv = PointNetConv(nn, add_self_loops=False)
 
-    def forward(self, x_dict, edge_index_dict):
+    def forward(self, x_locs, pos_locs, edge_index_dict):
         #raise ValueError("check + do we need a relu?")
         loc_x = self.conv(
-            x_dict["locs"], edge_index_dict["locs", "clusteredwith", "locs"]
+            x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
         ).relu()
         return loc_x
 
@@ -50,18 +51,17 @@ class Loc2Cluster(torch.nn.Module):
 
 
 class ClusterEncoder(torch.nn.Module):
-    def __init__(self):
+    def __init__(self, in_channels, out_channels):
         super().__init__()
         #raise ValueError("Is number of channels correct, and max or average aggregate")
         self.conv = HeteroConv(
-            {("clusters", "near", "clusters"): conv.SAGEConv((-1, -1), 4)}, aggr="max"
+            {("clusters", "near", "clusters"): conv.SAGEConv(in_channels, out_channels)}, aggr="max"
         )
 
-    def forward(self, x_dict, edge_index_dict, cluster_batch):
+    def forward(self, x_dict, edge_index_dict):
         out = self.conv(x_dict, edge_index_dict)
         #raise ValueError("Wrong axis when have batch")
-        out = global_max_pool(out['clusters'], cluster_batch)
-        return out
+        return out['clusters']
 
 
 class LocClusterNet(torch.nn.Module):
@@ -69,26 +69,39 @@ class LocClusterNet(torch.nn.Module):
         super().__init__()
         self.name = "loc_cluster_net"
         self.foo = foo
-        self.loc_encode = LocEncoder()
+        # wrong input channel size 2 might change if locs have features
+        self.loc_encode_0 = LocEncoder(MLP([4, 4, 4, 4]))
+        self.loc_encode_1 = LocEncoder(MLP([6, 6, 6, 6]))
+        self.loc_encode_2 = LocEncoder(MLP([8, 8, 8, 8]))
         self.loc2cluster = Loc2Cluster()
-        self.clusterencoder = ClusterEncoder()
-        self.linear = Linear(4, 2)
+        self.clusterencoder_0 = ClusterEncoder(17,18)
+        self.clusterencoder_1 = ClusterEncoder(18, 24)
+        self.clusterencoder_2 = ClusterEncoder(24, 32)
+        self.linear = Linear(32, 2)
 
-    def forward(self, data):
+    def forward(self, data):   
 
         x_dict = data.x_dict
+        pos_dict = data.pos_dict
         edge_index_dict = data.edge_index_dict
 
-        # embed each cluster, finish with pooling step
-        x_dict["locs"] = self.loc_encode(x_dict, edge_index_dict)
+        # embed each localisation 
+        x_dict["locs"] = self.loc_encode_0(x_dict["locs"], pos_dict['locs'], edge_index_dict)
+        x_dict["locs"] = self.loc_encode_1(x_dict["locs"], pos_dict['locs'], edge_index_dict)
+        x_dict["locs"] = self.loc_encode_2(x_dict["locs"], pos_dict['locs'], edge_index_dict)
 
-        # for each cluster concatenate this embedding with previous state
+        # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
         x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict)
 
-        # operate graph net on clusters, finish with pooling step
-        x_dict["clusters"] = self.clusterencoder(x_dict, edge_index_dict, data['clusters'].batch)
+        # operate graph net on clusters, finish with 
+        x_dict["clusters"] = self.clusterencoder_0(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.clusterencoder_1(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.clusterencoder_2(x_dict, edge_index_dict)
 
-        # linear layer
+        # pooling step so end up with one feature vector per fov
+        x_dict['clusters'] = global_max_pool(x_dict['clusters'], data['clusters'].batch)
+
+        # linear layer on each fov feature vector
         output = self.linear(x_dict["clusters"]).log_softmax(dim=-1)
 
         return output
