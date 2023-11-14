@@ -42,8 +42,8 @@ def main():
     baa()
 
 def baa():
-    loc_table = pl.read_csv('test_loc_dataset.csv')
-    cluster_table = pl.read_csv('test_cluster_dataset.csv')
+    loc_table = pl.read_csv('sandpit/output/test_loc_dataset.csv')
+    cluster_table = pl.read_csv('sandpit/output/test_cluster_dataset.csv')
 
     data = HeteroData()
 
@@ -107,6 +107,8 @@ def baa():
     cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
     loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
 
+    
+
     # locs with same clusterID
     edges = []
     for a in loc_indices:
@@ -128,6 +130,43 @@ def baa():
     cluster_cluster_edges = to_undirected(cluster_cluster_edges)
     loc_cluster_edges = loc_cluster_edges.astype(int)
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
+
+    print('original')
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
+    loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+    print(loc_coords, flush=True)
+    batch = torch.tensor(loc_cluster_edges[1])
+    print('batch', batch)
+    loc_loc_edges_mod = knn_graph(loc_coords, k=3, batch=batch, loop=False)    
+    #loc_loc_edges = torch.sort(loc_loc_edges, dim=1).values
+    #loc_loc_edges_mod = torch.sort(loc_loc_edges_mod, dim=1).values
+    from torch_geometric.utils import remove_self_loops
+    #print(loc_loc_edges.shape)
+    #print(loc_loc_edges_mod.shape)
+    loc_loc_edges = remove_self_loops(loc_loc_edges, None)[0]
+    loc_loc_edges_mod = remove_self_loops(loc_loc_edges_mod, None)[0]
+    loc_loc_edges = loc_loc_edges.T
+    loc_loc_edges_mod = loc_loc_edges_mod.T
+    loc_loc_edges = loc_loc_edges[loc_loc_edges[:,0].argsort()]
+    loc_loc_edges = loc_loc_edges[loc_loc_edges[:,1].argsort()]
+    loc_loc_edges_mod = loc_loc_edges_mod[loc_loc_edges_mod[:,0].argsort()]
+    loc_loc_edges_mod = loc_loc_edges_mod[loc_loc_edges_mod[:,1].argsort()]
+    loc_loc_edges = loc_loc_edges
+    loc_loc_edges_mod = loc_loc_edges_mod
+
+
+    print(loc_loc_edges)
+    print(loc_loc_edges_mod)
+
+    for i in loc_loc_edges_mod:
+        present = 0
+        for j in loc_loc_edges:
+            if (i==j).all():
+                present += 1
+        print(present, flush=True)
+
+    input('stop')
 
     data['locs','in','clusters'].edge_index = loc_cluster_edges
     data['locs', 'clusteredwith', 'locs'].edge_index = loc_loc_edges
