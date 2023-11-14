@@ -31,7 +31,11 @@ label_level: 'graph'
 model: 'ClusterLoc' # ClusterLoc, Loc or Cluster
 
 # number of nearest neighbours to connect clusters to in graph
-kneighbours: 3
+kneighboursclusters: 3
+
+# number of nearest neighbours to connect locs to in graph
+# if null then connects all locs within each cluster
+kneighbourslocs: 3
 
 # whether to use gpu (currently irrelevant)
 save_on_gpu: False

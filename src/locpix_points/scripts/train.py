@@ -125,9 +125,10 @@ def main(argv=None):
         max_feat_locs=None,
         min_feat_clusters=None,
         max_feat_clusters=None,
-        kneighbours=None,
+        kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        kneighbourslocs=None
         )
     
     print(f"Length of train dataset {len(train_set)}")
@@ -148,9 +149,10 @@ def main(argv=None):
         max_feat_locs=None,
         min_feat_clusters=None,
         max_feat_clusters=None,
-        kneighbours=None,
+        kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        kneighbourslocs=None
     )
 
     print(f"Length of validation dataset {len(val_set)}")
@@ -171,9 +173,10 @@ def main(argv=None):
         max_feat_locs=None,
         min_feat_clusters=None,
         max_feat_clusters=None,
-        kneighbours=None,
+        kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        kneighbourslocs=None
     )
 
     print(f"Length of validation dataset {len(val_set)}")

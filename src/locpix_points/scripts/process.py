@@ -253,9 +253,10 @@ def main(argv=None):
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config["kneighbours"],
+            config["kneighboursclusters"],
             config['fov_x'],
             config['fov_y'],
+            kneighbourslocs=config["kneighbourslocs"],
         )
 
         print("Val set...")
@@ -275,9 +276,10 @@ def main(argv=None):
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config["kneighbours"],
+            config["kneighboursclusters"],
             config['fov_x'],
             config['fov_y'],
+            kneighbourslocs=config["kneighbourslocs"],
         )
 
         print("Test set...")
@@ -297,9 +299,10 @@ def main(argv=None):
             max_feat_locs,
             min_feat_clusters,
             max_feat_clusters,
-            config["kneighbours"],
+            config["kneighboursclusters"],
             config['fov_x'],
             config['fov_y'],
+            kneighbourslocs=config["kneighbourslocs"],
         )
 
         # save yaml file

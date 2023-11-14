@@ -306,9 +306,10 @@ class ClusterLocDataset(SMLMDataset):
         max_feat_locs,
         min_feat_clusters,
         max_feat_clusters,
-        kneighbours,
+        kneighboursclusters,
         fov_x,
         fov_y,
+        kneighbourslocs,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -317,7 +318,8 @@ class ClusterLocDataset(SMLMDataset):
         self.max_feat_locs = max_feat_locs
         self.min_feat_clusters = min_feat_clusters
         self.max_feat_clusters = max_feat_clusters
-        self.kneighbours = kneighbours
+        self.kneighboursclusters = kneighboursclusters
+        self.kneighbourslocs = kneighbourslocs
 
         super().__init__(
             raw_loc_dir_root,
@@ -390,9 +392,10 @@ class ClusterLocDataset(SMLMDataset):
                 self.max_feat_locs,
                 self.min_feat_clusters,
                 self.max_feat_clusters,
-                self.kneighbours,
+                self.kneighboursclusters,
                 self.fov_x,
                 self.fov_y,
+                self.kneighbourslocs,
             )
 
             # load in gt label

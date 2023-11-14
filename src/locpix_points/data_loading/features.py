@@ -22,9 +22,10 @@ def load_loc_cluster(
     max_feat_locs,
     min_feat_clusters,
     max_feat_clusters,
-    kneighbours,
+    kneighboursclusters,
     fov_x,
     fov_y,
+    kneighbourslocs=None,
 ):
     """Load in position, features and edge index to each node
 
@@ -41,10 +42,12 @@ def load_loc_cluster(
         max_feat_locs (dict) : Maxmimum values of features over locs training dataset
         min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
         max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
-        kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
+        kneighboursclusters (int) : How many nearest neighbours to consider constructing knn graph for
             cluster dataset
         fov_x (float) : Size of fov (x) in units of data
         fov_y (float) : Size of fov (y) in units of data
+        kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
+            loc loc dataset. If None then connects all locs within each cluster. Default (None)
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
@@ -54,6 +57,10 @@ def load_loc_cluster(
     assert list(max_feat_locs.keys()) == loc_feat
     assert list(min_feat_clusters.keys()) == cluster_feat
     assert list(max_feat_clusters.keys()) == cluster_feat
+
+    # load in positions
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
 
     feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
     min_vals = torch.tensor(list(min_feat_locs.values()))
@@ -91,39 +98,48 @@ def load_loc_cluster(
     # loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
     loc_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table["clusterID"]])
 
-    # locs with same clusterID
-    edges = []
-    print(loc_cluster_edges[1])
-    # iterate through clusters
-    for i in range(np.max(loc_cluster_edges[1])):
-        # get the loc indices for the clusters
-        loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1] == i)]
-        combos = list(itertools.combinations(loc_indices, 2))
-        combos = np.ascontiguousarray(np.transpose(combos))
-        edges.append(combos)
-    loc_loc_edges = np.concatenate(edges, axis=-1)
-
     # knn on clusters
     x = torch.tensor(cluster_table["x_mean"].to_numpy())
     y = torch.tensor(cluster_table["y_mean"].to_numpy())
     coords = torch.stack([x, y], axis=-1)
     batch = torch.zeros(len(coords))
-    cluster_cluster_edges = knn_graph(coords, k=kneighbours, batch=batch, loop=False)
-
+    cluster_cluster_edges = knn_graph(coords, k=kneighboursclusters, batch=batch, loop=False)
+    
+    if kneighbourslocs is None:
+        # locs with same clusterID
+        edges = []
+        print(loc_cluster_edges[1])
+        # iterate through clusters
+        for i in range(np.max(loc_cluster_edges[1])):
+            # get the loc indices for the clusters
+            loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1] == i)]
+            combos = list(itertools.combinations(loc_indices, 2))
+            combos = np.ascontiguousarray(np.transpose(combos))
+            edges.append(combos)
+        loc_loc_edges = np.concatenate(edges, axis=-1)
+    else:
+        batch_loc_loc = torch.tensor(loc_table['clusterID'].to_numpy())
+        indices = torch.sort(batch_loc_loc).indices
+        x_locs_idx = x_locs[indices]
+        y_locs_idx = y_locs[indices]
+        batch_loc_loc = batch_loc_loc[indices]
+        loc_indices = np.arange(0, len(loc_table))[indices]
+        loc_coords = torch.stack([x_locs_idx, y_locs_idx], axis=-1)
+        loc_loc_edges = knn_graph(loc_coords, k=kneighbourslocs, batch=batch_loc_loc, loop=False)  
+        locs_zero = loc_indices[loc_loc_edges[0]]
+        locs_one = loc_indices[loc_loc_edges[1]]
+        loc_loc_edges = np.stack([locs_zero, locs_one])
+    
     # edges in correct data format and undirected where relevant
-    loc_loc_edges = loc_loc_edges.astype(int)
-    loc_loc_edges = torch.from_numpy(loc_loc_edges)
-    loc_loc_edges = to_undirected(loc_loc_edges)
     cluster_cluster_edges = to_undirected(cluster_cluster_edges)
     loc_cluster_edges = loc_cluster_edges.astype(int)
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
+    loc_loc_edges = loc_loc_edges.astype(int)
+    loc_loc_edges = torch.from_numpy(loc_loc_edges)
+    loc_loc_edges = to_undirected(loc_loc_edges)
 
     # Load in positions afterwards as scale data to between -1 and 1 - this might affect
     # above code
-
-    # load in positions
-    x_locs = torch.tensor(loc_table["x"].to_numpy())
-    y_locs = torch.tensor(loc_table["y"].to_numpy())
 
     # scale positions
     min_x = x_locs.min()
