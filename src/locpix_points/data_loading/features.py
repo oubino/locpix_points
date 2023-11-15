@@ -8,7 +8,7 @@ import polars as pl
 import numpy as np
 import itertools
 from torch_geometric.nn import knn_graph
-from torch_geometric.utils import to_undirected
+from torch_geometric.utils import to_undirected, is_undirected, contains_self_loops, add_self_loops
 import warnings
 
 
@@ -82,41 +82,36 @@ def load_loc_cluster(
     loc_table = pl.from_arrow(loc_table)
 
     # locs with clusterID connected to that cluster clusterID
-    # group = loc_table.group_by("clusterID", maintain_order=True).agg(
-    #    pl.col("x").agg_groups()
-    # )
-    # group = group.with_columns(
-    #    pl.col("clusterID"), pl.col("x").list.len().alias("count")
-    # )
-    # count = group["count"].to_numpy()
-    # clusterIDlist = [[i] * count[i] for i in range(len(count))]
-    # group = group.with_columns(pl.Series("clusterIDlist", clusterIDlist))
-    # loc_indices = group["x"].to_numpy()
-    # cluster_indices = group["clusterIDlist"].to_numpy()
-    # loc_indices_stack = np.concatenate(loc_indices, axis=0)
-    # cluster_indices_stack = np.concatenate(cluster_indices, axis=0)
-    # loc_cluster_edges = np.stack([loc_indices_stack, cluster_indices_stack])
     loc_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table["clusterID"]])
+    loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
+    #loc_cluster_edges = loc_cluster_edges.to(torch.int64)
 
     # knn on clusters
     x = torch.tensor(cluster_table["x_mean"].to_numpy())
     y = torch.tensor(cluster_table["y_mean"].to_numpy())
+    # first need to check that clusterID is also in correct ordered from 0 to max cluster ID
+    assert(np.array_equal(cluster_table['clusterID'].to_numpy(), np.arange(0,len(x))))
     coords = torch.stack([x, y], axis=-1)
     batch = torch.zeros(len(coords))
-    cluster_cluster_edges = knn_graph(coords, k=kneighboursclusters, batch=batch, loop=False)
+    # add 1 as with loop = True considers itself as one of the k neighbours
+    cluster_cluster_edges = knn_graph(coords, k=kneighboursclusters+1, batch=batch, loop=True)
+    cluster_cluster_edges = to_undirected(cluster_cluster_edges)
     
+    # first need to check locs in correct form
+    assert(np.array_equal(loc_cluster_edges[0].numpy(),np.arange(0, len(loc_cluster_edges[0]))))
     if kneighbourslocs is None:
         # locs with same clusterID
         edges = []
-        print(loc_cluster_edges[1])
         # iterate through clusters
-        for i in range(np.max(loc_cluster_edges[1])):
+        for i in range(torch.max(loc_cluster_edges[1])):
             # get the loc indices for the clusters
             loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1] == i)]
-            combos = list(itertools.combinations(loc_indices, 2))
+            combos = list(itertools.permutations(loc_indices, 2))
             combos = np.ascontiguousarray(np.transpose(combos))
             edges.append(combos)
         loc_loc_edges = np.concatenate(edges, axis=-1)
+        loc_loc_edges = torch.from_numpy(loc_loc_edges)
+        loc_loc_edges, _ = add_self_loops(loc_loc_edges)
     else:
         batch_loc_loc = torch.tensor(loc_table['clusterID'].to_numpy())
         indices = torch.sort(batch_loc_loc).indices
@@ -125,22 +120,18 @@ def load_loc_cluster(
         batch_loc_loc = batch_loc_loc[indices]
         loc_indices = np.arange(0, len(loc_table))[indices]
         loc_coords = torch.stack([x_locs_idx, y_locs_idx], axis=-1)
-        loc_loc_edges = knn_graph(loc_coords, k=kneighbourslocs, batch=batch_loc_loc, loop=False)  
+        # add 1 as with loop = True considers itself as one of the k neighbours
+        loc_loc_edges = knn_graph(loc_coords, k=kneighbourslocs+1, batch=batch_loc_loc, loop=True)  
+        # loc loc edges [0] is the neighbours
+        # loc loc edges [1] is the original points
         locs_zero = loc_indices[loc_loc_edges[0]]
         locs_one = loc_indices[loc_loc_edges[1]]
         loc_loc_edges = np.stack([locs_zero, locs_one])
-    
-    # edges in correct data format and undirected where relevant
-    cluster_cluster_edges = to_undirected(cluster_cluster_edges)
-    loc_cluster_edges = loc_cluster_edges.astype(int)
-    loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
-    loc_loc_edges = loc_loc_edges.astype(int)
-    loc_loc_edges = torch.from_numpy(loc_loc_edges)
-    loc_loc_edges = to_undirected(loc_loc_edges)
+        loc_loc_edges = torch.from_numpy(loc_loc_edges)
+    #loc_loc_edges = loc_loc_edges.to(torch.int64) 
 
     # Load in positions afterwards as scale data to between -1 and 1 - this might affect
     # above code
-
     # scale positions
     min_x = x_locs.min()
     min_y = y_locs.min()
@@ -153,15 +144,14 @@ def load_loc_cluster(
     range_xy = max(x_range, y_range)
 
     # scale position
-    if 1:
-        # shift and scale biggest axis from 0 to 1
-        x_locs = (x_locs - min_x)/range_xy 
-        y_locs = (y_locs - min_y)/range_xy 
-        # scale to between -1 and 1
-        x_locs = 2.0*x_locs - 1.0
-        y_locs = 2.0*y_locs - 1.0
-        assert (x_locs.min() == -1.0 or y_locs.min() == 1.0)
-        assert (x_locs.max() == 1.0 or y_locs.max() == 1.0)
+    # shift and scale biggest axis from 0 to 1
+    x_locs = (x_locs - min_x)/range_xy 
+    y_locs = (y_locs - min_y)/range_xy 
+    # scale to between -1 and 1
+    x_locs = 2.0*x_locs - 1.0
+    y_locs = 2.0*y_locs - 1.0
+    assert (x_locs.min() == -1.0 or y_locs.min() == 1.0)
+    assert (x_locs.max() == 1.0 or y_locs.max() == 1.0)
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
     warnings.warn(f"{loc_coords}")
     data["locs"].pos = loc_coords.float()
@@ -170,13 +160,12 @@ def load_loc_cluster(
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
 
-    if 1:
-        # scale from 0 to 1
-        x_clusters = (x_clusters - min_x)/range_xy 
-        y_clusters = (y_clusters - min_y)/range_xy 
-        # scale from -1 to 1
-        x_clusters = 2.0*x_clusters - 1.0
-        y_clusters = 2.0*y_clusters - 1.0
+    # scale from 0 to 1
+    x_clusters = (x_clusters - min_x)/range_xy 
+    y_clusters = (y_clusters - min_y)/range_xy 
+    # scale from -1 to 1
+    x_clusters = 2.0*x_clusters - 1.0
+    y_clusters = 2.0*y_clusters - 1.0
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
 
     data["clusters"].pos = cluster_coords.float()
@@ -184,6 +173,10 @@ def load_loc_cluster(
     data["locs", "in", "clusters"].edge_index = loc_cluster_edges
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
+
+    warnings.warn(f'Loc to cluster edges are undirected: {is_undirected(loc_cluster_edges)}')
+    warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
+    warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
 
     warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
     warnings.warn("Need to check that graph is connected correctly")

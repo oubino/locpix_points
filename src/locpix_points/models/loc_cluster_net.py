@@ -5,6 +5,8 @@ Concatenates this embedding to user derived cluster features.
 GraphNet operates on clusters, goes through linear layer, prediction!
 
 Helped using https://github.com/pyg-team/pytorch_geometric/blob/master/examples/hetero/bipartite_sage.py
+&
+https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sharing
 
 """
 

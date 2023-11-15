@@ -35,10 +35,8 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Apply PointNet
-    - Double check does PointNet usually have edges as undirected or directed and does it matter also doubloe check for self loops
-    - Construct my own PointNet which doesn't calculate nearest neighbours instead it considers all neighbours within a cluster - attempt to emulate pointnet in notes but directly write network using PointNetConv
+    - Improve network - ensure PointNet conv correctly implemented
     - Increase number of layers for all - especially graph network
-    
 
 To do
     - Improve model
