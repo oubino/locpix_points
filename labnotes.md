@@ -34,6 +34,16 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
+SEMORE
+    - Task 1: Dataset of pure fibrils vs pure random vs pure other (/w or /wo noise) therefore have per FOV label
+    - Task 2: If successfully complete the above then, dataset of fibril + random vs fibril + iso vs random + iso
+    - Task 3: Datasets with all three present but in different ratios
+
+    - Make sensible decision about where to store semore data generation code and tma data generation code considering new data going to be generating as well - probably all on onedrive under data/semore; data/tma_genetec; data/tma_piccolo note that should have code used to help located here as well to find it easier in future
+    - Move the semore data generation into locpix points with appopriate ackonwledgment of where code comes from (check license)
+    - Visualise the simulated data using visualise script
+    - Write a .sh script that runs k-fold learning on the dataset but note that it shouldn't calculate cluster features in order to validate the network without them - double check files to check hasn't done this
+
 Apply PointNet
     - Improve network - ensure PointNet conv correctly implemented
     - Increase number of layers for all - especially graph network
