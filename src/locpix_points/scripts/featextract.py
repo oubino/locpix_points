@@ -103,6 +103,13 @@ def main(argv=None):
         warnings.warn("Drop all unclustered points")
         df = df.filter(pl.col("clusterID") != -1)
 
+        # drop locs with only 2 loc
+        warnings.warn("Dropping all clusters with 2 or fewer locs - otherwise convex hull/PCA fail")
+        small_clusters = df.group_by('clusterID').count().filter(pl.col('count') < 3)
+        df = df.filter(~pl.col('clusterID').is_in(small_clusters['clusterID']))
+
+        warnings.warn("If no clusters then rest will fail")
+
         # basic features (com cluster, locs per cluster, radius of gyration)
         basic_cluster_df = featextract.basic_cluster_feats(df)
 
