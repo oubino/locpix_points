@@ -80,3 +80,6 @@ misc/
 tests/output
 sandpit/output
 sandpit/data
+
+# ignore semore output
+semore_expts/output
