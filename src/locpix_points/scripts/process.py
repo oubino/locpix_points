@@ -59,7 +59,7 @@ def load_pre_filter(path):
 
 
 def minmax(config, feat_str, file_directory, train_list):
-    if type(config[feat_str]) is list:
+    if type(config[feat_str]) is list and len(config[feat_str]) != 0:
         for index, file in enumerate(train_list):
             df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
             min_df = df.select(pl.col(config[feat_str]).min())
@@ -70,6 +70,10 @@ def minmax(config, feat_str, file_directory, train_list):
             else:
                 min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
                 max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
+    elif type(config[feat_str]) is list and len(config[feat_str]) == 0:
+        return None, None
+    elif config[feat_str] is None:
+        return None, None
     else:
         raise NotImplementedError
 
