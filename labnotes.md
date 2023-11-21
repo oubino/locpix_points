@@ -35,14 +35,25 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 SEMORE
+
+- Double check that features not being calculated
+- Commit the current changes under sensible commits for each change
+- Regenerate data but lots of it 
+- Train with bigger network
+
+- Need to regenerate data as is not in correct form with labels for iso etc.
     - Task 1: Dataset of pure fibrils vs pure random vs pure other (/w or /wo noise) therefore have per FOV label
     - Task 2: If successfully complete the above then, dataset of fibril + random vs fibril + iso vs random + iso
     - Task 3: Datasets with all three present but in different ratios
 
-    - Make sensible decision about where to store semore data generation code and tma data generation code considering new data going to be generating as well - probably all on onedrive under data/semore; data/tma_genetec; data/tma_piccolo note that should have code used to help located here as well to find it easier in future
-    - Move the semore data generation into locpix points with appopriate ackonwledgment of where code comes from (check license)
-    - Visualise the simulated data using visualise script
-    - Write a .sh script that runs k-fold learning on the dataset but note that it shouldn't calculate cluster features in order to validate the network without them - double check files to check hasn't done this
+- Trial training again
+
+    - Write a .sh script that runs k-fold learning on the dataset but note that 
+        - check config files
+        - run with random then stop and run without random
+        - it shouldn't calculate cluster features in order to validate the network without them - double check files to check hasn't done this
+        - commit changes
+        - need to modfiy code such that if cluster_feat/loc_feat is null or length is zero then deals with this - this should be done now just add a note to the commmt
 
 Apply PointNet
     - Improve network - ensure PointNet conv correctly implemented
@@ -80,6 +91,7 @@ Small dataset
     - Train pointtransformer
 
 Experiments
+    - Varga 2023 dataset should try out as well
     - I think we should simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset - use Daniel Nieves dataset - this can also help us to validate if made any mistakes in the code
     - Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
     - make decision on which length/area to use
