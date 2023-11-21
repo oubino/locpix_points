@@ -352,6 +352,9 @@ def main(argv=None):
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
+    # exit wandb
+    wandb.finish()
+
 
 if __name__ == "__main__":
     main()
