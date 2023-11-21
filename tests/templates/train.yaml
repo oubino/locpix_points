@@ -6,7 +6,9 @@ load_data_from_gpu: False
 model: locclusternet
 
 locclusternet:
-  foo: 0
+  LocEncoderChannels: [[4, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
+  ClusterEncoderChannels: [17, 18, 24, 32]
+  OutputChannels: 2
 
 # optimiser parameters
 optimiser: adam
