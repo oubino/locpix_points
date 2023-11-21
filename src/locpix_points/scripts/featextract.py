@@ -108,6 +108,11 @@ def main(argv=None):
         small_clusters = df.group_by('clusterID').count().filter(pl.col('count') < 3)
         df = df.filter(~pl.col('clusterID').is_in(small_clusters['clusterID']))
 
+        # remap the clusterIDs
+        unique_clusters = list(df['clusterID'].unique())
+        map = {value: i for i, value in enumerate(unique_clusters)}
+        df = df.with_columns(pl.col('clusterID').map_dict(map).alias('clusterID'))
+
         warnings.warn("If no clusters then rest will fail")
 
         # basic features (com cluster, locs per cluster, radius of gyration)
