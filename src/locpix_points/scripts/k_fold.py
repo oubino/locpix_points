@@ -50,6 +50,9 @@ def main(argv=None):
 
     project_directory = args.project_directory
 
+    # initiailse config
+    config = None
+
     # load yaml
     k_fold_yaml = os.path.join(args.config, 'k_fold.yaml')
     with open(k_fold_yaml, "r") as ymlfile:
@@ -93,6 +96,9 @@ def main(argv=None):
         splits['train'] = train_folds
         splits['val'] = val_folds
         splits['test'] = test_folds
+        if config is not None:
+            raise ValueError("Config should be none")
+        config = {}
         config['splits'] = splits
 
     else:
