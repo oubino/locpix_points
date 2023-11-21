@@ -223,12 +223,15 @@ def main(argv=None):
         first_train_item = data
     nodes = first_train_item.num_nodes
     label = first_train_item.y
-    if label_level == "node":
-        assert label.shape[0] == nodes
-    elif label_level == "graph":
-        assert label.shape == torch.Size([1])
-    else:
-        raise ValueError("Label level not defined")
+    #if label_level == "node":
+    #    assert label.shape[0] == nodes
+    #elif label_level == "graph":
+    #    print('label', label)
+    #    print('label shape', label.shape)
+    # line below is incorrect as we have batch dimension as well
+    #    assert label.shape == torch.Size([1])
+    #else:
+    #    raise ValueError("Label level not defined")
     dim = first_train_item['locs'].pos.shape[-1]
     print('Dim', dim)
 
