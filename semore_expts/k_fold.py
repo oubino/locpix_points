@@ -9,7 +9,8 @@ def test_pipeline():
             "-i",
             "semore_expts/output",
             "-c",
-            "semore_expts/templates/k_fold.yaml",
+            "semore_expts/templates",
             "-r",
+            "5",
         ]
     )
