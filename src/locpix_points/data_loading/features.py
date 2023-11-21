@@ -52,31 +52,40 @@ def load_loc_cluster(
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
 
-    # load in features
-    assert list(min_feat_locs.keys()) == loc_feat
-    assert list(max_feat_locs.keys()) == loc_feat
-    assert list(min_feat_clusters.keys()) == cluster_feat
-    assert list(max_feat_clusters.keys()) == cluster_feat
-
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
+    
+    # load in features
+    if min_feat_locs is None:
+        assert (loc_feat is None or (type(loc_feat) is list and len(loc_feat) == 0))
+        data['locs'].x = None
+    else:
+        assert list(min_feat_locs.keys()) == loc_feat
+        assert list(max_feat_locs.keys()) == loc_feat
 
-    feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
-    min_vals = torch.tensor(list(min_feat_locs.values()))
-    max_vals = torch.tensor(list(max_feat_locs.values()))
-    feat_data = (feat_data - min_vals) / (max_vals - min_vals)
-    # clamp needed if val/test data has min/max greater than train set min/max
-    feat_data = torch.clamp(feat_data, min=0, max=1)
-    data["locs"].x = feat_data.float()  # might not need .float()
+        feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
+        min_vals = torch.tensor(list(min_feat_locs.values()))
+        max_vals = torch.tensor(list(max_feat_locs.values()))
+        feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+        # clamp needed if val/test data has min/max greater than train set min/max
+        feat_data = torch.clamp(feat_data, min=0, max=1)
+        data["locs"].x = feat_data.float()  # might not need .float()
 
-    feat_data = torch.tensor(cluster_table.select(cluster_feat).to_pandas().to_numpy())
-    min_vals = torch.tensor(list(min_feat_clusters.values()))
-    max_vals = torch.tensor(list(max_feat_clusters.values()))
-    feat_data = (feat_data - min_vals) / (max_vals - min_vals)
-    # clamp needed if val/test data has min/max greater than train set min/max
-    feat_data = torch.clamp(feat_data, min=0, max=1)
-    data["clusters"].x = feat_data.float()  # might not need .float()
+    if min_feat_clusters is None:
+        assert (cluster_feat is None or (type(cluster_feat) is list and len(cluster_feat) == 0))
+        data['clusters'].x = None
+    else:
+        assert list(min_feat_clusters.keys()) == cluster_feat
+        assert list(max_feat_clusters.keys()) == cluster_feat
+
+        feat_data = torch.tensor(cluster_table.select(cluster_feat).to_pandas().to_numpy())
+        min_vals = torch.tensor(list(min_feat_clusters.values()))
+        max_vals = torch.tensor(list(max_feat_clusters.values()))
+        feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+        # clamp needed if val/test data has min/max greater than train set min/max
+        feat_data = torch.clamp(feat_data, min=0, max=1)
+        data["clusters"].x = feat_data.float()  # might not need .float()
 
     # compute edge connections - use polars for loc table
     loc_table = pl.from_arrow(loc_table)
