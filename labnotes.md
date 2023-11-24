@@ -34,50 +34,25 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 
 ### ToDo
 
-SEMORE
-
-- Double check that features not being calculated
-- Commit the current changes under sensible commits for each change
-- Regenerate data but lots of it 
-- Train with bigger network
-
-- Need to regenerate data as is not in correct form with labels for iso etc.
-    - Task 1: Dataset of pure fibrils vs pure random vs pure other (/w or /wo noise) therefore have per FOV label
+Semore
+- Commit all current changes
+- When train again train not random but using splits from first one
+- Train with bigger network (ensure PointNetConv correctly implemented; more layers especially Graph Network)
+- Other tasks:
+    - Task 1: Dataset of pure fibrils vs pure iso (/w or /wo noise) therefore have per FOV label
     - Task 2: If successfully complete the above then, dataset of fibril + random vs fibril + iso vs random + iso
     - Task 3: Datasets with all three present but in different ratios
-
-- Trial training again
-
-    - Write a .sh script that runs k-fold learning on the dataset but note that 
-        - check config files
-        - run with random then stop and run without random
-        - it shouldn't calculate cluster features in order to validate the network without them - double check files to check hasn't done this
-        - commit changes
-        - need to modfiy code such that if cluster_feat/loc_feat is null or length is zero then deals with this - this should be done now just add a note to the commmt
-
-Apply PointNet
-    - Improve network - ensure PointNet conv correctly implemented
-    - Increase number of layers for all - especially graph network
-
-To do
-    - Improve model
-        - take point net and apply this to each cluster
-        - better graph net on top 
-        - check model doing what we think its doing
-    - Simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset OR use Daniel Nieves dataset - this can help us to validate if there are mistakes in the code
-    
-Visualisation
-    - Check that loclisations are correctly connected to each other
-    - visualise can start showing the features - colour coded or on the z axis maybe?
+- Visualise to check data correctly connected
 
 Feature analysis
-    - this script should then also be able to take in the features we will derive from our graph neural network
-    - tidy script up
+    - this script should then also be able to take in the features we will derive from our graph neural network (UMAP etc.)
+
+Testing
+    - Add tests and add to GitHub actions
 
 ReadME
     - Visualise requires new environment to use python 3.10 - micromamba activate 
-    - include how to run tests using bash tests/tests.sh 
-    - also include visualise
+    - Include visualise
 
 Misc
     - Update evaluate so it evaluates on the test set 
@@ -86,27 +61,15 @@ Misc
         1. Args: Name of experiment/Location for experiment/location of data for experiment
         2. Creates a folder at the location with the experiment name
         3. In this folder should be a bash script to run every step, all the template files needed, shell script for running on arc
-
-Small dataset
-    - Train pointtransformer
-
-Experiments
-    - Varga 2023 dataset should try out as well
-    - I think we should simulate a dataset and see if the computer can derive the same features that we use (cluster diameter etc.) - use this to build/test the model a large simulated dataset - use Daniel Nieves dataset - this can also help us to validate if made any mistakes in the code
-    - Take each cluster as a data point, have lots for cancer and lots for non cancer, if UMAP doesn't distinguish trial learning some features using PointNet or GraphNet and then use UMAP on these features - this could help - also just try linear analysis on these clusters
     - make decision on which length/area to use
-    - GraphNet: node located at each cluster - CONSIDER HOW TO NORMALISE - MAKE SURE DOESNT JUST CONSIDER # OF POINTS + COORDINATES NEED TO BE PART OF NODE'S FEATURE I.E. X/Y MUST BE CONSIDEERED
-    - GraphNet: node for each localisation only connected to locs in its cluster, message parse etc.; then alongside other features for cluster node for each cluster message parse and make final prediction - ablation study to see if improves results
-    - Explainability
-    - Do we use the geometric features just as input to embedding or should we add on
-    - Different models to try:
-        1. PointNet etc. on all points
-        2. Simple machine learning on clustered data /w features
-        3. GraphNet on clustered data /w features
-        4. GraphNet on cluster data + pointNet/graphnet? for localisations within each cluster
-        4.5 As above but place the top level graph randomly/systematically across the FOV?
-        5. Also includ learned clustering
-        7. What edge features?
+    - make sure doesn't just make decision based on number of points (consider how to normalise)
+
+Other experiments
+    - Varga 2023 dataset 
+    - Different simulated dataset
+    - Daniel Nieves dataset
+    - Simple machine learning on clustered data /w features
+    - Place top level graph randomly/systematically across FOV
 
 Clustering
     - Extra cluster features: distance birth, distance death, cluster skew?
@@ -114,10 +77,6 @@ Clustering
 
 TMA data
     - Create reserved test set early
-
-Later
-    - Trial making one environment combining both
-    - Make documents
 
 
 ### 17th October 2023
