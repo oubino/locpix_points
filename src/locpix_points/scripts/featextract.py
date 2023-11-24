@@ -84,7 +84,17 @@ def main(argv=None):
     # start client for dask
     _ = Client()
 
+    # remove from files the ones that have already had feat extracted
+    loc_files = os.listdir(output_loc_directory)
+    cluster_files = os.listdir(output_cluster_directory)
+    completed_files = []
+    for file in files:
+        if file in loc_files and file in cluster_files:
+            completed_files.append(file)
+    files = [file for file in files if file not in completed_files]
     for index, file in enumerate(files):
+
+        print('file', file)
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, f"preprocessed/gt_label/{file}")
