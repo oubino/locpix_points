@@ -1,10 +1,10 @@
 """Test pipeline"""
 
-from locpix_points.scripts.featextract import main
+from locpix_points.scripts.featextract import main as main_feat
 
-def test_pipeline():
+def main():
     # run preprocess on data
-    main(
+    main_feat(
         [
             "-i",
             "semore_expts/output",
@@ -12,3 +12,7 @@ def test_pipeline():
             "semore_expts/templates/featextract.yaml",
         ]
     )
+
+if __name__ == "__main__":
+    
+    main()
