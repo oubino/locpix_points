@@ -337,12 +337,12 @@ def main(argv=None):
 
     wandb.log(metrics)
 
-    print("\n")
-    print("----- Saving model... ------")
-    if args.processed_directory is not None:
-        processed_directory = os.path.join(project_directory, args.processed_directory)
-    else:
-        processed_directory = os.path.join(project_directory, "processed")
+    #print("\n")
+    #print("----- Saving model... ------")
+    #if args.processed_directory is not None:
+    #    processed_directory = os.path.join(project_directory, args.processed_directory)
+    #else:
+    #    processed_directory = os.path.join(project_directory, "processed")
 
     # save config file to folder and wandb
     yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
@@ -354,6 +354,8 @@ def main(argv=None):
 
     # exit wandb
     wandb.finish()
+
+    return model_path
 
 
 if __name__ == "__main__":

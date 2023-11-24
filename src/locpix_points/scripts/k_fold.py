@@ -13,6 +13,7 @@ import time
 from sklearn.model_selection import KFold 
 from locpix_points.scripts.process import main as main_process
 from locpix_points.scripts.train import main as main_train
+from locpix_points.scripts.evaluate import main as main_eval
 import shutil
 
 def main(argv=None):
@@ -133,7 +134,7 @@ def main(argv=None):
         )
 
         # train
-        main_train(
+        model_path = main_train(
         [
             "-i",
             args.project_directory,
@@ -144,6 +145,20 @@ def main(argv=None):
             "-m",
             f"models/fold_{index}"
         ]
+        )
+
+        # evaluate
+        main_eval(
+            [
+                "-i",
+                args.project_directory,
+                "-p",
+                f"processed/fold_{index}",
+                "-c",
+                f"{args.config}/evaluate.yaml",
+                "-m",
+                model_path,
+            ]
         )
 
         print('Cleaning up')
