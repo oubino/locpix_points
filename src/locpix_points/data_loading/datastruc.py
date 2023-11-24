@@ -409,7 +409,7 @@ class ClusterLocDataset(SMLMDataset):
                 if "gt_label" in loc_table.columns:
                     raise ValueError("Should be no gt label column")
                 else:
-                    print("gt label", gt_label)
+                    #print("gt label", gt_label)
                     data.y = torch.tensor([gt_label], dtype=torch.long)
             elif self.label_level == "node":
                 raise NotImplementedError()
