@@ -112,3 +112,67 @@ def make_prediction(
             ][i][j]
 
     return metrics
+
+def make_prediction_test(
+    model, test_loader, device, num_classes
+):
+    """Make predictions using the model
+
+    Args:
+
+        model (pytorch geo model) : Model that will make predictiions
+        optimiser (pytorch optimiser) : Optimiser used in training
+        test_loader (torch dataloader): Dataloader for the
+            test dataset
+        device (gpu or cpu): Device to evaluate the model
+            on
+        label_level (string) : Either node or graph
+        num_classes (int) : Number of classes in the dataset"""
+
+    model.to(device)
+
+    test_metrics = MetricCollection(
+        MulticlassConfusionMatrix(num_classes=num_classes),
+        Recall(task="multiclass", num_classes=num_classes, average="none"),
+        Precision(task="multiclass", num_classes=num_classes, average="none"),
+        F1Score(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassJaccardIndex(num_classes=num_classes, average="none"),
+        Accuracy(task="multiclass", num_classes=num_classes, average="none"),
+    ).to(device)
+
+
+    # test data
+    model.eval()
+    for index, data in enumerate(test_loader):
+        with torch.no_grad():
+            # note set to none is meant to have less memory footprint
+            # move data to device
+            data.to(device)
+
+            # forward pass - with autocasting
+            with torch.autocast(device_type="cuda"):
+                output = model(data)
+                test_predictions = output.argmax(dim=1)
+
+                # per batch metric
+                test_metrics.update(test_predictions, data.y)
+
+    # metric over all batches
+    test_metrics = test_metrics.compute()
+
+    # output metrics
+    metrics = {}
+
+    # make into format acceptable to wandb
+    for i in range(num_classes):
+        metrics[f"TestRecall_{i}"] = test_metrics["MulticlassRecall"][i]
+        metrics[f"TestPrecision_{i}"] = test_metrics["MulticlassPrecision"][i]
+        metrics[f"TestF1Score_{i}"] = test_metrics["MulticlassF1Score"][i]
+        metrics[f"TestJaccardIndex_{i}"] = test_metrics["MulticlassJaccardIndex"][i]
+        metrics[f"TestAccuracy_{i}"] = test_metrics["MulticlassAccuracy"][i]
+        for j in range(num_classes):
+            metrics[f"Test_actual_{i}_pred_{j}"] = test_metrics[
+                "MulticlassConfusionMatrix"
+            ][i][j]
+
+    return metrics

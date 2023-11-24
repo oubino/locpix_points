@@ -1,9 +1,21 @@
 # params 
+load_data_from_gpu: False
 
-batch_size: 1
-pin_memory: True 
-num_workers: 4
+# what trying to predict
+label_level: graph # graph
 
-# device
+# wandb parameters
+wandb_project: semore_task1
+wandb_dataset: semore
 
-gpu: True
+# model parameters
+model: locclusternet
+
+locclusternet:
+  LocEncoderChannels: [[2, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
+  ClusterEncoderChannels: [8, 18, 24, 32]
+  OutputChannels: 2
+
+num_classes: 2
+
+eval_on_gpu: True
