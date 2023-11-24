@@ -35,9 +35,8 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Semore
-- Commit all current changes
 - When train again train not random but using splits from first one
-- Train with bigger network (ensure PointNetConv correctly implemented; more layers especially Graph Network)
+- Explainability
 - Other tasks:
     - Task 1: Dataset of pure fibrils vs pure iso (/w or /wo noise) therefore have per FOV label
     - Task 2: If successfully complete the above then, dataset of fibril + random vs fibril + iso vs random + iso
