@@ -162,7 +162,6 @@ def load_loc_cluster(
     assert (x_locs.min() == -1.0 or y_locs.min() == 1.0)
     assert (x_locs.max() == 1.0 or y_locs.max() == 1.0)
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
-    warnings.warn(f"{loc_coords}")
     data["locs"].pos = loc_coords.float()
 
     # scale cluster coordinates
@@ -183,12 +182,12 @@ def load_loc_cluster(
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 
-    warnings.warn(f'Loc to cluster edges are undirected: {is_undirected(loc_cluster_edges)}')
-    warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
-    warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
+    #warnings.warn(f'Loc to cluster edges are undirected: {is_undirected(loc_cluster_edges)}')
+    #warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
+    #warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
 
-    warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
-    warnings.warn("Need to check that graph is connected correctly")
-    warnings.warn("Data should be normalised and scaled correctly")
+    #warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
+    #warnings.warn("Need to check that graph is connected correctly")
+    #warnings.warn("Data should be normalised and scaled correctly")
 
     return data
