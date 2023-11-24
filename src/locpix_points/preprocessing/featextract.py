@@ -149,7 +149,7 @@ def convex_hull(array):
     perimeter = hull.area
     area = hull.volume
     length = np.max(neigh_dist)
-    print("length via convex hull", length)
+    #print("length via convex hull", length)
     return perimeter, area, length
 
 
