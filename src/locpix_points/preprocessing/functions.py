@@ -101,10 +101,10 @@ def file_to_datastruc(
         gt_label = None
         columns.append(gt_label_col)
         column_names.append("gt_label")
-        print("Per localisation labels")
+        #print("Per localisation labels")
         arrow_table = pq.read_table(input_file, columns=columns)
     elif gt_label_scope == "fov":
-        print("Per fov labels")
+        #print("Per fov labels")
         arrow_table = pq.read_table(input_file, columns=columns)
         gt_label_map = json.loads(
             arrow_table.schema.metadata[b"gt_label_map"].decode("utf-8")
