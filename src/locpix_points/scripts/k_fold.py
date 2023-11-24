@@ -115,6 +115,8 @@ def main(argv=None):
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):
+        print(f'Fold {index}')
+
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
