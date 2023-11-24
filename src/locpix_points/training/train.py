@@ -115,11 +115,14 @@ def train_loop(
         #    running_val_loss /= num_val_node
 
         # log results
+        print('Train loss', running_train_loss)
+        print('Val loss', running_val_loss)
         wandb.log({"train_loss": running_train_loss, "val_loss": running_val_loss})
 
         # if loss lowest on validation set save it
         if running_val_loss < best_loss:
             best_loss = running_val_loss
+            print('Saving model new lowest loss on val set')
             torch.save(model.state_dict(), model_path)
 
     print("Number of train nodes", num_train_node)
