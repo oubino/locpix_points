@@ -1,10 +1,10 @@
 """Test pipeline"""
 
-from locpix_points.scripts.preprocess import main 
+from locpix_points.scripts.preprocess import main as main_pre 
 
-def test_pipeline():
+def main():
     # run preprocess on data
-    main(
+    main_pre(
         [
             "-i",
             "../../../../mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/data/semore/data/task_1/train",
@@ -14,3 +14,6 @@ def test_pipeline():
             "semore_expts/output",
         ]
     )
+
+if __name__ == "__main__":
+    main()
