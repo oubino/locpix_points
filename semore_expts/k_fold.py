@@ -1,10 +1,10 @@
 """Test pipeline"""
 
-from locpix_points.scripts.k_fold import main
+from locpix_points.scripts.k_fold import main as main_k
 
-def test_pipeline():
+def main():
     # run k-fold on data
-    main(
+    main_k(
         [
             "-i",
             "semore_expts/output",
@@ -14,3 +14,6 @@ def test_pipeline():
             "5",
         ]
     )
+
+if __name__ == "__main__":
+    main()
