@@ -28,7 +28,7 @@ label_level: graph # graph
 # options: ['normalisescale', 'jitter', 'flip', 'randscale', 'rotate', 'subsample', 'shear'] # null
 transforms: 
   z_rotate: null
-  jitter: 15 # number of nm
+  #jitter: 15 # number of nm
   x_flip: null
   y_flip: null 
   randscale: [0.95,1.05]
