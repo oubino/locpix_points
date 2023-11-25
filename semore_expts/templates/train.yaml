@@ -28,7 +28,11 @@ label_level: graph # graph
 # options: ['normalisescale', 'jitter', 'flip', 'randscale', 'rotate', 'subsample', 'shear'] # null
 transforms: 
   z_rotate: null
-  #jitter: 15 # number of nm
+  # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
+  # fov_x/fov_y is defined in process.yaml
+  # here 1 unit = 20,000nm
+  # therefore 15nm = 0.00075 units
+  jitter: 0.00075
   x_flip: null
   y_flip: null 
   randscale: [0.95,1.05]
