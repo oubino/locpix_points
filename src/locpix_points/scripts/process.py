@@ -17,6 +17,7 @@ import torch
 import ast
 import polars as pl
 import numpy as np
+import ast
 
 # import torch_geometric.transforms as T
 
@@ -140,9 +141,19 @@ def main(argv=None):
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
 
-    args = parser.parse_args(argv)
+    group.add_argument(
+        "-k",
+        "--k_split",
+        type=str,
+        nargs="+",
+        action="append",
+        default=None,
+        help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files\
+              has to be slightly different to manual split",
+    )
 
-    print(args.manual_split)
+
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 
@@ -176,8 +187,7 @@ def main(argv=None):
     # split into train/val/test using pre filter
 
     # split randomly
-    if args.split is None and args.manual_split is None:
-        warnings.warn("Is this the correct file list")
+    if args.split is None and args.manual_split is None and args.k_split is None:
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
@@ -189,7 +199,7 @@ def main(argv=None):
         val_list = file_list[train_length : train_length + val_length]
         test_list = file_list[train_length + val_length : len(file_list)]
 
-    elif args.split is not None and args.manual_split is None:
+    elif args.split is not None and args.manual_split is None and args.k_split is None:
         warnings.warn(
             "Known omission is if pre-transform is done to dataset"
             "this is not currently also done to this dataset as well"
@@ -203,10 +213,15 @@ def main(argv=None):
         val_list = load_pre_filter(val_list_path)
         test_list = load_pre_filter(test_list_path)
 
-    elif args.split is None and args.manual_split is not None:
+    elif args.split is None and args.k_split is None and args.manual_split is not None:
         train_list = args.manual_split[0]
         val_list = args.manual_split[1]
         test_list = args.manual_split[2]
+
+    elif args.split is None and args.k_split is not None and args.manual_split is None:
+        train_list = ast.literal_eval(args.k_split[0][0])
+        val_list = ast.literal_eval(args.k_split[1][0])
+        test_list = ast.literal_eval(args.k_split[2][0])
 
     # bind arguments to functions
     train_pre_filter = partial(pre_filter, inclusion_list=train_list)
