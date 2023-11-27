@@ -7,9 +7,9 @@ def main():
     main_feat(
         [
             "-i",
-            "semore_expts/output",
+            "semore_expts/task_1",
             "-c",
-            "semore_expts/templates/featextract.yaml",
+            "semore_expts/task_1/config/featextract.yaml",
         ]
     )
 

@@ -7,11 +7,9 @@ def main():
     main_k(
         [
             "-i",
-            "semore_expts/output",
+            "semore_expts/task_1",
             "-c",
-            "semore_expts/templates",
-            "-r",
-            "5",
+            "semore_expts/task_1/config",
         ]
     )
 
