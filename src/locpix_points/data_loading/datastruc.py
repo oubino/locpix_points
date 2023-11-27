@@ -445,6 +445,8 @@ class ClusterLocDataset(SMLMDataset):
             idx_to_name["file_name"].append(file_name)
             idx += 1
 
+        self._processed_file_names = list(sorted(os.listdir(self.processed_dir)))
+
         warnings.warn("Need to check values are correct for data, positions, features")
         warnings.warn("Check graph correctly connected")
         warnings.warn(
