@@ -35,7 +35,8 @@ python src/locpix_points/scripts/train.py -i ../../output/nieves -c src/locpix_p
 ### ToDo
 
 Semore
-- When train again train not random but using splits from first one
+- Write evaluate script that evaluates on data located in semore/data/dataset_1/test
+- Trial training with features that we calculate
 - Explainability
 - Other tasks:
     - Task 1: Dataset of pure fibrils vs pure iso (/w or /wo noise) therefore have per FOV label
@@ -76,7 +77,6 @@ Clustering
 
 TMA data
     - Create reserved test set early
-
 
 ### 17th October 2023
 

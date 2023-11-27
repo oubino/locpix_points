@@ -51,6 +51,11 @@ pip install torch-geometric
 
 Note need to install locpix points as well
 
+Environment 3
+-------------
+
+Visualise environment needs to be described and is needed for visualise script
+
 Layout
 ======
 
