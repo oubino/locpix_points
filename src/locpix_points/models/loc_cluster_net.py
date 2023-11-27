@@ -43,12 +43,12 @@ class Loc2Cluster(torch.nn.Module):
             {("locs", "in", "clusters"): conv.SimpleConv(aggr="max")}, aggr=None
         )
 
-    def forward(self, x_dict, edge_index_dict, feats_present):
+    def forward(self, x_dict, edge_index_dict, cluster_feats_present=True):
         out = self.conv(x_dict, edge_index_dict)
         #raise ValueError("Do I need torch.squeeze")
         #raise ValueError("is dimension concatenating in correct")
         out["clusters"] = torch.squeeze(out["clusters"])
-        if feats_present:
+        if cluster_feats_present:
             x_dict["clusters"] = torch.cat((x_dict["clusters"], out["clusters"]), dim=-1)
         else:
             x_dict['clusters'] = out['clusters']
@@ -70,9 +70,10 @@ class ClusterEncoder(torch.nn.Module):
 
 
 class LocClusterNet(torch.nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, device='cpu'):
         super().__init__()
         self.name = "loc_cluster_net"
+        self.device = device
         # wrong input channel size 2 might change if locs have features
         self.loc_encode_0 = LocEncoder(MLP(config['LocEncoderChannels'][0]))
         self.loc_encode_1 = LocEncoder(MLP(config['LocEncoderChannels'][1]))
@@ -87,11 +88,22 @@ class LocClusterNet(torch.nn.Module):
 
         try:
             x_dict = data.x_dict
-        except AttributeError:
-            x_dict = {'locs': None, 'clusters': None}
+            try:
+                x_dict['locs']
+            except KeyError:
+                x_dict['locs'] = None
+            try:
+                x_dict['clusters']
+                cluster_feats_present = True
+            except KeyError:
+                x_dict['clusters'] = torch.ones((data['clusters'].batch.shape[0], 1))
+                cluster_feats_present = False  
+        # neither locs nor clusters have features
         except KeyError:
-            x_dict = {'locs': None, 'clusters': torch.ones((data['clusters'].batch.shape[0], 1))}
-            feats_present = False
+            x_dict = {'locs': None, 'clusters': torch.ones((data['clusters'].batch.shape[0], 1), device=self.device)}
+            cluster_feats_present = False
+        
+        
 
         pos_dict = data.pos_dict
         edge_index_dict = data.edge_index_dict
@@ -102,7 +114,7 @@ class LocClusterNet(torch.nn.Module):
         x_dict["locs"] = self.loc_encode_2(x_dict["locs"], pos_dict['locs'], edge_index_dict)
 
         # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
-        x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict, feats_present)
+        x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict, cluster_feats_present)
 
         # operate graph net on clusters, finish with 
         x_dict["clusters"] = self.clusterencoder_0(x_dict, edge_index_dict)

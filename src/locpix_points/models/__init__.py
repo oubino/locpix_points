@@ -28,6 +28,7 @@ def model_choice(name, *args, **kwargs):
         dim = kwargs["dim"]
         return Classifier(*args, dim=dim)
     elif name == "locclusternet":
-        return LocClusterNet(*args)
+        device = kwargs['device']
+        return LocClusterNet(*args, device=device)
     else:
         raise ValueError(f"{name} is not a supported model")
