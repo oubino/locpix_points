@@ -164,7 +164,7 @@ def main(argv=None):
 
     # save yaml file
     yaml_save_loc = os.path.join(
-        project_directory, f"preprocess_{os.path.basename(input_folder)}.yaml"
+        project_directory, f"preprocess.yaml"
     )
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
