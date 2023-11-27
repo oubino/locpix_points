@@ -121,6 +121,10 @@ def main(argv=None):
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
+        train_fold = [x.rstrip('.parquet') for x in train_fold]
+        val_fold = [x.rstrip('.parquet') for x in val_fold]
+        test_fold = [x.rstrip('.parquet') for x in test_fold]
+
         # process
         main_process(
         [
@@ -129,7 +133,13 @@ def main(argv=None):
             "-c",
             f"{args.config}/process.yaml",
             "-o",
-            f"processed/fold_{index}"
+            f"processed/fold_{index}",
+            "-k",
+            train_fold,
+            "-k",
+            val_fold,
+            "-k",
+            test_fold,
         ]
         )
 
