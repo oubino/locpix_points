@@ -179,7 +179,7 @@ def main(argv=None):
         kneighbourslocs=None
     )
 
-    print(f"Length of validation dataset {len(val_set)}")
+    print(f"Length of test dataset {len(test_set)}")
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
@@ -241,6 +241,7 @@ def main(argv=None):
         # this should parameterise the chosen model
         config[config["model"]],
         dim=dim,
+        device=device,
     )
 
     # initialise optimiser
