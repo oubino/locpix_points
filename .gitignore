@@ -84,6 +84,7 @@ sandpit/data
 # ignore semore output
 semore_expts/task_1/*
 semore_expts/task_2/*
+semore_expts/task_3/*
 !semore_expts/task_1/featextract.py
 !semore_expts/task_1/featextract.sh
 !semore_expts/task_1/train.sh
@@ -92,5 +93,7 @@ semore_expts/task_2/*
 !semore_expts/task_1/preprocess.py
 !semore_expts/task_2/train.sh
 !semore_expts/task_2/k_fold.py
+!semore_expts/task_3/train.sh
+!semore_expts/task_3/k_fold.py
 #!semore_expts/task_1/config
 #!semore_expts/task_2/config
