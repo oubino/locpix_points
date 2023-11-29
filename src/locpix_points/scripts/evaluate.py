@@ -64,6 +64,12 @@ def main(argv=None):
         help="path to model for evaluation",
     )
 
+    parser.add_argument(
+        "-e",
+        "--explain",
+        action="store_true"
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -193,6 +199,49 @@ def main(argv=None):
 
     for key, value in metrics.items():
         print(f'{key} : {value.item()}')
+
+
+    # explain
+    if args.explain:
+
+        raise NotImplementedError
+    
+        # load in explain params
+
+        # if use a GNN explainer then we need to put the data through the first part of the model
+
+        # then take the final GNN as the model
+
+        # and explain this!
+
+        # plus we need to do this for every data item
+
+        # train explainer
+        explainer = Explainer(
+            model=model,
+            algorithm=GNNExplainer(epochs=200),
+            explanation_type='model',
+            node_mask_type='attributes',
+            edge_mask_type='object',
+            model_config=dict(
+                mode='multiclass_classification',
+                task_level='node',
+                return_type='log_probs',
+        ),
+    )
+        node_index = 10
+        explanation = explainer(data.x, data.edge_index)
+        print(f'Generated explanations in {explanation.available_explanations}')
+
+        path = 'feature_importance.png'
+        explanation.visualize_feature_importance(path, top_k=10)
+        print(f"Feature importance plot has been saved to '{path}'")
+
+        path = 'subgraph.pdf'
+        explanation.visualize_graph(path)
+        print(f"Subgraph visualization plot has been saved to '{path}'")
+
+
 
     wandb.log(metrics)
 
