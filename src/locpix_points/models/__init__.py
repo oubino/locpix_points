@@ -12,6 +12,7 @@ of the model in models/ just the name!
 from .point_net import PointNetClassification, PointNetSegmentation
 from .point_transformer import Segmenter, Classifier
 from .loc_cluster_net import LocClusterNet
+from .cluster_net import ClusterNet
 
 
 def model_choice(name, *args, **kwargs):
@@ -30,5 +31,7 @@ def model_choice(name, *args, **kwargs):
     elif name == "locclusternet":
         device = kwargs['device']
         return LocClusterNet(*args, device=device)
+    elif name == "clusternet":
+        return ClusterNet(*args)
     else:
         raise ValueError(f"{name} is not a supported model")
