@@ -153,7 +153,7 @@ def load_loc_cluster(
     range_xy = max(x_range, y_range)
 
     # scale position
-    # shift and scale biggest axis from 0 to 1
+    # shift and scale biggest axis from -1 to 1
     x_locs = (x_locs - min_x)/range_xy 
     y_locs = (y_locs - min_y)/range_xy 
     # scale to between -1 and 1
@@ -168,7 +168,7 @@ def load_loc_cluster(
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
 
-    # scale from 0 to 1
+    # scale from -1 to 1
     x_clusters = (x_clusters - min_x)/range_xy 
     y_clusters = (y_clusters - min_y)/range_xy 
     # scale from -1 to 1
