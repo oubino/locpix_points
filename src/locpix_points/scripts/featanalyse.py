@@ -107,6 +107,8 @@ def main(argv=None):
     df = pl.concat(dfs)
     df = df.to_pandas()
 
+    sns.boxplot(data=df, x="count", y="type")
+    plt.show()
     sns.boxplot(data=df, x="RGyration", y="type")
     plt.show()
     sns.boxplot(data=df, x="linearity", y="type")
@@ -123,11 +125,16 @@ def main(argv=None):
     plt.show()
     sns.boxplot(data=df, x="length_convex_hull", y="type")
     plt.show()
+    sns.boxplot(data=df, x="density_pca", y="type")
+    plt.show()
+    sns.boxplot(data=df, x="density_convex_hull", y="type")
+    plt.show()
     # sns.pairplot(df, hue='type')
     # plt.show()
 
     reducer = umap.UMAP()
     data = df[[
+        "count",
         "RGyration",
         "linearity",
         "planarity",
@@ -136,6 +143,8 @@ def main(argv=None):
         "perimeter",
         "area_convex_hull",
         "length_convex_hull",
+        "density_pca",
+        "density_convex_hull",
     ]
     ].values
     scaled_data = StandardScaler().fit_transform(data)
