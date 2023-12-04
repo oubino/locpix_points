@@ -18,6 +18,8 @@ import wandb
 import torch
 from locpix_points.evaluation import evaluate
 import time
+from graphxai.explainers import PGExplainer
+import matplotlib.pyplot as plt
 
 # import torch
 # import torch_geometric.transforms as T
@@ -113,7 +115,28 @@ def main(argv=None):
 
     test_folder = os.path.join(processed_directory, "test")
 
+    print("\n")
+    print("Loading in best model")
+    print("\n")
+    model.load_state_dict(torch.load(args.model_loc))
+    model.to(device)
+
+    # model summary
+    print("\n")
+    print("---- Model summary ----")
+    print("\n")
+    number_nodes = 1000  # this is just for summary, has no bearing on training
+    summary(
+        model,
+        input_size=(test_set.num_node_features, number_nodes),
+        batch_size=1,
+    )
+
     # load in test dataset
+    if args.explain:
+        loc_embed=True
+        loc_net=model.loc_net
+
     test_set = datastruc.ClusterLocDataset(
         None, # raw_loc_dir_root
         None, # raw_cluster_dir_root
@@ -132,7 +155,9 @@ def main(argv=None):
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
-        kneighbourslocs=None
+        kneighbourslocs=None,
+        locembed=loc_embed,
+        locnet=loc_net,
     )
 
     test_loader = L.DataLoader(
@@ -170,22 +195,6 @@ def main(argv=None):
         },
     )
 
-    print("\n")
-    print("Loading in best model")
-    print("\n")
-    model.load_state_dict(torch.load(args.model_loc))
-    model.to(device)
-
-    # model summary
-    print("\n")
-    print("---- Model summary ----")
-    print("\n")
-    number_nodes = 1000  # this is just for summary, has no bearing on training
-    summary(
-        model,
-        input_size=(test_set.num_node_features, number_nodes),
-        batch_size=1,
-    )
 
     print("\n")
     print("---- Predict on test set... ----")
@@ -203,45 +212,30 @@ def main(argv=None):
 
     # explain
     if args.explain:
-
-        raise NotImplementedError
     
         # load in explain params
 
-        # if use a GNN explainer then we need to put the data through the first part of the model
+        # Embedding layer name is final GNN embedding layer in the model
+        pgex = PGExplainer(model.cluster_net, emb_layer_name = 'cluster_encoder_2', max_epochs = 10, lr = 0.1)
 
-        # then take the final GNN as the model
+        # Required to first train PGExplainer on the dataset:
+        pgex.train_explanation_model(test_set)
 
-        # and explain this!
+        # Get explanations from both IG and PGEx:
+        for index, data in enumerate(test_loader):
+            last_item = data
 
-        # plus we need to do this for every data item
+        pgex_exp = pgex.get_explanation_graph(
+            x = last_item.x, 
+            edge_index = last_item.edge_index,
+            label = last_item.label,
+        )
 
-        # train explainer
-        explainer = Explainer(
-            model=model,
-            algorithm=GNNExplainer(epochs=200),
-            explanation_type='model',
-            node_mask_type='attributes',
-            edge_mask_type='object',
-            model_config=dict(
-                mode='multiclass_classification',
-                task_level='node',
-                return_type='log_probs',
-        ),
-    )
-        node_index = 10
-        explanation = explainer(data.x, data.edge_index)
-        print(f'Generated explanations in {explanation.available_explanations}')
+        fig, ax = plt.subplots(1,3, figsize = (10, 8))
 
-        path = 'feature_importance.png'
-        explanation.visualize_feature_importance(path, top_k=10)
-        print(f"Feature importance plot has been saved to '{path}'")
-
-        path = 'subgraph.pdf'
-        explanation.visualize_graph(path)
-        print(f"Subgraph visualization plot has been saved to '{path}'")
-
-
+        # Ground-truth explanations always provided as a list. In ShapeGGen, we use the first
+        #   element since it produces unique explanations. 
+        pgex_exp.visualize_node(num_hops = 3, graph_data = last_item, ax = ax[1])
 
     wandb.log(metrics)
 
