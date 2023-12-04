@@ -60,71 +60,106 @@ class ClusterEncoder(torch.nn.Module):
         super().__init__()
         #raise ValueError("Is number of channels correct, and max or average aggregate")
         self.conv = HeteroConv(
-            {("clusters", "near", "clusters"): conv.SAGEConv(in_channels, out_channels)}, aggr="max"
+            {("clusters", "near", "clusters"): conv.GINConv(in_channels, out_channels)}, aggr="max"
         )
 
     def forward(self, x_dict, edge_index_dict):
-        out = self.conv(x_dict, edge_index_dict)
+        out = self.conv(x_dict, edge_index_dict).relu()
         #raise ValueError("Wrong axis when have batch")
         return out['clusters']
 
+class LocNet(torch.nn.Module):
+    def __init__(self, encoder_0, encoder_1, encoder_2, loc2cluster, device):
+        super().__init__()
+        self.device = device
+        self.encoder_0 = encoder_0
+        self.encoder_1 = encoder_1
+        self.encoder_2 = encoder_2
+        self.loc2cluster = loc2cluster
+
+    def forward(self, data):
+
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(data, self.device)
+
+        x_dict["locs"] = self.encoder_0(x_dict["locs"], pos_dict['locs'], edge_index_dict)
+        x_dict["locs"] = self.encoder_1(x_dict["locs"], pos_dict['locs'], edge_index_dict)
+        x_dict["locs"] = self.encoder_2(x_dict["locs"], pos_dict['locs'], edge_index_dict)
+
+        # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
+        x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict, cluster_feats_present)
+
+        return x_dict, pos_dict, edge_index_dict
+
+
+class ClusterNet(torch.nn.Module):
+    def __init__(self, cluster_encoder_0, cluster_encoder_1, cluster_encoder_2, linear):
+        super().__init__()
+        self.cluster_encoder_0 = cluster_encoder_0
+        self.cluster_encoder_1 = cluster_encoder_1
+        self.cluster_encoder_2 = cluster_encoder_2
+        self.linear = linear
+    
+    def forward(self, x_dict, edge_index_dict, batch):
+
+        x_dict["clusters"] = self.cluster_encoder_0(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.cluster_encoder_1(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.cluster_encoder_2(x_dict, edge_index_dict)
+
+        # pooling step so end up with one feature vector per fov
+        x_dict['clusters'] = global_max_pool(x_dict['clusters'], batch)
+
+        # linear layer on each fov feature vector
+        return self.linear(x_dict["clusters"])
+
+
+def parse_data(data, device):
+
+    try:
+        x_dict = data.x_dict
+        try:
+            x_dict['locs']
+        except KeyError:
+            x_dict['locs'] = None
+        try:
+            x_dict['clusters']
+            cluster_feats_present = True
+        except KeyError:
+            x_dict['clusters'] = torch.ones((data['clusters'].batch.shape[0], 1))
+            cluster_feats_present = False  
+    # neither locs nor clusters have features
+    except KeyError:
+        x_dict = {'locs': None, 'clusters': torch.ones((data['clusters'].batch.shape[0], 1), device=self.device)}
+        cluster_feats_present = False
+    
+    pos_dict = data.pos_dict
+    edge_index_dict = data.edge_index_dict
+
+    return x_dict, pos_dict, edge_index_dict, cluster_feats_present
 
 class LocClusterNet(torch.nn.Module):
     def __init__(self, config, device='cpu'):
         super().__init__()
         self.name = "loc_cluster_net"
-        self.device = device
         # wrong input channel size 2 might change if locs have features
-        self.loc_encode_0 = LocEncoder(MLP(config['LocEncoderChannels'][0]))
-        self.loc_encode_1 = LocEncoder(MLP(config['LocEncoderChannels'][1]))
-        self.loc_encode_2 = LocEncoder(MLP(config['LocEncoderChannels'][2]))
-        self.loc2cluster = Loc2Cluster()
-        self.clusterencoder_0 = ClusterEncoder(config['ClusterEncoderChannels'][0],config['ClusterEncoderChannels'][1])
-        self.clusterencoder_1 = ClusterEncoder(config['ClusterEncoderChannels'][1], config['ClusterEncoderChannels'][2])
-        self.clusterencoder_2 = ClusterEncoder(config['ClusterEncoderChannels'][2], config['ClusterEncoderChannels'][3])
-        self.linear = Linear(config['ClusterEncoderChannels'][3], config['OutputChannels'])
+        self.loc_net = LocNet(LocEncoder(MLP(config['LocEncoderChannels'][0])),
+                              LocEncoder(MLP(config['LocEncoderChannels'][1])),
+                              LocEncoder(MLP(config['LocEncoderChannels'][2])),
+                              Loc2Cluster(),
+                              device
+        )
+        self.cluster_net = ClusterNet(
+            ClusterEncoder(config['ClusterEncoderChannels'][0],config['ClusterEncoderChannels'][1]),
+            ClusterEncoder(config['ClusterEncoderChannels'][1], config['ClusterEncoderChannels'][2]),
+            ClusterEncoder(config['ClusterEncoderChannels'][2], config['ClusterEncoderChannels'][3]),
+            Linear(config['ClusterEncoderChannels'][3], config['OutputChannels']),
+        )
 
     def forward(self, data):   
 
-        try:
-            x_dict = data.x_dict
-            try:
-                x_dict['locs']
-            except KeyError:
-                x_dict['locs'] = None
-            try:
-                x_dict['clusters']
-                cluster_feats_present = True
-            except KeyError:
-                x_dict['clusters'] = torch.ones((data['clusters'].batch.shape[0], 1))
-                cluster_feats_present = False  
-        # neither locs nor clusters have features
-        except KeyError:
-            x_dict = {'locs': None, 'clusters': torch.ones((data['clusters'].batch.shape[0], 1), device=self.device)}
-            cluster_feats_present = False
-        
-        
-
-        pos_dict = data.pos_dict
-        edge_index_dict = data.edge_index_dict
-
-        # embed each localisation 
-        x_dict["locs"] = self.loc_encode_0(x_dict["locs"], pos_dict['locs'], edge_index_dict)
-        x_dict["locs"] = self.loc_encode_1(x_dict["locs"], pos_dict['locs'], edge_index_dict)
-        x_dict["locs"] = self.loc_encode_2(x_dict["locs"], pos_dict['locs'], edge_index_dict)
-
-        # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
-        x_dict["clusters"] = self.loc2cluster(x_dict, edge_index_dict, cluster_feats_present)
+        # embed each localisation
+        x_dict, _, edge_index_dict = self.loc_net(data)
 
         # operate graph net on clusters, finish with 
-        x_dict["clusters"] = self.clusterencoder_0(x_dict, edge_index_dict)
-        x_dict["clusters"] = self.clusterencoder_1(x_dict, edge_index_dict)
-        x_dict["clusters"] = self.clusterencoder_2(x_dict, edge_index_dict)
+        output = self.cluster_net(x_dict, edge_index_dict, data['clusters'].batch)
 
-        # pooling step so end up with one feature vector per fov
-        x_dict['clusters'] = global_max_pool(x_dict['clusters'], data['clusters'].batch)
-
-        # linear layer on each fov feature vector
-        output = self.linear(x_dict["clusters"]).log_softmax(dim=-1)
-
-        return output
+        return output.log_softmax(dim=-1)
