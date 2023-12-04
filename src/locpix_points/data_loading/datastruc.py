@@ -310,6 +310,8 @@ class ClusterLocDataset(SMLMDataset):
         fov_x,
         fov_y,
         kneighbourslocs,
+        loc_embed=False,
+        loc_net=None,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -320,6 +322,11 @@ class ClusterLocDataset(SMLMDataset):
         self.max_feat_clusters = max_feat_clusters
         self.kneighboursclusters = kneighboursclusters
         self.kneighbourslocs = kneighbourslocs
+
+        if loc_embed:
+            assert loc_net is not None
+            self.loc_embed = loc_embed
+            self.loc_net = loc_net
 
         super().__init__(
             raw_loc_dir_root,
@@ -430,6 +437,10 @@ class ClusterLocDataset(SMLMDataset):
             # pre-transform
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
+
+            # pass through loc net
+            if self.loc_embed:
+                data.x_dict, _, data.edge_index_dict = self.loc_net(data)
 
             # save it
             _, extension = os.path.splitext(raw_path)
