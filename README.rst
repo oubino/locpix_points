@@ -36,7 +36,14 @@ Before installing the remaining requirements
 
 ``
 pip install -r requirements.txt
+
 ``
+
+Also need to install https://github.com/mims-harvard/GraphXAI
+
+&
+
+ipdb
 
 Environment 2
 -------------
@@ -285,7 +292,7 @@ Featanalyse
 
 *Requirements*
 
-The packages required are not installed in any current environment. These include 
+The packages required are  installed in the locpix-points environment. These include 
 - polars
 - seaborn
 - matplotlib
