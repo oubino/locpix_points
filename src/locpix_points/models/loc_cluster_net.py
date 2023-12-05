@@ -20,7 +20,6 @@ from torch_geometric.nn import (
 from torch_geometric.nn.pool import global_max_pool
 from torch.nn import Linear
 
-
 class LocEncoder(torch.nn.Module):
     def __init__(self, nn):
         super().__init__()
@@ -56,17 +55,19 @@ class Loc2Cluster(torch.nn.Module):
 
 
 class ClusterEncoder(torch.nn.Module):
-    def __init__(self, in_channels, out_channels):
+    def __init__(self, channel_list):
         super().__init__()
         #raise ValueError("Is number of channels correct, and max or average aggregate")
+        nn = MLP(channel_list)
+        # note here as all the same relation the aggr has no effect
         self.conv = HeteroConv(
-            {("clusters", "near", "clusters"): conv.GINConv(in_channels, out_channels)}, aggr="max"
+            {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
         )
 
     def forward(self, x_dict, edge_index_dict):
-        out = self.conv(x_dict, edge_index_dict).relu()
+        out = self.conv(x_dict, edge_index_dict)
+        return out['clusters'].relu()
         #raise ValueError("Wrong axis when have batch")
-        return out['clusters']
 
 class LocNet(torch.nn.Module):
     def __init__(self, encoder_0, encoder_1, encoder_2, loc2cluster, device):
@@ -111,6 +112,43 @@ class ClusterNet(torch.nn.Module):
         # linear layer on each fov feature vector
         return self.linear(x_dict["clusters"])
 
+class ClusterNetHomogeneous(torch.nn.Module):
+    def __init__(self, cluster_net_hetero, config):
+        super().__init__()
+        # first
+        self.cluster_encoder_0 = conv.GINConv(MLP(config['ClusterEncoderChannels'][0]))        
+        state_dict_saved = {
+            key[40:]:value for key,value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
+        }
+        self.cluster_encoder_0.load_state_dict(state_dict_saved)
+        # second
+        self.cluster_encoder_1 = conv.GINConv(MLP(config['ClusterEncoderChannels'][1]))   
+        state_dict_saved = {
+            key[40:]:value for key,value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
+        }
+        self.cluster_encoder_1.load_state_dict(state_dict_saved)
+        # third
+        self.cluster_encoder_2 = conv.GINConv(MLP(config['ClusterEncoderChannels'][2]))        
+        state_dict_saved = {
+            key[40:]:value for key,value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
+        }
+        self.cluster_encoder_2.load_state_dict(state_dict_saved)
+        # linear
+        self.linear = Linear(config['ClusterEncoderChannels'][-1][-1], config['OutputChannels'])
+        state_dict_saved = cluster_net_hetero.linear.state_dict()
+        self.linear.load_state_dict(state_dict_saved)
+    
+    def forward(self, x, edge_index, batch):
+        x = self.cluster_encoder_0(x, edge_index).relu()
+        x = self.cluster_encoder_1(x, edge_index).relu()
+        x = self.cluster_encoder_2(x, edge_index).relu()
+
+        # pooling step so end up with one feature vector per fov
+        x = global_max_pool(x, batch)
+
+        # linear layer on each fov feature vector
+        return self.linear(x)
+
 
 def parse_data(data, device):
 
@@ -148,10 +186,10 @@ class LocClusterNet(torch.nn.Module):
                               device
         )
         self.cluster_net = ClusterNet(
-            ClusterEncoder(config['ClusterEncoderChannels'][0],config['ClusterEncoderChannels'][1]),
-            ClusterEncoder(config['ClusterEncoderChannels'][1], config['ClusterEncoderChannels'][2]),
-            ClusterEncoder(config['ClusterEncoderChannels'][2], config['ClusterEncoderChannels'][3]),
-            Linear(config['ClusterEncoderChannels'][3], config['OutputChannels']),
+            ClusterEncoder(config['ClusterEncoderChannels'][0]),
+            ClusterEncoder(config['ClusterEncoderChannels'][1]),
+            ClusterEncoder(config['ClusterEncoderChannels'][2]),
+            Linear(config['ClusterEncoderChannels'][-1][-1], config['OutputChannels']),
         )
 
     def forward(self, data):   
