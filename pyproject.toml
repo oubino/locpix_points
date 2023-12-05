@@ -35,6 +35,9 @@ dependencies = [
     "tox",
     "pytest",
     "seaborn",
+    "ipdb",
+    "pgmpy",
+    # need to install https://github.com/mims-harvard/GraphXAI
 
     # "torchvision",  check actually need this
     # conda install pyg -c pyg
