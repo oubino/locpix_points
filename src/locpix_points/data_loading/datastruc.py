@@ -16,7 +16,7 @@ from . import features
 from . import custom_transforms
 import json
 import warnings
-
+import shutil
 
 class SMLMDataset(Dataset):
     """Base SMLM dataset class.
@@ -245,7 +245,6 @@ class ClusterDataset(SMLMDataset):
 
     def __init__(
         self,
-        raw_loc_dir_root,
         raw_cluster_dir_root,
         processed_dir_root,
         label_level,
@@ -253,13 +252,19 @@ class ClusterDataset(SMLMDataset):
         save_on_gpu,
         transform,
         pre_transform,
-        min_feat,
-        max_feat,
-        pos,
-        feat,
+        fov_x,
+        fov_y,
+        from_cluster_loc=False,
+        loc_net=None,
+        device=torch.device("cpu"),
     ):
+        
+        self.from_cluster_loc = from_cluster_loc 
+        self.loc_net = loc_net
+        self.device = device
+
         super().__init__(
-            raw_loc_dir_root,
+            None,
             raw_cluster_dir_root,
             processed_dir_root,
             label_level,
@@ -267,10 +272,47 @@ class ClusterDataset(SMLMDataset):
             save_on_gpu,
             transform,
             pre_transform,
-        )
+            fov_x,
+            fov_y,
+        ) 
 
     def process(self):
-        raise NotImplementedError
+        
+        if self.from_cluster_loc:
+            """Process data into homogeneous graph"""
+
+            assert self.loc_net is not None
+
+            # work through tensors
+            for raw_path in self.raw_cluster_file_names:
+
+                # if file not file_map.csv; pre_filter.pt; pre_transform.pt
+                if raw_path in ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']:
+                    src = os.path.join(self._raw_cluster_dir_root, raw_path)
+                    dst = os.path.join(self.processed_dir, raw_path)
+                    shutil.copyfile(src, dst)
+                    continue
+
+                # initialise homogeneous data item
+                data = Data()
+
+                # load in tensor
+                hetero_data = torch.load(os.path.join(self._raw_cluster_dir_root, raw_path))
+                hetero_data.to(self.device)
+
+                # pass through loc net
+                x_dict, _, edge_index_dict = self.loc_net(hetero_data)
+                data.x = x_dict['clusters']
+                data.edge_index = edge_index_dict['clusters', 'near', 'clusters']
+
+                # save to the homogeneous data item
+                data.name = hetero_data.name
+                data.y = hetero_data.y
+
+                # save
+                torch.save(data, os.path.join(self.processed_dir, raw_path))
+
+            self._processed_file_names = list(sorted(os.listdir(self.processed_dir)))
 
 
 class ClusterLocDataset(SMLMDataset):
@@ -310,8 +352,6 @@ class ClusterLocDataset(SMLMDataset):
         fov_x,
         fov_y,
         kneighbourslocs,
-        loc_embed=False,
-        loc_net=None,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -322,11 +362,6 @@ class ClusterLocDataset(SMLMDataset):
         self.max_feat_clusters = max_feat_clusters
         self.kneighboursclusters = kneighboursclusters
         self.kneighbourslocs = kneighbourslocs
-
-        if loc_embed:
-            assert loc_net is not None
-            self.loc_embed = loc_embed
-            self.loc_net = loc_net
 
         super().__init__(
             raw_loc_dir_root,
@@ -438,10 +473,6 @@ class ClusterLocDataset(SMLMDataset):
             if self.pre_transform is not None:
                 data = self.pre_transform(data)
 
-            # pass through loc net
-            if self.loc_embed:
-                data.x_dict, _, data.edge_index_dict = self.loc_net(data)
-
             # save it
             _, extension = os.path.splitext(raw_path)
             _, tail = os.path.split(raw_path)
@@ -468,105 +499,3 @@ class ClusterLocDataset(SMLMDataset):
         df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
 
 
-"""
-def process_heterogeneous(self):
-        Process the raw data into procesed data.
-        This currently includes
-            1. For each .parquet create a heterogeneous graph
-            , where the different (i.e. heterogeneous) nodes
-            are due to there being multiple channels.
-            e.g. two channel image with 700 localisations for
-            channel 0 and 300 for channel 1 - would have
-            1000 nodes and each node is type (channel 0 or
-            channel 1)
-            2. Then if not pre-filtered the heterogeneous
-            graph is pre-transformed
-            3. Then the graph is saved
-
-        idx = 0
-        idx_to_name = {}
-
-        raise ValueError("Haven't looked at in a while may need amending")
-
-        # convert raw parquet files to tensors
-        for raw_path in self.raw_paths:
-            # read in parquet file
-            arrow_table = pq.read_table(raw_path)
-            # dimensions and channels metadata
-            dimensions = arrow_table.schema.metadata[b"dim"]
-            channels = arrow_table.schema.metadata[b"channels"]
-            dimensions = int(dimensions)
-            channels = ast.literal_eval(channels.decode("utf-8"))
-            # each dataitem is a heterogeneous graph
-            # where the channels define the different type of node
-            # i.e. for two channel data have two types of node
-            # for both channels
-            data = HeteroData()
-            # for channel in list of channels
-            for chan in channels:
-                # filter table
-                filter = pc.field("channel") == chan
-                filter_table = arrow_table.filter(filter)
-                # convert to tensor (Number of points x 2/3 (dimensions))
-                x = torch.tensor(filter_table["x"].to_numpy())
-                y = torch.tensor(filter_table["y"].to_numpy())
-                if dimensions == 2:
-                    coord_data = torch.stack((x, y), dim=1)
-                if dimensions == 3:
-                    z = torch.tensor(arrow_table["z"].to_numpy())
-                    coord_data = torch.stack((x, y, z), dim=1)
-
-                # feature tensor
-                # shape: [Number of points x 2/3 dimensions]
-                data[str(chan)].x = coord_data
-
-                # position tensor
-                # shape: [Number of points x 2/3 dimensions]
-                data[str(chan)].pos = coord_data
-
-                # localisation level labels
-                data[str(chan)].y = torch.tensor(filter_table["gt_label"].to_numpy())
-
-            _, extension = os.path.splitext(raw_path)
-            _, tail = os.path.split(raw_path)
-            file_name = tail.strip(extension)
-
-            # assign name to data
-            print("file name", file_name)
-            name = arrow_table.schema.metadata[b"name"]
-            print("name", name)
-            input("stop dataloading")
-
-            # if pre filter skips it then skip this item
-            if self.pre_filter is not None and not self.pre_filter(data):
-                continue
-
-            # pre-transform
-            if self.pre_transform is not None:
-                data = self.pre_transform(data)
-
-            # save it
-            _, extension = os.path.splitext(raw_path)
-            _, tail = os.path.split(raw_path)
-            file_name = tail.strip(extension)
-            # TODO: change/check this
-            # if self.save_on_gpu:
-            #    data.cuda()
-            if data.x is not None:
-                data.x = data.x.float()
-            if data.pos is not None:
-                data.pos = data.pos.float()
-            if data.y is not None:
-                data.y = data.y.long()
-            torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
-
-            # add to index
-            idx_to_name["idx"].append(idx)
-            idx_to_name["file_name"].append(file_name)
-            idx += 1
-
-        # save mapping from idx to name
-        df = pl.from_dict(idx_to_name)
-        df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
-
-"""
