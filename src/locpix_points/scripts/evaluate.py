@@ -20,6 +20,8 @@ from locpix_points.evaluation import evaluate
 import time
 from graphxai.explainers import PGExplainer
 import matplotlib.pyplot as plt
+import warnings
+from locpix_points.models.loc_cluster_net import ClusterNetHomogeneous 
 
 # import torch
 # import torch_geometric.transforms as T
@@ -115,28 +117,6 @@ def main(argv=None):
 
     test_folder = os.path.join(processed_directory, "test")
 
-    print("\n")
-    print("Loading in best model")
-    print("\n")
-    model.load_state_dict(torch.load(args.model_loc))
-    model.to(device)
-
-    # model summary
-    print("\n")
-    print("---- Model summary ----")
-    print("\n")
-    number_nodes = 1000  # this is just for summary, has no bearing on training
-    summary(
-        model,
-        input_size=(test_set.num_node_features, number_nodes),
-        batch_size=1,
-    )
-
-    # load in test dataset
-    if args.explain:
-        loc_embed=True
-        loc_net=model.loc_net
-
     test_set = datastruc.ClusterLocDataset(
         None, # raw_loc_dir_root
         None, # raw_cluster_dir_root
@@ -156,8 +136,6 @@ def main(argv=None):
         fov_x=None,
         fov_y=None,
         kneighbourslocs=None,
-        locembed=loc_embed,
-        locnet=loc_net,
     )
 
     test_loader = L.DataLoader(
@@ -167,10 +145,9 @@ def main(argv=None):
         pin_memory=pin_memory,
         num_workers=0,
     )
-    for index, data in enumerate(test_loader):
+    for _, data in enumerate(test_loader):
         first_item = data
     dim = first_item['locs'].pos.shape[-1]
-    
     # initialise model
     model = model_choice(
         config["model"],
@@ -178,6 +155,23 @@ def main(argv=None):
         config[config["model"]],
         dim=dim,
         device=device,
+    )
+
+    print("\n")
+    print("Loading in best model")
+    print("\n")
+    model.load_state_dict(torch.load(args.model_loc))
+    model.to(device)
+
+    # model summary
+    print("\n")
+    print("---- Model summary ----")
+    print("\n")
+    number_nodes = 1000  # this is just for summary, has no bearing on training
+    summary(
+        model,
+        input_size=(test_set.num_node_features, number_nodes),
+        batch_size=1,
     )
 
     wandb.login()
@@ -195,7 +189,6 @@ def main(argv=None):
         },
     )
 
-
     print("\n")
     print("---- Predict on test set... ----")
     print("\n")
@@ -209,33 +202,97 @@ def main(argv=None):
     for key, value in metrics.items():
         print(f'{key} : {value.item()}')
 
-
     # explain
     if args.explain:
+
+        warnings.warn('Assumes\
+                      1. Using a ClusterNet \
+                      2. Embedding is in a final cluster encoder layer\
+                      3. Graph level explanation')
     
         # load in explain params
+        mult = 2 # in pg_explainer mult is 2 unless it is per node then mult is 3
+        in_channels = config[config['model']]['ClusterEncoderChannels'][-1][-1] 
+        in_channels *= mult
 
-        # Embedding layer name is final GNN embedding layer in the model
-        pgex = PGExplainer(model.cluster_net, emb_layer_name = 'cluster_encoder_2', max_epochs = 10, lr = 0.1)
-
-        # Required to first train PGExplainer on the dataset:
-        pgex.train_explanation_model(test_set)
-
-        # Get explanations from both IG and PGEx:
-        for index, data in enumerate(test_loader):
-            last_item = data
-
-        pgex_exp = pgex.get_explanation_graph(
-            x = last_item.x, 
-            edge_index = last_item.edge_index,
-            label = last_item.label,
+        # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
+        explain_folder = os.path.join(processed_directory, "explain")
+        if not os.path.exists(explain_folder):
+            os.makedirs(explain_folder)
+        explain_dataset = datastruc.ClusterDataset(
+            test_folder,
+            explain_folder,
+            label_level=None,
+            pre_filter=None,
+            save_on_gpu=None,
+            transform=None,
+            pre_transform=None,
+            fov_x=None,
+            fov_y=None,
+            from_cluster_loc=True,
+            loc_net=model.loc_net,
+            device=device,
         )
 
-        fig, ax = plt.subplots(1,3, figsize = (10, 8))
+        # need to create a model that acts on the homogeneous data
+        if config['model'] == 'locclusternet':
+            model = ClusterNetHomogeneous(model.cluster_net,
+                                      config['locclusternet'])
+        else:
+            raise NotImplementedError
 
-        # Ground-truth explanations always provided as a list. In ShapeGGen, we use the first
-        #   element since it produces unique explanations. 
-        pgex_exp.visualize_node(num_hops = 3, graph_data = last_item, ax = ax[1])
+        if 'pgex' in config.keys():
+
+            emb_layer_name = config['pgex']['emb_layer_name']
+            coeff_size = config['pgex']['coeff_size']
+            coeff_ent = config['pgex']['coeff_ent']
+            explain_graph = config['pgex']['explain_graph'] 
+            max_epochs = config['pgex']['max_epochs']
+            lr = config['pgex']['lr']
+
+            # Embedding layer name is final GNN embedding layer in the model
+            pgex = PGExplainer(model,
+                            emb_layer_name = emb_layer_name, 
+                            coeff_size = coeff_size,
+                            coeff_ent = coeff_ent,
+                            explain_graph= explain_graph,
+                            max_epochs = max_epochs, 
+                            lr = lr,
+                            in_channels=in_channels)
+            
+            # Required to first train PGExplainer on the dataset:
+            pgex.train_explanation_model(explain_dataset,
+                                        forward_kwargs={'batch':torch.tensor([0], device=device)})
+
+            # Get explanations from both IG and PGEx:
+            for index, data in enumerate(explain_dataset):
+                last_item = data
+
+            pgex_exp = pgex.get_explanation_graph(
+                x = last_item.x, 
+                edge_index = last_item.edge_index,
+                label = last_item.y,
+                forward_kwargs={'batch':torch.tensor([0], device=device)},
+            )
+
+            print('Feature importance')
+            print(pgex_exp.feature_imp)
+            print('Node importance')
+            imp = pgex_exp.node_imp
+            print(imp)
+            print('Edge importance')
+            imp = pgex_exp.edge_imp
+            print(imp)
+
+            #fig, ax = plt.subplots(1,3, figsize = (10, 8))
+
+            # Ground-truth explanations always provided as a list. In ShapeGGen, we use the first
+            #   element since it produces unique explanations. 
+            #pgex_exp.visualize_graph(ax = ax[1],
+            #                         show=True)
+        
+        else:
+            raise NotImplementedError
 
     wandb.log(metrics)
 
