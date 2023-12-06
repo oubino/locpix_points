@@ -114,7 +114,7 @@ def make_prediction(
     return metrics
 
 def make_prediction_test(
-    model, test_loader, device, num_classes
+    model, test_loader, device, num_classes, explain=False,
 ):
     """Make predictions using the model
 
@@ -127,7 +127,8 @@ def make_prediction_test(
         device (gpu or cpu): Device to evaluate the model
             on
         label_level (string) : Either node or graph
-        num_classes (int) : Number of classes in the dataset"""
+        num_classes (int) : Number of classes in the dataset
+        explain (bool) : Whether this is for an explain dataset"""
 
     model.to(device)
 
@@ -151,7 +152,10 @@ def make_prediction_test(
 
             # forward pass - with autocasting
             with torch.autocast(device_type="cuda"):
-                output = model(data)
+                if explain:
+                    output = model(data.x, data.edge_index, data.batch)
+                else:
+                    output = model(data)
                 test_predictions = output.argmax(dim=1)
 
                 # per batch metric
