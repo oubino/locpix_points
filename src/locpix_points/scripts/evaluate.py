@@ -189,19 +189,6 @@ def main(argv=None):
         },
     )
 
-    print("\n")
-    print("---- Predict on test set... ----")
-    print("\n")
-    metrics = evaluate.make_prediction_test(
-        model,
-        test_loader,
-        device,
-        num_classes,
-    )
-
-    for key, value in metrics.items():
-        print(f'{key} : {value.item()}')
-
     # explain
     if args.explain:
 
@@ -240,6 +227,27 @@ def main(argv=None):
                                       config['locclusternet'])
         else:
             raise NotImplementedError
+        
+        print("\n")
+        print("---- Predict on test set (in explain)... ----")
+        explain_loader = L.DataLoader(
+            explain_dataset,
+            batch_size=1,
+            shuffle=False,
+            pin_memory=False,
+            num_workers=0,
+        )
+        print("\n")
+        metrics = evaluate.make_prediction_test(
+            model,
+            explain_loader,
+            device,
+            num_classes,
+            explain=True,
+        )
+
+        for key, value in metrics.items():
+            print(f'{key} : {value.item()}')
 
         if 'pgex' in config.keys():
 
@@ -293,6 +301,20 @@ def main(argv=None):
         
         else:
             raise NotImplementedError
+    else:
+        print("\n")
+        print("---- Predict on test set... ----")
+        print("\n")
+        metrics = evaluate.make_prediction_test(
+            model,
+            test_loader,
+            device,
+            num_classes,
+            explain=False,
+        )
+
+        for key, value in metrics.items():
+            print(f'{key} : {value.item()}')
 
     wandb.log(metrics)
 
