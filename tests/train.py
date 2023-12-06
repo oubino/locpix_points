@@ -2,6 +2,7 @@
 
 from locpix_points.scripts.train import main
 
+
 def test_pipeline():
     # run preprocess on data
     main(

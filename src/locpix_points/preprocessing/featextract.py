@@ -3,15 +3,15 @@
 This module contains functions to extract features from the data
 """
 
+import cudf
 import dask
 import dask.array as da
-from dask_ml.decomposition import PCA
-import polars as pl
-from scipy.spatial import ConvexHull
-from cuml.cluster import DBSCAN
-import cudf
-from sklearn.neighbors import NearestNeighbors
 import numpy as np
+import polars as pl
+from cuml.cluster import DBSCAN
+from dask_ml.decomposition import PCA
+from scipy.spatial import ConvexHull
+from sklearn.neighbors import NearestNeighbors
 
 
 def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
@@ -43,6 +43,20 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
 
 
 def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
+    """Calculate basic cluster features for the dataframe:
+        locs per cluster, cluster COM, radius of gyration
+
+    Args:
+        df (pl.DataFrame): Dataframe containing the clusters
+        col_name (string): Name of the column that identifies the clusters
+        x_name (string): Name of the column that contains the x coords
+            of the clusters
+        y_name (string): Name of the column that contains the y coords
+            of the clusters
+
+    Returns:
+        cluster_df (pl.DataFrame): Dataframe with cluters and the new features"""
+
     # take in loc df with cluster id per cluster
     cluster_df = df.group_by(col_name).agg(
         [
@@ -63,6 +77,17 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
 
 
 def pca_fn(X):
+    """Calculates PCA for an array
+
+    Args:
+        X (array): Array to calculate PCA for
+
+    Returns:
+        linearity (float): Linearity for the cluster
+        planarity (float): Planarity for the cluster
+        length_pca (float): Length of the cluster according to PCA
+        area_pca (float): Area of the cluster according to PCA
+    """
     dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
     pca.fit(dX)
@@ -149,7 +174,7 @@ def convex_hull(array):
     perimeter = hull.area
     area = hull.volume
     length = np.max(neigh_dist)
-    #print("length via convex hull", length)
+    # print("length via convex hull", length)
     return perimeter, area, length
 
 

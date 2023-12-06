@@ -12,5 +12,3 @@ python semore_expts/task_1/k_fold.py
 # remove files regardless of last script success
 #echo "removing output end"
 #rm -r semore_expts/output
-
-

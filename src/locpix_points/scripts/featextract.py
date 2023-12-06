@@ -3,20 +3,28 @@
 Module takes in the .parquet files and extracts features
 """
 
-import os
-import yaml
-from locpix_points.preprocessing import functions
 import argparse
 import json
+import os
 import time
-from locpix_points.preprocessing import datastruc
-from locpix_points.preprocessing import featextract
-import polars as pl
-from dask.distributed import Client
 import warnings
+
+import polars as pl
+import yaml
+from dask.distributed import Client
+
+from locpix_points.preprocessing import datastruc, featextract
 
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If no files present to open"""
+
     # parse arugments
     parser = argparse.ArgumentParser(description="Extract features")
 
@@ -93,8 +101,7 @@ def main(argv=None):
             completed_files.append(file)
     files = [file for file in files if file not in completed_files]
     for index, file in enumerate(files):
-
-        print('file', file)
+        print("file", file)
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, f"preprocessed/gt_label/{file}")
@@ -114,14 +121,16 @@ def main(argv=None):
         df = df.filter(pl.col("clusterID") != -1)
 
         # drop locs with only 2 loc
-        warnings.warn("Dropping all clusters with 2 or fewer locs - otherwise convex hull/PCA fail")
-        small_clusters = df.group_by('clusterID').count().filter(pl.col('count') < 3)
-        df = df.filter(~pl.col('clusterID').is_in(small_clusters['clusterID']))
+        warnings.warn(
+            "Dropping all clusters with 2 or fewer locs - otherwise convex hull/PCA fail"
+        )
+        small_clusters = df.group_by("clusterID").count().filter(pl.col("count") < 3)
+        df = df.filter(~pl.col("clusterID").is_in(small_clusters["clusterID"]))
 
         # remap the clusterIDs
-        unique_clusters = list(df['clusterID'].unique())
+        unique_clusters = list(df["clusterID"].unique())
         map = {value: i for i, value in enumerate(unique_clusters)}
-        df = df.with_columns(pl.col('clusterID').map_dict(map).alias('clusterID'))
+        df = df.with_columns(pl.col("clusterID").map_dict(map).alias("clusterID"))
 
         warnings.warn("If no clusters then rest will fail")
 

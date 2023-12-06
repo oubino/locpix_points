@@ -1,12 +1,30 @@
+"""Script for visualising the data"""
+
 # Take in datastructure and visualise as points or as images
-import polars as pl
-import open3d as o3d
-import numpy as np
-import matplotlib.colors as cl
-import torch
 import argparse
 
+import matplotlib.colors as cl
+import numpy as np
+import open3d as o3d
+import polars as pl
+import torch
+
+
 def load_file(file, x_name, y_name, z_name, channel_name):
+    """Load file for visualisation
+
+    Args:
+        file (string): Name of the file to read in
+        x_name (string): Name of the x column in the parquet file
+        y_name (string): Name of the y column in the parquet file
+        z_name (string): Name of the z column in the parquet file
+        channel_name (string): Name of the channel column in the parquet file
+
+    Returns:
+        df (pl.DataFrame): DataFrame that has been loaded in
+        df[channel_name].unique() (list): List of unique channels in the
+            dataframe
+    """
     if z_name is None:
         df = pl.read_parquet(file, columns=[x_name, y_name, channel_name])
     else:
@@ -18,6 +36,22 @@ def load_file(file, x_name, y_name, z_name, channel_name):
 def add_pcd_parquet(
     df, chan, x_name, y_name, z_name, chan_name, unique_chans, cmap, pcds
 ):
+    """Add a parquet file as a PCD for visualisation
+
+    Args:
+        df (pl.DataFrame): DataFrame containing data to visualise
+        chan (int): Channel to visualise
+        x_name (str): Name of the x column in the dataframe
+        y_name (str): Name of the y column in the dataframe
+        z_name (str): Name of the z column in the dataframe
+        chan_name (str): Name of the protein imaged in the channel
+        unique_chans (list): Unique channels in the dataframe
+        cmap (string): Colour to visualise the channel in
+        pcds (list): List of pcds that will be visualised
+
+    Returns:
+        pcds (list): List of pcds that has been updated and will be visualised
+    """
     if chan in unique_chans:
         pcd = o3d.geometry.PointCloud()
 
@@ -66,7 +100,8 @@ def visualise_parquet(
         z_name (str) : Name of the z column in the data, if is None, then
             assumes data is 2D
         channel_name (str) : Name of the channel column in the data
-        channel_labels (dict) : Dictionary mapping channel label to name"""
+        channel_labels (dict) : Dictionary mapping channel label to name
+        cmap (list) : CMAP to visualise the data"""
 
     df, unique_chans = load_file(file_loc, x_name, y_name, z_name, channel_name)
 
@@ -79,13 +114,7 @@ def visualise_parquet(
             df, key, x_name, y_name, z_name, channel_name, unique_chans, cmap, pcds
         )
 
-    visualise(pcds, 
-              None,
-              None,
-              None,
-              unique_chans, 
-              channel_labels, 
-              cmap)
+    visualise(pcds, None, None, None, unique_chans, channel_labels, cmap)
 
 
 def visualise_torch_geometric(
@@ -129,13 +158,13 @@ def visualise_torch_geometric(
     locs_to_clusters.colors = o3d.utility.Vector3dVector(colors)
 
     # loc to loc edges
-    lines = np.swapaxes(x['locs','clusteredwith','locs'].edge_index,0,1)
+    lines = np.swapaxes(x["locs", "clusteredwith", "locs"].edge_index, 0, 1)
     colors = [[0, 1, 0] for i in range(len(lines))]
     locs_to_locs = o3d.geometry.LineSet()
     locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
     locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
     locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
-    #locs_to_locs = None
+    # locs_to_locs = None
 
     # cluster to cluster edges
     lines = np.swapaxes(x["clusters", "near", "clusters"].edge_index, 0, 1)
@@ -176,13 +205,13 @@ def visualise(
     Args:
         pcds (list) : List of point cloud data files
         locs_to_locs (list) : Lines to draw between localisations
-        loc_to_clusters (list) : Lines to draw from localisations to clusters
+        locs_to_clusters (list) : Lines to draw from localisations to clusters
         clusters_to_clusters (list) : Lines to draw between clusters
         unique_chans (list) : List of unique channels
         channel_labels (dict) : Dictionary mapping channel index to real name
         cmap (list) : Colours to plot in"""
 
-    vis = o3d.visualization.Visualizer()
+    _ = o3d.visualization.Visualizer()
 
     assert len(pcds) == len(unique_chans)
 
@@ -191,6 +220,10 @@ def visualise(
     present = Present()
 
     def visualise_chan_0(vis):
+        """Function needed for key binding to visualise channel 0
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
         if present.chan_present[0]:
             vis.remove_geometry(pcds[0], False)
             present.chan_present[0] = False
@@ -199,6 +232,10 @@ def visualise(
             present.chan_present[0] = True
 
     def visualise_chan_1(vis):
+        """Function needed for key binding to visualise channel 1
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
         if present.chan_present[1]:
             vis.remove_geometry(pcds[1], False)
             present.chan_present[1] = False
@@ -207,6 +244,10 @@ def visualise(
             present.chan_present[1] = True
 
     def visualise_chan_2(vis):
+        """Function needed for key binding to visualise channel 2
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
         if present.chan_present[2]:
             vis.remove_geometry(pcds[2], False)
             present.chan_present[2] = False
@@ -215,6 +256,10 @@ def visualise(
             present.chan_present[2] = True
 
     def visualise_chan_3(vis):
+        """Function needed for key binding to visualise channel 3
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
         if present.chan_present[3]:
             vis.remove_geometry(pcds[3], False)
             present.chan_present[3] = False
@@ -257,7 +302,7 @@ def visualise(
     view_control = vis.get_view_control()
     view_control.set_lookat([fov_x, fov_y, -2000])  # Set the look-at point
     #view_control.set_up([0, 1, 0])    # Set the up direction
-    #view_control.set_front([0, 0, 1]) # Set the camera front direction       
+    #view_control.set_front([0, 0, 1]) # Set the camera front direction
     view_control.set_zoom(0.2)
     # v the renderer
     #vis.update_renderer()
@@ -266,7 +311,16 @@ def visualise(
     vis.destroy_window()
     """
 
+
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If incorrect file type for input file"""
+
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Visualise the data - either from parquet or pytorch geometric"
@@ -306,7 +360,7 @@ def main(argv=None):
         type=str,
         help="Name of z column in the data if .parquet file and if 3D",
         required=False,
-        default=None
+        default=None,
     )
 
     parser.add_argument(
@@ -320,20 +374,21 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    if args.input_file.endswith('.parquet'):
+    if args.input_file.endswith(".parquet"):
         visualise_parquet(
-        args.input_file,
-        args.x_name,
-        args.y_name,
-        args.z_name,
-        args.channel_name,
-        {0: 'channel_0', 1:'channel_1', 2:'channel_2', 3:'channel_3'},
-    )
-    elif args.input_file.endswith('.pt'):
+            args.input_file,
+            args.x_name,
+            args.y_name,
+            args.z_name,
+            args.channel_name,
+            {0: "channel_0", 1: "channel_1", 2: "channel_2", 3: "channel_3"},
+        )
+    elif args.input_file.endswith(".pt"):
         visualise_torch_geometric(args.input_file)
-    
+
     else:
-        raise ValueError('Should be .parquet or .pt file')
+        raise ValueError("Should be .parquet or .pt file")
+
 
 if __name__ == "__main__":
     main()

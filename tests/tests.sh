@@ -63,5 +63,3 @@ fi
 # remove files regardless of last script success
 #echo "removing output end"
 #rm -r tests/output
-
-

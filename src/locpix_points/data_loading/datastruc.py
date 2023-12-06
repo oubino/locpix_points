@@ -4,19 +4,19 @@ This module contains definitions of the datastructures the
 SMLM dataitem will be parsed as during processing.
 """
 
-import os
-import torch
-from torch_geometric.data import Dataset, HeteroData, Data
-from torch_geometric import transforms
-import pyarrow.parquet as pq
-import pyarrow.compute as pc
-import ast
-import polars as pl
-from . import features
-from . import custom_transforms
 import json
-import warnings
+import os
 import shutil
+import warnings
+
+import polars as pl
+import pyarrow.parquet as pq
+import torch
+from torch_geometric import transforms
+from torch_geometric.data import Data, Dataset, HeteroData
+
+from . import custom_transforms, features
+
 
 class SMLMDataset(Dataset):
     """Base SMLM dataset class.
@@ -97,11 +97,15 @@ class SMLMDataset(Dataset):
             # axis to rotate around i.e. axis=2 rotate around z axis - meaning
             # coordinates are rotated in the xy plane
             if "z_rotate" in transform.keys():
-                output_transforms.append(custom_transforms.RandomRotate(degrees=180, axis=2))
+                output_transforms.append(
+                    custom_transforms.RandomRotate(degrees=180, axis=2)
+                )
 
             # need to either define as constant or allow precision to impact this
             if "jitter" in transform.keys():
-                output_transforms.append(custom_transforms.RandomJitter(transform["jitter"]))
+                output_transforms.append(
+                    custom_transforms.RandomJitter(transform["jitter"])
+                )
 
             # axis = 0 - means x coordinates are flipped - i.e. reflection
             # in the y axis
@@ -121,10 +125,12 @@ class SMLMDataset(Dataset):
 
             # shear by particular matrix
             if "shear" in transform.keys():
-                output_transforms.append(custom_transforms.RandomShear(transform["shear"]))
+                output_transforms.append(
+                    custom_transforms.RandomShear(transform["shear"])
+                )
 
             if "subsample" in transform.keys():
-                raise ValueError('Not implemented for cluster/locs yet')
+                raise ValueError("Not implemented for cluster/locs yet")
                 output_transforms.append(
                     custom_transforms.Subsample(
                         transform["subsample"][0], transform["subsample"][1]
@@ -132,7 +138,9 @@ class SMLMDataset(Dataset):
                 )
 
             if "normalisescale" in transform.keys():
-                raise ValueError('Normalise and sacle the data myself to bewteen -1 nad 1 or 0 and 1; dont use this + make sure clusters scaled correctly')
+                raise ValueError(
+                    "Normalise and sacle the data myself to bewteen -1 nad 1 or 0 and 1; dont use this + make sure clusters scaled correctly"
+                )
 
             output_transforms = transforms.Compose(output_transforms)
 
@@ -167,6 +175,10 @@ class SMLMDataset(Dataset):
         return self._processed_file_names
 
     def len(self):
+        """Gets length of dataset
+
+        Returns:
+            len(files) (int) : Length of dataset"""
         files = self._processed_file_names
         if "pre_filter.pt" in files:
             files.remove("pre_filter.pt")
@@ -179,13 +191,27 @@ class SMLMDataset(Dataset):
     def get(self, idx):
         """I believe that pytorch geometric is wrapper
         over get item and therefore it handles the
-        transform"""
+        transform
+
+        Args:
+            idx (int): Integer id for the data item
+
+        Returns:
+            data (torch tensor): Tensor data item from the dataset"""
+
         data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"))
         return data
 
     # This is copied from the pytorch geometric docs
     # because is not defined in my download for some reason
     def _infer_num_classes(self, y) -> int:
+        """Get the number of classes
+
+        Args:
+            y (torch.tensor) : Label for the dataset
+
+        Returns:
+            num_classes (int) : Number of classes"""
         if y is None:
             return 0
         elif y.numel() == y.size(0) and not torch.is_floating_point(y):
@@ -199,7 +225,10 @@ class SMLMDataset(Dataset):
     # because is not defined in my download for some reason
     @property
     def num_classes(self) -> int:
-        r"""Returns the number of classes in the dataset."""
+        r"""Returns the number of classes in the dataset.
+
+        Returns:
+            self._infer_num_classes(y) (int) : Number of classes in the dataset"""
         y = torch.cat([data.y for data in self], dim=0)
         # Do not fill cache for `InMemoryDataset`:
         if hasattr(self, "_data_list") and self._data_list is not None:
@@ -208,7 +237,11 @@ class SMLMDataset(Dataset):
 
 
 class LocDataset(SMLMDataset):
-    """Dataset for localisations with no clusters loaded in"""
+    """Dataset for localisations with no clusters loaded in
+
+    Raises:
+        NotImplementedError: If try to process as this dataset has not been written yet
+    """
 
     def __init__(
         self,
@@ -258,8 +291,7 @@ class ClusterDataset(SMLMDataset):
         loc_net=None,
         device=torch.device("cpu"),
     ):
-        
-        self.from_cluster_loc = from_cluster_loc 
+        self.from_cluster_loc = from_cluster_loc
         self.loc_net = loc_net
         self.device = device
 
@@ -274,20 +306,19 @@ class ClusterDataset(SMLMDataset):
             pre_transform,
             fov_x,
             fov_y,
-        ) 
+        )
 
     def process(self):
-        
-        if self.from_cluster_loc:
-            """Process data into homogeneous graph"""
+        """Processes data with just clusters"""
 
+        # Processes data into homogeneous graph
+        if self.from_cluster_loc:
             assert self.loc_net is not None
 
             # work through tensors
             for raw_path in self.raw_cluster_file_names:
-
                 # if file not file_map.csv; pre_filter.pt; pre_transform.pt
-                if raw_path in ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']:
+                if raw_path in ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]:
                     src = os.path.join(self._raw_cluster_dir_root, raw_path)
                     dst = os.path.join(self.processed_dir, raw_path)
                     shutil.copyfile(src, dst)
@@ -297,13 +328,15 @@ class ClusterDataset(SMLMDataset):
                 data = Data()
 
                 # load in tensor
-                hetero_data = torch.load(os.path.join(self._raw_cluster_dir_root, raw_path))
+                hetero_data = torch.load(
+                    os.path.join(self._raw_cluster_dir_root, raw_path)
+                )
                 hetero_data.to(self.device)
 
                 # pass through loc net
                 x_dict, _, edge_index_dict = self.loc_net(hetero_data)
-                data.x = x_dict['clusters']
-                data.edge_index = edge_index_dict['clusters', 'near', 'clusters']
+                data.x = x_dict["clusters"]
+                data.edge_index = edge_index_dict["clusters", "near", "clusters"]
 
                 # save to the homogeneous data item
                 data.name = hetero_data.name
@@ -377,7 +410,11 @@ class ClusterLocDataset(SMLMDataset):
         )
 
     def process(self):
-        """Process the raw data into heterogeneous graph"""
+        """Process the raw data into heterogeneous graph
+
+        Raises:
+            ValueError: If gt label is not in the correct format given the desired label
+            NotImplementedError: If label level is node as currently not implemented"""
 
         idx = 0
         idx_to_name = {"idx": [], "file_name": []}
@@ -451,7 +488,7 @@ class ClusterLocDataset(SMLMDataset):
                 if "gt_label" in loc_table.columns:
                     raise ValueError("Should be no gt label column")
                 else:
-                    #print("gt label", gt_label)
+                    # print("gt label", gt_label)
                     data.y = torch.tensor([gt_label], dtype=torch.long)
             elif self.label_level == "node":
                 raise NotImplementedError()
@@ -497,5 +534,3 @@ class ClusterLocDataset(SMLMDataset):
         # save mapping from idx to name
         df = pl.from_dict(idx_to_name)
         df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
-
-

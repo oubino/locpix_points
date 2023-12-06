@@ -6,25 +6,38 @@ Recipe :
     3. Train...
 """
 
-import os
-import yaml
-from locpix_points.data_loading import datastruc
-import torch_geometric.loader as L
-from locpix_points.training import train
-from locpix_points.models import model_choice
-from locpix_points.evaluation import evaluate
-from torchsummary import summary
-import torch.optim
 import argparse
+import os
 import time
+
+import torch.optim
+import torch_geometric.loader as L
+import yaml
+
+# from torchsummary import summary
+
 import wandb
-import sys
+from locpix_points.data_loading import datastruc
+from locpix_points.evaluation import evaluate
+from locpix_points.models import model_choice
+from locpix_points.training import train
 
 # import torch
 # import torch_geometric.transforms as T
 
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Returns:
+        model_path: Path to the saved model
+
+    Raises:
+        ValueError: If GPU argument incorrectly specified"""
+
     # parse arugments
     parser = argparse.ArgumentParser(description="Training")
 
@@ -65,7 +78,6 @@ def main(argv=None):
         help="where to store the models if not specified\
                 defaults to project_directory/models",
     )
-
 
     args = parser.parse_args(argv)
 
@@ -111,14 +123,14 @@ def main(argv=None):
 
     # load in train dataset
     train_set = datastruc.ClusterLocDataset(
-        None, # raw_loc_dir_root
-        None, # raw_cluster_dir_root
-        train_folder, # processed_dir_root
-        label_level=config['label_level'],# label_level
-        pre_filter=None, # pre_filter
-        save_on_gpu=load_data_from_gpu, # gpu
-        transform=config["transforms"], # transform
-        pre_transform=None, # pre_transform
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        train_folder,  # processed_dir_root
+        label_level=config["label_level"],  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=load_data_from_gpu,  # gpu
+        transform=config["transforms"],  # transform
+        pre_transform=None,  # pre_transform
         loc_feat=None,
         cluster_feat=None,
         min_feat_locs=None,
@@ -128,21 +140,21 @@ def main(argv=None):
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
-        kneighbourslocs=None
-        )
-    
+        kneighbourslocs=None,
+    )
+
     print(f"Length of train dataset {len(train_set)}")
 
     # load in val dataset
     val_set = datastruc.ClusterLocDataset(
-        None, # raw_loc_dir_root
-        None, # raw_cluster_dir_root
-        val_folder, # processed_dir_root
-        label_level=config['label_level'],# label_level
-        pre_filter=None, # pre_filter
-        save_on_gpu=load_data_from_gpu, # gpu
-        transform=config["transforms"], # transform
-        pre_transform=None, # pre_transform
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        val_folder,  # processed_dir_root
+        label_level=config["label_level"],  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=load_data_from_gpu,  # gpu
+        transform=config["transforms"],  # transform
+        pre_transform=None,  # pre_transform
         loc_feat=None,
         cluster_feat=None,
         min_feat_locs=None,
@@ -152,21 +164,21 @@ def main(argv=None):
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
-        kneighbourslocs=None
+        kneighbourslocs=None,
     )
 
     print(f"Length of validation dataset {len(val_set)}")
 
     # load in test dataset
     test_set = datastruc.ClusterLocDataset(
-        None, # raw_loc_dir_root
-        None, # raw_cluster_dir_root
-        test_folder, # processed_dir_root
-        label_level=config['label_level'],# label_level
-        pre_filter=None, # pre_filter
-        save_on_gpu=load_data_from_gpu, # gpu
-        transform=None, # transform
-        pre_transform=None, # pre_transform
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        test_folder,  # processed_dir_root
+        label_level=config["label_level"],  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=load_data_from_gpu,  # gpu
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
         loc_feat=None,
         cluster_feat=None,
         min_feat_locs=None,
@@ -176,7 +188,7 @@ def main(argv=None):
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
-        kneighbourslocs=None
+        kneighbourslocs=None,
     )
 
     print(f"Length of test dataset {len(test_set)}")
@@ -189,7 +201,7 @@ def main(argv=None):
         pin_memory = True
     else:
         raise ValueError("load_data_from_gpu should be True or False")
-    
+
     # initialise dataloaders
     train_loader = L.DataLoader(
         train_set,
@@ -221,19 +233,19 @@ def main(argv=None):
     print("Number val graphs", num_val_graph)
     for index, data in enumerate(train_loader):
         first_train_item = data
-    nodes = first_train_item.num_nodes
-    label = first_train_item.y
-    #if label_level == "node":
+    # nodes = first_train_item.num_nodes
+    # label = first_train_item.y
+    # if label_level == "node":
     #    assert label.shape[0] == nodes
-    #elif label_level == "graph":
+    # elif label_level == "graph":
     #    print('label', label)
     #    print('label shape', label.shape)
     # line below is incorrect as we have batch dimension as well
     #    assert label.shape == torch.Size([1])
-    #else:
+    # else:
     #    raise ValueError("Label level not defined")
-    dim = first_train_item['locs'].pos.shape[-1]
-    print('Dim', dim)
+    dim = first_train_item["locs"].pos.shape[-1]
+    print("Dim", dim)
 
     # initialise model
     model = model_choice(
@@ -251,7 +263,7 @@ def main(argv=None):
         )
 
     # initialise loss function
-    if loss_fn == "nll":# CHANGE
+    if loss_fn == "nll":  # CHANGE
         loss_fn = torch.nn.functional.nll_loss
 
     wandb.login()
@@ -271,17 +283,17 @@ def main(argv=None):
     )
 
     # model summary
-    #print("\n")
-    #print("---- Model summary (estimate) ----")
-    #print("\n")
-    #number_nodes = nodes * len(
+    # print("\n")
+    # print("---- Model summary (estimate) ----")
+    # print("\n")
+    # number_nodes = nodes * len(
     #    train_set
-    #)  # this is just for summary, has no bearing on training
-    #summary(
+    # )  # this is just for summary, has no bearing on training
+    # summary(
     #    model,
     #    input_size=(train_set.num_node_features, number_nodes),
     #    batch_size=batch_size,
-    #)
+    # )
 
     # define save location for model
     if args.model_folder is not None:
@@ -299,7 +311,7 @@ def main(argv=None):
     print("\n")
     print("---- Training... ----")
     print("\n")
-    train.train_loop(# CHANGE
+    train.train_loop(  # CHANGE
         epochs,
         model,
         optimiser,
@@ -332,17 +344,16 @@ def main(argv=None):
         train_loader,
         val_loader,
         device,
-        label_level,
         num_classes,
     )
 
     wandb.log(metrics)
 
-    #print("\n")
-    #print("----- Saving model... ------")
-    #if args.processed_directory is not None:
+    # print("\n")
+    # print("----- Saving model... ------")
+    # if args.processed_directory is not None:
     #    processed_directory = os.path.join(project_directory, args.processed_directory)
-    #else:
+    # else:
     #    processed_directory = os.path.join(project_directory, "processed")
 
     # save config file to folder and wandb

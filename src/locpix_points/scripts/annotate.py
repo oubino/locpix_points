@@ -4,14 +4,21 @@ Take in items, convert to histograms, annotate,
 visualise histo mask, save the exported annotation .parquet
 """
 
-import yaml
-import os
-from locpix_points.preprocessing import datastruc
-import polars as pl
 import argparse
+import os
+import yaml
+
+from locpix_points.preprocessing import datastruc
 
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If no files present to open or dimensions not 2 or 3"""
     # parse arugments
     parser = argparse.ArgumentParser(description="Annotate the data")
 

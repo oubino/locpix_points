@@ -6,17 +6,26 @@ Recipe :
     3. Train
 """
 
-import os
-import yaml
 import argparse
-import time
-from sklearn.model_selection import KFold 
+import os
+
+import yaml
+from sklearn.model_selection import KFold
+
+from locpix_points.scripts.evaluate import main as main_eval
 from locpix_points.scripts.process import main as main_process
 from locpix_points.scripts.train import main as main_train
-from locpix_points.scripts.evaluate import main as main_eval
-import shutil
+
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If specify random split but also have a config file"""
+
     # parse arugments
     parser = argparse.ArgumentParser(description="Training")
 
@@ -55,7 +64,7 @@ def main(argv=None):
     config = None
 
     # load yaml
-    k_fold_yaml = os.path.join(args.config, 'k_fold.yaml')
+    k_fold_yaml = os.path.join(args.config, "k_fold.yaml")
     with open(k_fold_yaml, "r") as ymlfile:
         config = yaml.safe_load(ymlfile)
 
@@ -65,16 +74,16 @@ def main(argv=None):
         # split randomly
         n_splits = args.random
         kf = KFold(n_splits=n_splits, shuffle=True)
-        file_list = os.listdir(os.path.join(project_directory, 'preprocessed/gt_label'))
+        file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         train_folds = []
         val_folds = []
         test_folds = []
-        for (train_index, test_index) in kf.split(file_list):
+        for train_index, test_index in kf.split(file_list):
             train_fold = []
             val_fold = []
             test_fold = []
             # split train into train/val: 80/20
-            val_index = int(0.8*len(train_index))
+            val_index = int(0.8 * len(train_index))
             for index in train_index:
                 if index < val_index:
                     train_fold.append(file_list[index])
@@ -85,28 +94,28 @@ def main(argv=None):
             train_folds.append(train_fold)
             val_folds.append(val_fold)
             test_folds.append(test_fold)
-        
+
         for index, train_fold in enumerate(train_folds):
             val_fold = val_folds[index]
             test_fold = test_folds[index]
             assert train_fold != val_fold
             assert train_fold != test_fold
             assert val_fold != test_fold
-            
+
         # save to config
-        splits['train'] = train_folds
-        splits['val'] = val_folds
-        splits['test'] = test_folds
+        splits["train"] = train_folds
+        splits["val"] = val_folds
+        splits["test"] = test_folds
         if config is not None:
             raise ValueError("Config should be none")
         config = {}
-        config['splits'] = splits
+        config["splits"] = splits
 
     else:
-        splits = config['splits'] 
-        train_folds = splits['train']
-        val_folds = splits['val']
-        test_folds = splits['test']
+        splits = config["splits"]
+        train_folds = splits["train"]
+        val_folds = splits["val"]
+        test_folds = splits["test"]
         for index, train_fold in enumerate(train_folds):
             val_fold = val_folds[index]
             test_fold = test_folds[index]
@@ -116,45 +125,45 @@ def main(argv=None):
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):
-        print(f'Fold {index}')
+        print(f"Fold {index}")
 
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
-        train_fold = [x.rstrip('.parquet') for x in train_fold]
-        val_fold = [x.rstrip('.parquet') for x in val_fold]
-        test_fold = [x.rstrip('.parquet') for x in test_fold]
+        train_fold = [x.rstrip(".parquet") for x in train_fold]
+        val_fold = [x.rstrip(".parquet") for x in val_fold]
+        test_fold = [x.rstrip(".parquet") for x in test_fold]
 
         # process
         main_process(
-        [
-            "-i",
-            args.project_directory,
-            "-c",
-            f"{args.config}/process.yaml",
-            "-o",
-            f"processed/fold_{index}",
-            "-k",
-            train_fold,
-            "-k",
-            val_fold,
-            "-k",
-            test_fold,
-        ]
+            [
+                "-i",
+                args.project_directory,
+                "-c",
+                f"{args.config}/process.yaml",
+                "-o",
+                f"processed/fold_{index}",
+                "-k",
+                train_fold,
+                "-k",
+                val_fold,
+                "-k",
+                test_fold,
+            ]
         )
 
         # train
         model_path = main_train(
-        [
-            "-i",
-            args.project_directory,
-            "-c",
-            f"{args.config}/train.yaml",
-            "-p",
-            f"processed/fold_{index}",
-            "-m",
-            f"models/fold_{index}"
-        ]
+            [
+                "-i",
+                args.project_directory,
+                "-c",
+                f"{args.config}/train.yaml",
+                "-p",
+                f"processed/fold_{index}",
+                "-m",
+                f"models/fold_{index}",
+            ]
         )
 
         # evaluate
@@ -171,34 +180,34 @@ def main(argv=None):
             ]
         )
 
-        #print('Cleaning up')
+        # print('Cleaning up')
 
         # clean up process folder check it first during debugging
-        #keep_files = ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']
-        #keep_files = []
-        #train_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/train')
-        #val_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/val')
-        #test_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/test')
-        ## get list of folders to delete
-        #train_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/train', i) for i in train_files if i not in keep_files]
-        #val_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/val', i) for i in val_files if i not in keep_files]
-        #test_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/test', i) for i in test_files if i not in keep_files]
+        # keep_files = ['file_map.csv', 'pre_filter.pt', 'pre_transform.pt']
+        # keep_files = []
+        # train_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/train')
+        # val_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/val')
+        # test_files = os.listdir(f'{args.project_directory}/processed/fold_{index}/test')
+        # get list of folders to delete
+        # train_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/train', i) for i in train_files if i not in keep_files]
+        # val_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/val', i) for i in val_files if i not in keep_files]
+        # test_files = [os.path.join(f'{args.project_directory}/processed/fold_{index}/test', i) for i in test_files if i not in keep_files]
 
-        #for file in train_files:
+        # for file in train_files:
         #    os.remove(file)
-        #for file in val_files:
+        # for file in val_files:
         #    os.remove(file)
-        #for file in test_files:
+        # for file in test_files:
         #    os.remove(file)
-        
+
         # remove directories
-        #os.rmdir(f'{args.project_directory}/processed/fold_{index}/train')
-        #os.rmdir(f'{args.project_directory}/processed/fold_{index}/val')
-        #os.rmdir(f'{args.project_directory}/processed/fold_{index}/test')
-        #os.rmdir(f'{args.project_directory}/processed/fold_{index}')
+        # os.rmdir(f'{args.project_directory}/processed/fold_{index}/train')
+        # os.rmdir(f'{args.project_directory}/processed/fold_{index}/val')
+        # os.rmdir(f'{args.project_directory}/processed/fold_{index}/test')
+        # os.rmdir(f'{args.project_directory}/processed/fold_{index}')
 
     # save config file to folder and wandb
-    yaml_save_loc = os.path.join(project_directory, f"k_fold.yaml")
+    yaml_save_loc = os.path.join(project_directory, "k_fold.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 

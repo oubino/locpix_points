@@ -1,7 +1,7 @@
-# params 
+# params
 
 batch_size: 1
-pin_memory: True 
+pin_memory: True
 num_workers: 4
 
 # device

@@ -2,6 +2,7 @@
 
 from locpix_points.scripts.featextract import main
 
+
 def test_pipeline():
     # run preprocess on data
     main(

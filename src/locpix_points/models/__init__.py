@@ -1,4 +1,4 @@
-"""Init file
+"""Models
 
 Bring all models into namespace
 
@@ -6,19 +6,40 @@ model_choice returns initialised model,
 so that outside of this init file,
 don't have to specify the location
 of the model in models/ just the name!
+
+Currently available models:
+
+    cluster_net
+    loc_cluster_net
+    point_net
+    point_transformer
 """
 
-#from .simple_gcn_1 import SimpleGCN1
-from .point_net import PointNetClassification, PointNetSegmentation
-from .point_transformer import Segmenter, Classifier
-from .loc_cluster_net import LocClusterNet
 from .cluster_net import ClusterNet
+from .loc_cluster_net import LocClusterNet
+
+# from .simple_gcn_1 import SimpleGCN1
+from .point_net import PointNetClassification, PointNetSegmentation
+from .point_transformer import Classifier, Segmenter
 
 
 def model_choice(name, *args, **kwargs):
-    if name == "simplegcn1":
-        return SimpleGCN1(*args)
-    elif name == "pointnetclass":
+    """Returns the chosen model
+
+    Args:
+        name (str): Name of the model to initialise
+        *args: Positional arguments to initialise the models with
+        **kwargs: Keyword arguments to initialise the models with
+
+    Returns:
+        model: the model chosen by the user
+
+    Raises:
+        ValueError: if desired model is not specified"""
+
+    # if name == "simplegcn1":
+    #    return SimpleGCN1(*args)
+    if name == "pointnetclass":
         return PointNetClassification(*args)
     elif name == "pointnetseg":
         return PointNetSegmentation(*args)
@@ -29,7 +50,7 @@ def model_choice(name, *args, **kwargs):
         dim = kwargs["dim"]
         return Classifier(*args, dim=dim)
     elif name == "locclusternet":
-        device = kwargs['device']
+        device = kwargs["device"]
         return LocClusterNet(*args, device=device)
     elif name == "clusternet":
         return ClusterNet(*args)

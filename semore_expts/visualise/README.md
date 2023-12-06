@@ -4,7 +4,7 @@ First we need to process a file for visualisation, we need a folder which has al
 
 Change the parameters in visualise_process.py
 
-Then 
+Then
 
 ```
     activate locpix-points

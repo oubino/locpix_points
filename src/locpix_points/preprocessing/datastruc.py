@@ -5,15 +5,16 @@ SMLM dataitem will be parsed as.
 
 """
 
-import numpy as np
-import napari
+import ast
+import json
+import os
+import warnings
+
 import matplotlib.pyplot as plt
+import napari
+import numpy as np
 import polars as pl
 import pyarrow.parquet as pq
-import ast
-import os
-import json
-import warnings
 
 _interpolate = {
     "log2": lambda d: np.log2(d),
@@ -82,8 +83,6 @@ class item:
         gt_label=None,
         gt_label_map=None,
     ):
-        """Initialises item"""
-
         self.name = name
         self.df = df
         self.histo = histo
@@ -119,7 +118,10 @@ class item:
         """Returns the label associated with the channel specified
 
         Args:
-            chan (int) : Integer representing the channel"""
+            chan (int) : Integer representing the channel
+
+        Returns:
+            self.channel_label[chan] (string) : Protein imaged in that channel"""
 
         return self.channel_label[chan]
 
@@ -129,12 +131,18 @@ class item:
 
         Args:
             label (string) : String representing the label you want
-                to find the channel for"""
+                to find the channel for
+
+        Returns:
+            list(self.channel_label.keys())[
+                list(self.channel_label.values()).index(label)
+            ] (int) : channel integer from the channel label as a string
+
+        Raises:
+            ValueError: If label specified is not present"""
 
         if label not in self.channel_label.values():
-            raise ValueError(
-                "The label specified is not present in" "the channel labels"
-            )
+            raise ValueError("The label specified is not present in the channel labels")
 
         return list(self.channel_label.keys())[
             list(self.channel_label.values()).index(label)
@@ -156,7 +164,6 @@ class item:
                 bins/pixels in x,y,z
             cmap (list of strings) : The colourmaps used to
                 plot the histograms
-            plot (bool): Whether to plot the output
             vis_interpolation (string): How to inerpolate
                 the image for visualisation"""
 
@@ -337,6 +344,9 @@ class item:
         Args:
             cmap (list of strings) : Colourmaps napari uses to
                 plot the histograms
+
+        Raises:
+            ValueError: If try to manually segment file which already has gt labels
         """
 
         # if already has gt label raise error
@@ -456,12 +466,12 @@ class item:
 
         Args:
             img_mask (np.ndarray): Mask over the image -
-            to reiterate, to convert this to histogram space need
-            to transpose it
+                to reiterate, to convert this to histogram space need
+                to transpose it
 
         Returns:
             df (polars dataframe): Original dataframe with
-            additional column with the predicted label"""
+                additional column with the predicted label"""
 
         if self.dim == 2:
             # list of mask dataframes, each mask dataframe contains
@@ -524,8 +534,9 @@ class item:
                 additional column for each localisation
                 containing the label for each channel
 
-        Returns:
-            None"""
+        Raises:
+            NotImplementedError: This method is not implemented yet
+            ValueError: If try to drop zero label when none is present"""
 
         raise NotImplementedError
 
@@ -566,7 +577,6 @@ class item:
             print(
                 "channel label is now a dictionary which changes below line so need to change"
             )
-            channel_label = ["egfr", "ereg"]
             label_df = pl.DataFrame({"chan_label": self.channel_label}).with_row_count(
                 "channel"
             )
@@ -599,8 +609,10 @@ class item:
                 the column with x,y,z pixel
             overwrite (bool): Whether to overwrite
 
-        Returns:
-            None
+        Raises:
+            ValueError: If try to drop zero label but no gt label; If the
+                gt label and gt label scope are incompatible; If try
+                to overwrite without manually saying want to do this
         """
 
         save_df = self.df
@@ -798,7 +810,10 @@ class item:
         return histo, channel_map, label_map
 
     def render_seg(self):
-        """Render the segmentation of the histogram"""
+        """Render the segmentation of the histogram
+
+        Returns:
+            histo (np.histogram) : Segmentation of the histogram"""
 
         labels = self.df.select(pl.col("gt_label")).to_numpy()
         x_pixels = self.df.select(pl.col("x_pixel")).to_numpy()

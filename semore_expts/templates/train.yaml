@@ -26,7 +26,7 @@ label_level: graph # graph
 
 # train/val transforms
 # options: ['normalisescale', 'jitter', 'flip', 'randscale', 'rotate', 'subsample', 'shear'] # null
-transforms: 
+transforms:
   z_rotate: null
   # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
   # fov_x/fov_y is defined in process.yaml
@@ -34,7 +34,7 @@ transforms:
   # therefore 15nm = 0.00075 units
   jitter: 0.00075
   x_flip: null
-  y_flip: null 
+  y_flip: null
   randscale: [0.95,1.05]
   shear: 0.05
   # subsample

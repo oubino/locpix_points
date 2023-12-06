@@ -8,5 +8,3 @@ micromamba activate rapids=23.10
 
 # Test feat extract
 python semore_expts/task_1/featextract.py
-
-

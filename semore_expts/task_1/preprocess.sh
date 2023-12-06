@@ -8,6 +8,3 @@ micromamba activate locpix-points
 
 # Preprocess
 python semore_expts/task_1/preprocess.py
-
-
-

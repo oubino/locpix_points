@@ -1,4 +1,4 @@
-# The following are the names of the 
+# The following are the names of the
 # x column, y column, z column if present, channel, frame,
 # in the csvs being processed
 x_col: x
@@ -8,7 +8,7 @@ channel_col: channel #'channel'
 frame_col: frame # 'frame'
 
 # The number of dimensions to consider
-# If 2 only deals with x and y 
+# If 2 only deals with x and y
 # If 3 will read in and deal with z as well (currently not fully supported)
 dim: 2
 
@@ -25,7 +25,7 @@ channel_label:
 # pixel
 drop_pixel_col: False
 
-# files to include: all for everyone 
+# files to include: all for everyone
 include_files: all
   #- file_1
   #- file_2
@@ -42,8 +42,8 @@ gt_label_loc:
     0 : null # 'EGFR'
     1 : null
   # which column is the gt label in
-  gt_label_col : null # index 
+  gt_label_col : null # index
 
-# if gt_label_scope is 'fov' then we assume 
+# if gt_label_scope is 'fov' then we assume
 # but will check that gt_label and gt_label_map are both
 # in the metadata

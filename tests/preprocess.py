@@ -1,6 +1,7 @@
 """Test pipeline"""
 
-from locpix_points.scripts.preprocess import main 
+from locpix_points.scripts.preprocess import main
+
 
 def test_pipeline():
     # run preprocess on data

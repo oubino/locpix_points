@@ -1,20 +1,18 @@
 """PointTransformer
 
 
-PointTransformer adapted from 
+PointTransformer adapted from
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transformer_classification.py
 and
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transformer_segmentation.py
 
-Originally in 
-PointTransformer http://arxiv.org/abs/2012.09164 
+Originally in
+PointTransformer http://arxiv.org/abs/2012.09164
 """
-
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear as Lin
-import warnings
 from torch_geometric.nn import (
     MLP,
     PointTransformerConv,

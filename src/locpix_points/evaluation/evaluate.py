@@ -4,21 +4,18 @@ This contains functions for evaluating the models
 """
 
 import torch
-from torchmetrics import MetricCollection, Precision, Recall, F1Score, Accuracy
+from torchmetrics import Accuracy, F1Score, MetricCollection, Precision, Recall
 from torchmetrics.classification import (
-    BinaryAccuracy,
     MulticlassConfusionMatrix,
     MulticlassJaccardIndex,
 )
+import warnings
 
 
-def make_prediction(
-    model, optimiser, train_loader, val_loader, device, label_level, num_classes
-):
+def make_prediction(model, optimiser, train_loader, val_loader, device, num_classes):
     """Make predictions using the model
 
     Args:
-
         model (pytorch geo model) : Model that will make predictiions
         optimiser (pytorch optimiser) : Optimiser used in training
         train_loader (torch dataloader): Dataloader for the
@@ -27,8 +24,10 @@ def make_prediction(
             validation dataset
         device (gpu or cpu): Device to train the model
             on
-        label_level (string) : Either node or graph
-        num_classes (int) : Number of classes in the dataset"""
+        num_classes (int) : Number of classes in the dataset
+
+    Returns:
+        metrics (dict) : Dict containing the metrics"""
 
     model.to(device)
 
@@ -113,22 +112,27 @@ def make_prediction(
 
     return metrics
 
+
 def make_prediction_test(
-    model, test_loader, device, num_classes, explain=False,
+    model,
+    test_loader,
+    device,
+    num_classes,
+    explain=False,
 ):
     """Make predictions using the model
 
     Args:
-
         model (pytorch geo model) : Model that will make predictiions
-        optimiser (pytorch optimiser) : Optimiser used in training
         test_loader (torch dataloader): Dataloader for the
             test dataset
         device (gpu or cpu): Device to evaluate the model
             on
-        label_level (string) : Either node or graph
         num_classes (int) : Number of classes in the dataset
-        explain (bool) : Whether this is for an explain dataset"""
+        explain (bool) : Whether this is for an explain dataset
+
+    Returns:
+        metrics (dict) : Dict containing the metrics"""
 
     model.to(device)
 
@@ -141,7 +145,6 @@ def make_prediction_test(
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
-
     # test data
     model.eval()
     for index, data in enumerate(test_loader):
@@ -153,7 +156,14 @@ def make_prediction_test(
             # forward pass - with autocasting
             with torch.autocast(device_type="cuda"):
                 if explain:
+                    warnings.warn(
+                        "Assuming that last layer is unnormalised\
+                                  prob"
+                    )
                     output = model(data.x, data.edge_index, data.batch)
+                    output = output.log_softmax(dim=-1)
+                    print("output", output)
+                    print("label", data.y)
                 else:
                     output = model(data)
                 test_predictions = output.argmax(dim=1)

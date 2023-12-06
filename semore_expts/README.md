@@ -32,12 +32,10 @@ Now however we use cluster features (only) and a cluster network to make the cla
 
 ## Methods
 
-Data generated according to semore folder - for tasks 1-3 all use same dataset 1 - which has pure iso vs pure fibrils. 
-These tasks 
+Data generated according to semore folder - for tasks 1-3 all use same dataset 1 - which has pure iso vs pure fibrils.
+These tasks
 
-## Results 
+## Results
 
 
 ## Discussion
-
-

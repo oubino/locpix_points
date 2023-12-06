@@ -2,7 +2,6 @@ import os.path as osp
 
 import torch
 import torch.nn.functional as F
-
 import torch_geometric.transforms as T
 from torch_geometric.datasets import ModelNet
 from torch_geometric.loader import DataLoader
@@ -22,8 +21,9 @@ class SAModule(torch.nn.Module):
 
     def forward(self, x, pos, batch):
         idx = fps(pos, batch, ratio=self.ratio)
-        row, col = radius(pos, pos[idx], self.r, batch, batch[idx],
-                          max_num_neighbors=64)
+        row, col = radius(
+            pos, pos[idx], self.r, batch, batch[idx], max_num_neighbors=64
+        )
         edge_index = torch.stack([col, row], dim=0)
         x_dst = None if x is None else x[idx]
         x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
@@ -67,7 +67,7 @@ class Net(torch.nn.Module):
 
         print(x.shape)
         print(batch)
-        input('stop')
+        input("stop")
 
         out = self.mlp(x).log_softmax(dim=-1)
         print(out.shape)
@@ -97,22 +97,21 @@ def test(loader):
     return correct / len(loader.dataset)
 
 
-if __name__ == '__main__':
-    path = osp.join(osp.dirname(osp.realpath(__file__)), '..',
-                    'sandpit/data/ModelNet10')
+if __name__ == "__main__":
+    path = osp.join(
+        osp.dirname(osp.realpath(__file__)), "..", "sandpit/data/ModelNet10"
+    )
     pre_transform, transform = T.NormalizeScale(), T.SamplePoints(1024)
-    train_dataset = ModelNet(path, '10', True, transform, pre_transform)
-    test_dataset = ModelNet(path, '10', False, transform, pre_transform)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True,
-                              num_workers=6)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False,
-                             num_workers=6)
+    train_dataset = ModelNet(path, "10", True, transform, pre_transform)
+    test_dataset = ModelNet(path, "10", False, transform, pre_transform)
+    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=6)
+    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=6)
 
-    device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
     model = Net().to(device)
     optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
     for epoch in range(1, 201):
         train(epoch)
         test_acc = test(test_loader)
-        print(f'Epoch: {epoch:03d}, Test: {test_acc:.4f}')
+        print(f"Epoch: {epoch:03d}, Test: {test_acc:.4f}")

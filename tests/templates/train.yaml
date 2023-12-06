@@ -26,11 +26,11 @@ label_level: graph # graph
 
 # train/val transforms
 # options: ['normalisescale', 'jitter', 'flip', 'randscale', 'rotate', 'subsample', 'shear'] # null
-transforms: 
+transforms:
   z_rotate: null
   jitter: 15 # number of nm
   x_flip: null
-  y_flip: null 
+  y_flip: null
   randscale: [0.95,1.05]
   shear: 0.05
   # subsample

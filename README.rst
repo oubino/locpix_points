@@ -6,9 +6,9 @@ Requirements
 
 Requires Cuda 12.1 or above!
 
-For wsl for windows - follow 
+For wsl for windows - follow
 
-Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local 
+Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
 
 Also had to install Rapids on WSL
 
@@ -16,9 +16,8 @@ Also had to install Rapids on WSL
 micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
 ``
 
-
-Environment 1
--------------
+Environment 1 (locpix-points)
+-----------------------------
 
 Create new environment
 
@@ -32,7 +31,7 @@ Then install this repository
 pip install -e .
 ``
 
-Before installing the remaining requirements
+Before installing the remaining requirements, making sure you have activated the environment first
 
 ``
 pip install -r requirements.txt
@@ -41,12 +40,21 @@ pip install -r requirements.txt
 
 Also need to install https://github.com/mims-harvard/GraphXAI
 
-&
+To do this clone the repository to your desired location
 
-ipdb
+``
+git clone https://github.com/mims-harvard/GraphXAI.git
+``
 
-Environment 2
--------------
+Then navigate to the directory and install using 
+
+``
+pip install -e .
+``
+
+
+Environment 2 (feat_extract)
+----------------------------
 
 ``
 micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
@@ -58,10 +66,14 @@ pip install torch-geometric
 
 Note need to install locpix points as well
 
-Environment 3
--------------
+Environment 3 (visualise)
+-------------------------
 
-Visualise environment needs to be described and is needed for visualise script
+``
+micromamba create -n visualise python=3.10 
+micromamba activate visualise
+pip install matplotlib numpy open3d polars torch
+``
 
 Layout
 ======
@@ -78,31 +90,50 @@ This repository then does the following:
     - Allow visualisation
 
 
-Model architecture
-==================
+Model architectures
+===================
 
 
 Recipes
 =======
 
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2.
+Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 and visualise which must be run with Environment 3
+
+Here are some different recipes one might use
 
 Recipe 1
 --------
 
-Preprocess
-Featextract (use Environment 2)
-Process
-Train
+    Preprocess
+    Featextract (use Environment 2)
+    Process
+    Train
+    Evaluate
 
 Recipe 2
 --------
 
-Preprocess
-Annotate 
-Featextract (use Environment 2)
-Process
-Train
+    Preprocess
+    Annotate
+    Featextract (use Environment 2)
+    Process
+    Train
+    Evaluate
+
+Recipe 3
+--------
+
+    Preprocess
+    Featextract (use Environment 2)
+    K-fold (does process + train + evaluate)
+
+Feat analyse can also be run after processing and visualise can be run on the .parquet files or the processed files.
+We recommend visualising the processed files as then you are able to see the graph.
+
+Scripts
+=======
+
+The recipes consist of the scripts we need to run which are detailed below
 
 Preprocess
 ----------
@@ -146,11 +177,11 @@ in the dataset and the values representing the real concept e.g. 0:'dog', 1:'cat
 - bin sizes: Size of bins of the histogram if constructed e.g. (23.2, 34.5, 21.3)
 
 The dataframe has the following columns:
-- x 
-- y 
-- z 
-- channel 
-- frame 
+- x
+- y
+- z
+- channel
+- frame
 
 *Current limitations*
 - Currently there is no option to manually choose which channels to consider, so all channels are considered.
@@ -176,7 +207,7 @@ Data loaded in from
 
     project_folder/preprocessed/no_gt_label
 
-Data then stored in 
+Data then stored in
 
     project_folder/preprocessed/gt_label
 
@@ -206,11 +237,11 @@ python recipes/featextract.py
 
 *Structure*
 
-Data loaded in from 
+Data loaded in from
 
     project_folder/preprocessed/gt_label
 
-Feature data for localisations saved in 
+Feature data for localisations saved in
 
     project_directory/preprocessed/featextract/locs
 
@@ -220,7 +251,7 @@ Feature data for clusters saved in
 
 *Long description*
 
-For each FOV DBSCAN is used to cluster the data 
+For each FOV DBSCAN is used to cluster the data
 
 Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
 
@@ -251,21 +282,21 @@ python recipes/process.py
 
 *Structure*
 
-Data loaded in from 
+Data loaded in from
 
-    project_folder/preprocessed/featextract/locs 
+    project_folder/preprocessed/featextract/locs
 
-And 
+And
 
     project_folder/preprocessed/featextact/clusters
 
-Processed files then saved in 
+Processed files then saved in
 
     project_directory/processed/train/
     project_directory/processed/val/
     project_directory/processed/test/
 
-or 
+or
 
     project_directory/{args.output_folder}/train/
     project_directory/{args.output_folder}/val/
@@ -287,12 +318,137 @@ Then edges are added between
 
 This is then ready for training
 
+Train
+-----
+
+*Run*
+
+```
+python recipes/train.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-p (Optional) Location of processed files, if not specified defaults to project_directory/processed
+-m (Optional) Where to store the models, if not specified defaults to project_directory/models
+``
+
+*Structure*
+
+Data loaded in from
+
+    project_folder/processed
+
+or
+
+    project_folder/{args.processed_directory}
+
+Output model is then saved in
+
+    project_directory/models/
+
+or
+
+    project_directory/{args.model_folder}
+
+*Long description*
+
+The data is loaded in, the specified model is trained and saved.
+
+
+Evaluate
+--------
+
+*Run*
+
+```
+python recipes/evaluate.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-m Path to the model to to evaluate
+-p (Optional) Location of processed files, if not specified defaults to project_directory/processed
+-e (Optional) If given then explain algorithms are run on the dataset
+``
+
+*Structure*
+
+Data loaded in from
+
+    project_folder/processed/test
+
+or
+
+    project_folder/{args.processed_directory}/test
+
+Model is loaded from 
+
+    {args.model_loc}
+
+
+*Long description*
+
+Data is loaded in from the test folder and the model from the model_path.
+This model is then evaluated on the dataset and metrics are provided.
+If the explain argument is given then explain algorithms are also run on the dataset
+
+k-fold
+------
+
+*Run*
+
+```
+python recipes/k_fold.py
+```
+
+*Arguments*
+``
+-i Path to the project folder
+-c Path to configuration .yaml file
+-r (Optional) If specified this integer defines the number of random splits to perform
+``
+
+*Structure*
+
+Data loaded in from
+
+    project_folder/preprocessed/featextract/locs
+
+And
+
+    project_folder/preprocessed/featextact/clusters
+
+Temporary processed files are saved in
+
+    project_directory/processed/fold_{index}/train/
+    project_directory/processed/fold_{index}/val/
+    project_directory/processed/fold_{index}/test/
+
+However, these files are removed afterwards.
+
+The final models are saved in
+
+    project_folder/models/fold_{index}/
+
+*Long description*
+
+If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+
+For each fold, the data is processed and trained using the train and validation folds.
+
+After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
+
 Featanalyse
 -----------
 
 *Requirements*
 
-The packages required are  installed in the locpix-points environment. These include 
+The packages required are  installed in the locpix-points environment. These include
 - polars
 - seaborn
 - matplotlib
@@ -316,7 +472,7 @@ python recipes/featanalyse.py
 
 Loads in .parquet files for clusters and localisations and visualises the extracted features.
 Including
-- box plots 
+- box plots
 - UMAPs
 
 Visualise
@@ -330,7 +486,7 @@ python recipes/visualise.py
 
 *Arguments*
 ``
--i Path to the file to visualise (either .parquet or .pt pytorch geometric object) 
+-i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
 -x If .parquet file then name of the x column
 -y If .parquet file then name of the y column
 -z If .parquet and 3D then name of the z column
@@ -343,97 +499,10 @@ Can either load in .parquet file and visualise just the points.
 
 Or can load in .pt pytorch geometric file and visualise the nodes and edges
 
-Train
------
-
-*Run*
-
-```
-python recipes/train.py
-```
-
-*Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--p (Optional) Location of processed files, if not specified defaults to project_directory/processed
--m (Optional) Where to store the models, if not specified defaults to project_directory/models
-``
-
-*Structure*
-
-Data loaded in from 
-
-    project_folder/processed
-
-or 
-
-    project_folder/{args.processed_directory}
-
-Output model is then saved in 
-
-    project_directory/models/
-
-or 
-
-    project_directory/{args.model_folder}
-
-*Long description*
-
-The data is loaded in, the specified model is trained and saved.
-
-k-fold
-------
-
-*Run*
-
-```
-python recipes/k_fold.py
-```
-
-*Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--r (Optional) If specified this integer defines the number of random splits to perform
-``
-
-*Structure*
-
-Data loaded in from 
-
-    project_folder/preprocessed/featextract/locs 
-
-And 
-
-    project_folder/preprocessed/featextact/clusters
-
-Temporary processed files are saved in 
-
-    project_directory/processed/fold_{index}/train/
-    project_directory/processed/fold_{index}/val/
-    project_directory/processed/fold_{index}/test/
-
-However, these files are removed afterwards.
-
-The final models are saved in 
-
-    project_folder/models/fold_{index}/
-
-*Long description*
-
-If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
-
-For each fold, the data is processed and trained using the train and validation folds.
-
-After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
-
-
 Clean up
 --------
 
-
-
+Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
 
 Pytorch geometric
 =================
@@ -467,7 +536,7 @@ back down during backpropagation we can work in FP16 while avoiding underflow.
 
 It is called mixed precision, as we maintain two copies of a weight matrix
 in FP32 and FP16.
-The gradient updates are calculated using FP16 but they are applied to the 
+The gradient updates are calculated using FP16 but they are applied to the
 FP32 matrix, thereby making the updates safer.
 
 Some operations are safe in FP16 while some are only safe in FP32, therefore
@@ -484,19 +553,19 @@ Features of ONI data
 X (nm): x
 Y (nm: y
 Z (nm): z
-X precision (nm): include, normalise to 0-1	
-Y precision (nm): include, normalise to 0-1	
-X (pix): ignore	
-Y (pix): ignore	
-Z (pix): ignore	
-X precision (pix): ignore	
-Y precision (pix): ignore	
-Photons: normalise 0-1	
-Background: normalise 0-1	
-PSF Sigma X (pix): normalise 0-1	
-PSF Sigma Y (pix): normalise 0-1	
-Sigma X var: normalise 0-1	
-Sigma Y var: normalise 0-1	
+X precision (nm): include, normalise to 0-1
+Y precision (nm): include, normalise to 0-1
+X (pix): ignore
+Y (pix): ignore
+Z (pix): ignore
+X precision (pix): ignore
+Y precision (pix): ignore
+Photons: normalise 0-1
+Background: normalise 0-1
+PSF Sigma X (pix): normalise 0-1
+PSF Sigma Y (pix): normalise 0-1
+Sigma X var: normalise 0-1
+Sigma Y var: normalise 0-1
 p-value: leave as is
 
 Need to load these in, need to calculate max and min for each column over the whole training dataset
@@ -507,7 +576,7 @@ Note that when then apply to new point need to clamp points below 0 to 0 and abo
 
 Then also experiment with pytorch geometric normalise features
 
-1. Need to calculate max and min for each dataitem 
+1. Need to calculate max and min for each dataitem
 2. Need to load in train/val/test files for fold 0
 3. Need to normalise each feature by the max and min values
 4. Then can run on arc

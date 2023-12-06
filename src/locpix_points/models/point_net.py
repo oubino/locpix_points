@@ -1,14 +1,14 @@
 """SimplePointNet
 
-PointNets are adapted from 
+PointNets are adapted from
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pointnet2_classification.py
-and 
+and
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/pointnet2_segmentation.py
 
-Originally in 
-PointNet https://arxiv.org/abs/1612.00593 
-and 
-PointNet++ https://arxiv.org/abs/1706.02413 
+Originally in
+PointNet https://arxiv.org/abs/1612.00593
+and
+PointNet++ https://arxiv.org/abs/1706.02413
 """
 
 import torch
@@ -17,8 +17,8 @@ from torch_geometric.nn import (
     PointNetConv,
     fps,
     global_max_pool,
-    radius,
     knn_interpolate,
+    radius,
 )
 
 # TODO: layer sizes

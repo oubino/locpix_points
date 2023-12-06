@@ -7,12 +7,14 @@ including (add as added):
     - convert .parquet to datastructure
 """
 
-import polars as pl
-import os
-from . import datastruc
-import warnings
-import pyarrow.parquet as pq
 import json
+import os
+import warnings
+
+import polars as pl
+import pyarrow.parquet as pq
+
+from . import datastruc
 
 
 def file_to_datastruc(
@@ -37,7 +39,6 @@ def file_to_datastruc(
 
     Args:
         input_file (string) : Location of the file
-        save_loc (string) : Location to save datastructure to
         dim (int) : Dimensions to consider either 2 or 3
         channel_col (string) : Name of column which gives channel
             for localisation
@@ -63,6 +64,9 @@ def file_to_datastruc(
 
     Returns:
         datastruc (SMLM_datastruc) : Datastructure containg the data
+
+    Raises:
+        ValueError: If incorrectly try to read in file
     """
 
     # Check dimensions correctly specified
@@ -101,10 +105,10 @@ def file_to_datastruc(
         gt_label = None
         columns.append(gt_label_col)
         column_names.append("gt_label")
-        #print("Per localisation labels")
+        # print("Per localisation labels")
         arrow_table = pq.read_table(input_file, columns=columns)
     elif gt_label_scope == "fov":
-        #print("Per fov labels")
+        # print("Per fov labels")
         arrow_table = pq.read_table(input_file, columns=columns)
         gt_label_map = json.loads(
             arrow_table.schema.metadata[b"gt_label_map"].decode("utf-8")

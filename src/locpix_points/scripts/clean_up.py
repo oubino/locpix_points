@@ -1,6 +1,7 @@
+"""Cleans up the directory removing certain files"""
+import argparse
 import os
 import shutil
-import argparse
 
 # list of file endings to remove
 file_endings = [".egg-info", "__pycache__", ".tox", ".vscode"]

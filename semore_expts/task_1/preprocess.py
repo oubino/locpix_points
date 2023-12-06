@@ -1,6 +1,7 @@
 """Test pipeline"""
 
-from locpix_points.scripts.preprocess import main as main_pre 
+from locpix_points.scripts.preprocess import main as main_pre
+
 
 def main():
     # run preprocess on data
@@ -14,6 +15,7 @@ def main():
             "semore_expts/task_1",
         ]
     )
+
 
 if __name__ == "__main__":
     main()

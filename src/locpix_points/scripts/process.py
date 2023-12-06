@@ -4,20 +4,21 @@ Recipe :
     1. Create dataset
     2. Process dataset - pre-transform and save to .pt
 """
-import random
-import os
-import yaml
-from locpix_points.data_loading import datastruc
-from functools import partial
 import argparse
+import ast
 import json
+import os
+import random
 import time
 import warnings
-import torch
-import ast
-import polars as pl
+from functools import partial
+
 import numpy as np
-import ast
+import polars as pl
+import torch
+import yaml
+
+from locpix_points.data_loading import datastruc
 
 # import torch_geometric.transforms as T
 
@@ -31,7 +32,11 @@ def pre_filter(data, inclusion_list=[]):
         data (torch.geometric.data) : The pytorch
             geometric dataitem part of the dataset
         inclusion_list (list) : List of names
-            indicating which data should be included"""
+            indicating which data should be included
+
+    Returns:
+        0/1: 0 if file shouldn't be included in final dataset and 1
+            if it should"""
 
     if data.name in inclusion_list:
         return 1
@@ -43,7 +48,13 @@ def load_pre_filter(path):
     """Load in a pre-filter from previous run
 
     Args:
-        path (string) : Path to the pre-filter.pt"""
+        path (string) : Path to the pre-filter.pt
+
+    Returns:
+        pre_filter (?) : Pre filter saved
+
+    Raises:
+        ValueError : If pre-filter is not correct type"""
 
     pre_filter = torch.load(path)
     if (
@@ -60,6 +71,26 @@ def load_pre_filter(path):
 
 
 def minmax(config, feat_str, file_directory, train_list):
+    """Calculate minimum and maximum values of the features
+    in the file
+
+    Args:
+        config (dict): Configuration for processing
+        feat_str (str): loc_feat or cluster_feat depending on if
+            calculating for the localisations or clusters
+        file_directory (str): Directory containing the files
+        train_list (list): List of files to load in
+
+    Returns:
+        min_vals (dict): Dictioanry containing the minimum values for the
+            features
+        max_vals (dict): Dictioanry containing the maximum values for the
+            features
+
+    Raises:
+        NotImplementedError: If the features in the config file
+            are not correct
+    """
     if type(config[feat_str]) is list and len(config[feat_str]) != 0:
         for index, file in enumerate(train_list):
             df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
@@ -85,6 +116,14 @@ def minmax(config, feat_str, file_directory, train_list):
 
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        NotImplementedError: If model type not recognised"""
+
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -151,7 +190,6 @@ def main(argv=None):
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files\
               has to be slightly different to manual split",
     )
-
 
     args = parser.parse_args(argv)
 
@@ -257,7 +295,7 @@ def main(argv=None):
 
         print("Train set...")
         # create train dataset
-        trainset = datastruc.ClusterLocDataset(
+        _ = datastruc.ClusterLocDataset(
             os.path.join(project_directory, "preprocessed/featextract/locs"),
             os.path.join(project_directory, "preprocessed/featextract/clusters"),
             train_folder,
@@ -273,14 +311,14 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighboursclusters"],
-            config['fov_x'],
-            config['fov_y'],
+            config["fov_x"],
+            config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
         )
 
         print("Val set...")
         # create val dataset
-        valset = datastruc.ClusterLocDataset(
+        _ = datastruc.ClusterLocDataset(
             os.path.join(project_directory, "preprocessed/featextract/locs"),
             os.path.join(project_directory, "preprocessed/featextract/clusters"),
             val_folder,
@@ -296,14 +334,14 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighboursclusters"],
-            config['fov_x'],
-            config['fov_y'],
+            config["fov_x"],
+            config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
         )
 
         print("Test set...")
         # create test dataset
-        testset = datastruc.ClusterLocDataset(
+        _ = datastruc.ClusterLocDataset(
             os.path.join(project_directory, "preprocessed/featextract/locs"),
             os.path.join(project_directory, "preprocessed/featextract/clusters"),
             test_folder,
@@ -319,8 +357,8 @@ def main(argv=None):
             min_feat_clusters,
             max_feat_clusters,
             config["kneighboursclusters"],
-            config['fov_x'],
-            config['fov_y'],
+            config["fov_x"],
+            config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
         )
 

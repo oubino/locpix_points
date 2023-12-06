@@ -3,13 +3,15 @@
 Module takes in the .csv files and processes saving the datastructures
 """
 
-import os
-import yaml
-from locpix_points.preprocessing import functions
 import argparse
-import socket
 import json
+import os
+import socket
 import time
+
+import yaml
+
+from locpix_points.preprocessing import functions
 
 
 class project_info:
@@ -52,6 +54,14 @@ class project_info:
 
 
 def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If try to preprocess but already files there"""
+
     # parse arugments
     parser = argparse.ArgumentParser(
         description="Preprocess the data for\
@@ -163,9 +173,7 @@ def main(argv=None):
         )
 
     # save yaml file
-    yaml_save_loc = os.path.join(
-        project_directory, f"preprocess.yaml"
-    )
+    yaml_save_loc = os.path.join(project_directory, "preprocess.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
