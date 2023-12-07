@@ -27,8 +27,7 @@ Then install this repository
 
 Before installing the remaining requirements, making sure you have activated the environment first
 
-``pip install -r requirements.txt
-``
+``pip install -r requirements.txt``
 
 Also need to install https://github.com/mims-harvard/GraphXAI
 
@@ -38,29 +37,28 @@ To do this clone the repository to your desired location
 
 Then navigate to the directory and install using 
 
-``pip install -e .
-``
+``pip install -e .``
 
 
 Environment 2 (feat_extract)
 ----------------------------
 
-``micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
-micromamba activate feat_extract
-pip install dask dask-ml polars pytest
-pip install -e .
-pip install torch-geometric
-``
+``micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0``
+``micromamba activate feat_extract``
+``pip install dask dask-ml polars pytest``
+``pip install -e .``
+``pip install torch-geometric``
+
 
 Note need to install locpix points as well
 
 Environment 3 (visualise)
 -------------------------
 
-``micromamba create -n visualise python=3.10 
-micromamba activate visualise
-pip install matplotlib numpy open3d polars torch
-``
+``micromamba create -n visualise python=3.10 ``
+``micromamba activate visualise``
+``pip install matplotlib numpy open3d polars torch``
+
 
 Layout
 ======
@@ -126,14 +124,13 @@ Preprocess
 ----------
 
 *Run*
-``python recipes/preprocess.py
-``
+``python recipes/preprocess.py``
+
 
 *Arguments*
-``-i Path to the input data folder
--c Path to configuration .yaml file
--o Path to the project folder will create
-``
+``-i Path to the input data folder``
+``-c Path to configuration .yaml file``
+``-o Path to the project folder will create``
 
 *Structure*
 
@@ -177,13 +174,13 @@ Annotate
 --------
 
 *Run*
-``python recipes/annotate.py
-``
+``python recipes/annotate.py``
+
 
 *Arguments*
-``-i Path to the project folder
--c Path to configuration .yaml file
-``
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
+
 *Structure*
 
 Data loaded in from
@@ -208,15 +205,11 @@ Featextract
 
 *Run*
 
-```
-python recipes/featextract.py
-```
+``python recipes/featextract.py``
 
 *Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
-``
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
 
 *Structure*
 
@@ -249,19 +242,17 @@ Process
 
 *Run*
 
-```
-python recipes/process.py
-```
+``python recipes/process.py``
 
 *Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--o (Optional) Specify output folder if not provided defaults to project_directory/processed
--r If you want to copy the data split of another project then include this argument with
-   the location of the project folder
--m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
-``
+
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
+``-o (Optional) Specify output folder if not provided defaults to project_directory/processed``
+``-r If you want to copy the data split of another project then include this argument with``
+   ``the location of the project folder``
+``-m List of lists, list[0]=train files, list[1] = val files, list[2] = test files``
+
 
 *Structure*
 
@@ -306,16 +297,15 @@ Train
 
 *Run*
 
-``python recipes/train.py
-``
+``python recipes/train.py``
+
 
 *Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--p (Optional) Location of processed files, if not specified defaults to project_directory/processed
--m (Optional) Where to store the models, if not specified defaults to project_directory/models
-``
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
+``-p (Optional) Location of processed files, if not specified defaults to project_directory/processed``
+``-m (Optional) Where to store the models, if not specified defaults to project_directory/models``
+
 
 *Structure*
 
@@ -345,17 +335,16 @@ Evaluate
 
 *Run*
 
-``python recipes/evaluate.py
-``
+``python recipes/evaluate.py``
+
 
 *Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--m Path to the model to to evaluate
--p (Optional) Location of processed files, if not specified defaults to project_directory/processed
--e (Optional) If given then explain algorithms are run on the dataset
-``
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
+``-m Path to the model to to evaluate``
+``-p (Optional) Location of processed files, if not specified defaults to project_directory/processed``
+``-e (Optional) If given then explain algorithms are run on the dataset
+
 
 *Structure*
 
@@ -383,15 +372,14 @@ k-fold
 
 *Run*
 
-``python recipes/k_fold.py
-``
+``python recipes/k_fold.py``
 
 *Arguments*
-``
--i Path to the project folder
--c Path to configuration .yaml file
--r (Optional) If specified this integer defines the number of random splits to perform
-``
+
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
+``-r (Optional) If specified this integer defines the number of random splits to perform``
+
 
 *Structure*
 
@@ -438,14 +426,11 @@ The packages required are  installed in the locpix-points environment. These inc
 
 *Run*
 
-```
-python recipes/featanalyse.py
-```
+``python recipes/featanalyse.py``
 
 *Arguments*
-``-i Path to the project folder
--c Path to configuration .yaml file
-``
+``-i Path to the project folder``
+``-c Path to configuration .yaml file``
 
 *Long description*
 
@@ -459,16 +444,14 @@ Visualise
 
 *Run*
 
-``python recipes/visualise.py
-``
+``python recipes/visualise.py``
 
 *Arguments*
-``-i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
--x If .parquet file then name of the x column
--y If .parquet file then name of the y column
--z If .parquet and 3D then name of the z column
--c If .parquet name of the channel column
-``
+``-i Path to the file to visualise (either .parquet or .pt pytorch geometric object)``
+``-x If .parquet file then name of the x column``
+``-y If .parquet file then name of the y column``
+``-z If .parquet and 3D then name of the z column``
+``-c If .parquet name of the channel column``
 
 *Long description*
 
