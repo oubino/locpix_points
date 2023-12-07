@@ -12,52 +12,40 @@ Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html 
 
 Also had to install Rapids on WSL
 
-``
-micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
-``
+``micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0``
 
 Environment 1 (locpix-points)
 -----------------------------
 
 Create new environment
 
-``
-micromamba create -n locpix-points python=3.11
-``
+``micromamba create -n locpix-points python=3.11``
 
 Then install this repository
 
-``
-pip install -e .
-``
+``pip install -e .``
 
 Before installing the remaining requirements, making sure you have activated the environment first
 
-``
-pip install -r requirements.txt
-
+``pip install -r requirements.txt
 ``
 
 Also need to install https://github.com/mims-harvard/GraphXAI
 
 To do this clone the repository to your desired location
 
-``
-git clone https://github.com/mims-harvard/GraphXAI.git
-``
+``git clone https://github.com/mims-harvard/GraphXAI.git``
 
 Then navigate to the directory and install using 
 
-``
-pip install -e .
+``pip install -e .
 ``
 
 
 Environment 2 (feat_extract)
 ----------------------------
 
-``
-micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
+``micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
 micromamba activate feat_extract
 pip install dask dask-ml polars pytest
 pip install -e .
@@ -69,8 +57,7 @@ Note need to install locpix points as well
 Environment 3 (visualise)
 -------------------------
 
-``
-micromamba create -n visualise python=3.10 
+``micromamba create -n visualise python=3.10 
 micromamba activate visualise
 pip install matplotlib numpy open3d polars torch
 ``
@@ -139,13 +126,11 @@ Preprocess
 ----------
 
 *Run*
-``
-python recipes/preprocess.py
+``python recipes/preprocess.py
 ``
 
 *Arguments*
-``
--i Path to the input data folder
+``-i Path to the input data folder
 -c Path to configuration .yaml file
 -o Path to the project folder will create
 ``
@@ -192,13 +177,11 @@ Annotate
 --------
 
 *Run*
-``
-python recipes/annotate.py
+``python recipes/annotate.py
 ``
 
 *Arguments*
-``
--i Path to the project folder
+``-i Path to the project folder
 -c Path to configuration .yaml file
 ``
 *Structure*
@@ -323,9 +306,8 @@ Train
 
 *Run*
 
-```
-python recipes/train.py
-```
+``python recipes/train.py
+``
 
 *Arguments*
 ``
@@ -363,9 +345,8 @@ Evaluate
 
 *Run*
 
-```
-python recipes/evaluate.py
-```
+``python recipes/evaluate.py
+``
 
 *Arguments*
 ``
@@ -402,9 +383,8 @@ k-fold
 
 *Run*
 
-```
-python recipes/k_fold.py
-```
+``python recipes/k_fold.py
+``
 
 *Arguments*
 ``
@@ -463,8 +443,7 @@ python recipes/featanalyse.py
 ```
 
 *Arguments*
-``
--i Path to the project folder
+``-i Path to the project folder
 -c Path to configuration .yaml file
 ``
 
@@ -480,13 +459,11 @@ Visualise
 
 *Run*
 
-```
-python recipes/visualise.py
-```
+``python recipes/visualise.py
+``
 
 *Arguments*
-``
--i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
+``-i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
 -x If .parquet file then name of the x column
 -y If .parquet file then name of the y column
 -z If .parquet and 3D then name of the z column
