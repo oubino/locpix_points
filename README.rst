@@ -166,6 +166,7 @@ If 'gt_label_scope' in config file is 'loc' or 'fov':
 *Long description*
 
 Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
+
     - name: Name of the file/fov    
     - dimensions: Dimensions of the localisations
     - channels: List of ints representing channels in data user wants to consider
@@ -176,6 +177,7 @@ Files are read from input data folder as .parquet files, converted to datastruct
     - bin sizes: Size of bins of the histogram if constructed e.g. (23.2, 34.5, 21.3)
 
 The dataframe has the following columns:
+
     - x
     - y
     - z
@@ -183,6 +185,7 @@ The dataframe has the following columns:
     - frame
 
 *Current limitations*
+
     - Currently there is no option to manually choose which channels to consider, so all channels are considered.
     - Drop zero label is set to False by default no option to change
     - Drop pixel col is set to False by default no option to change
