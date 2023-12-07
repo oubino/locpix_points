@@ -157,39 +157,35 @@ Preprocess
 
 If 'gt_label_scope' in config file is null:
 
-    Data stored in project_folder/preprocessed/no_gt_label
+    - Data stored in project_folder/preprocessed/no_gt_label
 
 If 'gt_label_scope' in config file is 'loc' or 'fov':
 
-    Data store in project_folder/preprocessed/gt_label
+    - Data store in project_folder/preprocessed/gt_label
 
 *Long description*
 
 Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
-- name: Name of the file/fov
-- dimensions: Dimensions of the localisations
-- channels: List of ints representing channels in data user wants to consider
-- channel label: label for each channel i.e. [0:'egfr',1:'ereg',2:'unk'] means
-channel 0 is egfr protein, channel 1 is ereg proteins and channel 2 is unknown
-- gt_label_scope: If not specified (None) there are no gt labels. If
-specified then is either 'loc' - gt label per localisatoin or 'fov' - gt label for field-of-view
-- gt_label: Value of the gt label for the fov or None if gt_label_scope
-is None or loc
-- gt_label_map:  Dictionary with keys representing the gt label present
-in the dataset and the values representing the real concept e.g. 0:'dog', 1:'cat'
-- bin sizes: Size of bins of the histogram if constructed e.g. (23.2, 34.5, 21.3)
+    - name: Name of the file/fov    
+    - dimensions: Dimensions of the localisations
+    - channels: List of ints representing channels in data user wants to consider
+    - channel label: label for each channel i.e. [0:'egfr',1:'ereg',2:'unk'] means channel 0 is egfr protein, channel 1 is ereg proteins and channel 2 is unknown
+    - gt_label_scope: If not specified (None) there are no gt labels. If specified then is either 'loc' - gt label per localisatoin or 'fov' - gt label for field-of-view
+    - gt_label: Value of the gt label for the fov or None if gt_label_scope is None or loc
+    - gt_label_map:  Dictionary with keys representing the gt label present in the dataset and the values representing the real concept e.g. 0:'dog', 1:'cat'
+    - bin sizes: Size of bins of the histogram if constructed e.g. (23.2, 34.5, 21.3)
 
 The dataframe has the following columns:
-- x
-- y
-- z
-- channel
-- frame
+    - x
+    - y
+    - z
+    - channel
+    - frame
 
 *Current limitations*
-- Currently there is no option to manually choose which channels to consider, so all channels are considered.
-- Drop zero label is set to False by default no option to change
-- Drop pixel col is set to False by default no option to change
+    - Currently there is no option to manually choose which channels to consider, so all channels are considered.
+    - Drop zero label is set to False by default no option to change
+    - Drop pixel col is set to False by default no option to change
 
 Annotate
 --------
@@ -202,19 +198,19 @@ Annotate
 
 
 *Arguments*
-
-    -i Path to the project folder
-    -c Path to configuration .yaml file
+    
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/preprocessed/no_gt_label
+    - project_folder/preprocessed/no_gt_label
 
 Data then stored in
 
-    project_folder/preprocessed/gt_label
+    - project_folder/preprocessed/gt_label
 
 *Long description*
 
@@ -236,22 +232,22 @@ Featextract
 
 *Arguments*
 
-    -i Path to the project folder
-    -c Path to configuration .yaml file
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/preprocessed/gt_label
+    - project_folder/preprocessed/gt_label
 
 Feature data for localisations saved in
 
-    project_directory/preprocessed/featextract/locs
+    - project_directory/preprocessed/featextract/locs
 
 Feature data for clusters saved in
 
-    project_directory/preprocessed/featextract/clusters
+    - project_directory/preprocessed/featextract/clusters
 
 *Long description*
 
@@ -276,35 +272,34 @@ Process
 
 *Arguments*
 
-    -i Path to the project folder
-    -c Path to configuration .yaml file
-    -o (Optional) Specify output folder if not provided defaults to project_directory/processed
-    -r If you want to copy the data split of another project then include this argument with
-    the location of the project folder
-    -m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
+    - -o (Optional) Specify output folder if not provided defaults to project_directory/processed
+    - -r If you want to copy the data split of another project then include this argument with the location of the project folder
+    - -m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
 
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/preprocessed/featextract/locs
+    - project_folder/preprocessed/featextract/locs
 
 And
 
-    project_folder/preprocessed/featextact/clusters
+    - project_folder/preprocessed/featextact/clusters
 
 Processed files then saved in
 
-    project_directory/processed/train/
-    project_directory/processed/val/
-    project_directory/processed/test/
+    - project_directory/processed/train/
+    - project_directory/processed/val/
+    - project_directory/processed/test/
 
 or
 
-    project_directory/{args.output_folder}/train/
-    project_directory/{args.output_folder}/val/
-    project_directory/{args.output_folder}/test/
+    - project_directory/{args.output_folder}/train/
+    - project_directory/{args.output_folder}/val/
+    - project_directory/{args.output_folder}/test/
 
 *Long description*
 
@@ -316,9 +311,9 @@ The features for the localisations and clusters are loaded into these nodes.
 
 Then edges are added between
 
-    Localisations to localisations within the same cluster
-    Localisations to the cluster they are in
-    Clusters to nearest clusters
+    - Localisations to localisations within the same cluster
+    - Localisations to the cluster they are in
+    - Clusters to nearest clusters
 
 This is then ready for training
 
@@ -333,29 +328,29 @@ Train
 
 
 *Arguments*
-    -i Path to the project folder
-    -c Path to configuration .yaml file
-    -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
-    -m (Optional) Where to store the models, if not specified defaults to project_directory/models
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
+    - -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
+    - -m (Optional) Where to store the models, if not specified defaults to project_directory/models
 
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/processed
+    - project_folder/processed
 
 or
 
-    project_folder/{args.processed_directory}
+    - project_folder/{args.processed_directory}
 
 Output model is then saved in
 
-    project_directory/models/
+    - project_directory/models/
 
 or
 
-    project_directory/{args.model_folder}
+    - project_directory/{args.model_folder}
 
 *Long description*
 
@@ -373,26 +368,26 @@ Evaluate
 
 
 *Arguments*
-    -i Path to the project folder
-    -c Path to configuration .yaml file
-    -m Path to the model to to evaluate
-    -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
-    -e (Optional) If given then explain algorithms are run on the datas
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
+    - -m Path to the model to to evaluate
+    - -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
+    - -e (Optional) If given then explain algorithms are run on the datas
 
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/processed/test
+    - project_folder/processed/test
 
 or
 
-    project_folder/{args.processed_directory}/test
+    - project_folder/{args.processed_directory}/test
 
 Model is loaded from 
 
-    {args.model_loc}
+    - {args.model_loc}
 
 
 *Long description*
@@ -412,32 +407,32 @@ k-fold
 
 *Arguments*
 
--i Path to the project folder
--c Path to configuration .yaml file
--r (Optional) If specified this integer defines the number of random splits to perform
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
+    - -r (Optional) If specified this integer defines the number of random splits to perform
 
 
 *Structure*
 
 Data loaded in from
 
-    project_folder/preprocessed/featextract/locs
+    - project_folder/preprocessed/featextract/locs
 
 And
 
-    project_folder/preprocessed/featextact/clusters
+    - project_folder/preprocessed/featextact/clusters
 
 Temporary processed files are saved in
 
-    project_directory/processed/fold_{index}/train/
-    project_directory/processed/fold_{index}/val/
-    project_directory/processed/fold_{index}/test/
+    - project_directory/processed/fold_{index}/train/
+    - project_directory/processed/fold_{index}/val/
+    - project_directory/processed/fold_{index}/test/
 
 However, these files are removed afterwards.
 
 The final models are saved in
 
-    project_folder/models/fold_{index}/
+    - project_folder/models/fold_{index}/
 
 *Long description*
 
@@ -453,12 +448,12 @@ Featanalyse
 *Requirements*
 
 The packages required are  installed in the locpix-points environment. These include
-- polars
-- seaborn
-- matplotlib
-- umap
-- sklearn
-- numpy
+    - polars
+    - seaborn
+    - matplotlib
+    - umap
+    - sklearn
+    - numpy
 
 *Run*
 
@@ -468,15 +463,15 @@ The packages required are  installed in the locpix-points environment. These inc
 
 *Arguments*
 
-    -i Path to the project folder
-    -c Path to configuration .yaml file
+    - -i Path to the project folder
+    - -c Path to configuration .yaml file
 
 *Long description*
 
 Loads in .parquet files for clusters and localisations and visualises the extracted features.
 Including
-- box plots
-- UMAPs
+    - box plots
+    - UMAPs
 
 Visualise
 ---------
@@ -489,11 +484,11 @@ Visualise
 
 *Arguments*
 
-    -i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
-    -x If .parquet file then name of the x column
-    -y If .parquet file then name of the y column
-    -z If .parquet and 3D then name of the z column
-    -c If .parquet name of the channel column
+    - -i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
+    - -x If .parquet file then name of the x column
+    - -y If .parquet file then name of the y column
+    - -z If .parquet and 3D then name of the z column
+    - -c If .parquet name of the channel column
 
 *Long description*
 
