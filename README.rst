@@ -141,12 +141,14 @@ Preprocess
 ----------
 
 *Run*
+
 .. code-block:: python
 
     python recipes/preprocess.py
 
 
 *Arguments*
+
     -i Path to the input data folder
     -c Path to configuration .yaml file
     -o Path to the project folder will create
@@ -193,12 +195,14 @@ Annotate
 --------
 
 *Run*
+
 .. code-block:: python
 
     python recipes/annotate.py
 
 
 *Arguments*
+
     -i Path to the project folder
     -c Path to configuration .yaml file
 
@@ -231,6 +235,7 @@ Featextract
     python recipes/featextract.py
 
 *Arguments*
+
     -i Path to the project folder
     -c Path to configuration .yaml file
 
@@ -462,6 +467,7 @@ The packages required are  installed in the locpix-points environment. These inc
     python recipes/featanalyse.py
 
 *Arguments*
+
     -i Path to the project folder
     -c Path to configuration .yaml file
 
@@ -482,6 +488,7 @@ Visualise
     python recipes/visualise.py
 
 *Arguments*
+
     -i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
     -x If .parquet file then name of the x column
     -y If .parquet file then name of the y column
