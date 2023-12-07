@@ -28,7 +28,9 @@ Create new environment
 
 Then install this repository
 
-pip install -e .
+.. code-block:: python
+
+    pip install -e .
 
 Before installing the remaining requirements, making sure you have activated the environment first
 
@@ -476,7 +478,7 @@ Visualise
 *Run*
 
 .. code-block:: python
-    
+
     python recipes/visualise.py
 
 *Arguments*
