@@ -149,9 +149,9 @@ Preprocess
 
 *Arguments*
 
-    -i Path to the input data folder
-    -c Path to configuration .yaml file
-    -o Path to the project folder will create
+    - -i Path to the input data folder
+    - -c Path to configuration .yaml file
+    - -o Path to the project folder will create
 
 *Structure*
 
