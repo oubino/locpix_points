@@ -23,6 +23,7 @@ Create new environment
 
 
 .. code-block:: python
+
     micromamba create -n locpix-points python=3.11
 
 Then install this repository
@@ -32,6 +33,7 @@ pip install -e .
 Before installing the remaining requirements, making sure you have activated the environment first
 
 .. code-block:: python
+
     pip install -r requirements.txt
 
 Also need to install https://github.com/mims-harvard/GraphXAI
@@ -39,11 +41,13 @@ Also need to install https://github.com/mims-harvard/GraphXAI
 To do this clone the repository to your desired location
 
 .. code-block:: python 
+
     git clone https://github.com/mims-harvard/GraphXAI.git
 
 Then navigate to the directory and install using 
 
 .. code-block:: python 
+
     pip install -e .
 
 
@@ -51,6 +55,7 @@ Environment 2 (feat_extract)
 ----------------------------
 
 .. code-block:: python 
+
     micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
@@ -64,6 +69,7 @@ Environment 3 (visualise)
 -------------------------
 
 .. code-block:: python
+
     micromamba create -n visualise python=3.10 
     micromamba activate visualise
     pip install matplotlib numpy open3d polars torch
@@ -134,6 +140,7 @@ Preprocess
 
 *Run*
 .. code-block:: python
+
     python recipes/preprocess.py
 
 
@@ -185,6 +192,7 @@ Annotate
 
 *Run*
 .. code-block:: python
+
     python recipes/annotate.py
 
 
@@ -217,6 +225,7 @@ Featextract
 *Run*
 
 .. code-block:: python
+
     python recipes/featextract.py
 
 *Arguments*
@@ -255,6 +264,7 @@ Process
 *Run*
 
 .. code-block:: python
+
     python recipes/process.py
 
 *Arguments*
@@ -311,6 +321,7 @@ Train
 *Run*
 
 .. code-block:: python
+
     python recipes/train.py
 
 
@@ -350,6 +361,7 @@ Evaluate
 *Run*
 
 .. code-block:: python
+
     python recipes/evaluate.py
 
 
@@ -388,6 +400,7 @@ k-fold
 *Run*
 
 .. code-block:: python
+
     python recipes/k_fold.py
 
 *Arguments*
@@ -443,6 +456,7 @@ The packages required are  installed in the locpix-points environment. These inc
 *Run*
 
 .. code-block:: python
+
     python recipes/featanalyse.py
 
 *Arguments*
@@ -462,6 +476,7 @@ Visualise
 *Run*
 
 .. code-block:: python
+    
     python recipes/visualise.py
 
 *Arguments*
