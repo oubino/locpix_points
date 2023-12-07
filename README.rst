@@ -106,28 +106,28 @@ Here are some different recipes one might use
 Recipe 1
 --------
 
-    Preprocess
-    Featextract (use Environment 2)
-    Process
-    Train
-    Evaluate
+    - Preprocess
+    - Featextract (use Environment 2)
+    - Process
+    - Train
+    - Evaluate
 
 Recipe 2
 --------
 
-    Preprocess
-    Annotate
-    Featextract (use Environment 2)
-    Process
-    Train
-    Evaluate
+    - Preprocess
+    - Annotate
+    - Featextract (use Environment 2)
+    - Process
+    - Train
+    - Evaluate
 
 Recipe 3
 --------
 
-    Preprocess
-    Featextract (use Environment 2)
-    K-fold (does process + train + evaluate)
+    - Preprocess
+    - Featextract (use Environment 2)
+    - K-fold (does process + train + evaluate)
 
 Feat analyse can also be run after processing and visualise can be run on the .parquet files or the processed files.
 We recommend visualising the processed files as then you are able to see the graph.
