@@ -149,6 +149,7 @@ class LocNet(torch.nn.Module):
             pos_dict (dict): Positions of the localisation
             edge_index_dict (dict): Edge connections between locs/clusters
         """
+
         x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
             data, self.device
         )
@@ -308,13 +309,15 @@ def parse_data(data, device):
             x_dict["clusters"]
             cluster_feats_present = True
         except KeyError:
-            x_dict["clusters"] = torch.ones((data["clusters"].batch.shape[0], 1))
+            num_clusters = data.pos_dict["clusters"].shape[0]
+            x_dict["clusters"] = torch.ones((num_clusters, 1), device=device)
             cluster_feats_present = False
     # neither locs nor clusters have features
     except KeyError:
+        num_clusters = data.pos_dict["clusters"].shape[0]
         x_dict = {
             "locs": None,
-            "clusters": torch.ones((data["clusters"].batch.shape[0], 1), device=device),
+            "clusters": torch.ones((num_clusters, 1), device=device),
         }
         cluster_feats_present = False
 
