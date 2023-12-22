@@ -10,6 +10,8 @@ import json
 import os
 import time
 
+from locpix_points.data_loading import datastruc
+from locpix_points.models import model_choice
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
@@ -23,23 +25,9 @@ from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
+import torch
 import warnings
 import yaml
-
-config = {
-    "pca_vs_convex_hull": False,
-    "boxplots": False,
-    "umap": False,
-    "log_reg": True,
-    "dec_tree": True,
-    "svm": True,
-    "knn": True,
-}
-
-label_map = {
-    "fib": 0,
-    "iso": 1,
-}
 
 
 def main(argv=None):
@@ -63,13 +51,32 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-c",
+        "--config",
+        action="store",
+        type=str,
+        help="the location of the .yaml configuaration file\
+                             for evaluating",
+        required=True,
+    )
+
+    parser.add_argument(
+        "-n",
+        "--neuralnet",
+        action="store_true",
+        help="if present then the output of the neural"
+        "net is analysed rather than the manual features",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 
     # load config
-    # with open(args.config, "r") as ymlfile:
-    #    config = yaml.safe_load(ymlfile)
+    with open(args.config, "r") as ymlfile:
+        config = yaml.safe_load(ymlfile)
+    label_map = config["label_map"]
 
     metadata_path = os.path.join(project_directory, "metadata.json")
     with open(
@@ -102,6 +109,33 @@ def main(argv=None):
         raise ValueError("There should be some cluster files to open")
 
     assert loc_files == cluster_files
+
+    # ---- Analyse cluster features -------
+    if not args.neuralnet:
+        analyse_manual_feats(project_directory, loc_files, label_map, config, args)
+    elif args.neuralnet:
+        analyse_nn_feats(project_directory, label_map, config, args)
+    else:
+        raise ValueError("Should be neural net or manual")
+
+
+def analyse_manual_feats(
+    project_directory,
+    loc_files,
+    label_map,
+    config,
+    args,
+):
+    """Analyse the features of the clusters manually extracted
+
+    Args:
+        project_directory (str): Location of the project directory
+        loc_files (list): List of the files with the protein
+            localisations
+        label_map (dict): Map from the label name to number
+        config (dict): Configuration for this script
+        args (dict): Arguments passed to this script
+    """
 
     # aggregate cluster features into collated df
     dfs = []
@@ -163,85 +197,353 @@ def main(argv=None):
 
     # 2. Plot boxplots of features
     if config["boxplots"]:
-        for f in features:
-            sns.boxplot(data=df, x=f, y="type")
-            plt.show()
+        plot_boxplots(features, df)
 
     # 3. Plot UMAP
     if config["umap"]:
-        warnings.warn("Not generic code")
-        reducer = umap.UMAP()
-        embedding = reducer.fit_transform(data_feats_scaled)
-
-        # Plot UMAP - normal vs cancer
-        plt.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c=[sns.color_palette()[x] for x in df.type.map(umap_config)],
-            label=[x for x in df.type.map({"normal": 0, "cancer": 1})],
-        )
-        normal_patch = mpatches.Patch(color=sns.color_palette()[0], label="Normal")
-        cancer_patch = mpatches.Patch(color=sns.color_palette()[1], label="Cancer")
-        plt.legend(handles=[normal_patch, cancer_patch])
-        plt.gca().set_aspect("equal", "datalim")
-        plt.title("UMAP projection of the dataset", fontsize=24)
-        plt.show()
-
-        # Plot UMAP patients
-        plt.scatter(
-            embedding[:, 0],
-            embedding[:, 1],
-            c=[
-                sns.color_palette()[x]
-                for x in df.file_name.map(
-                    {
-                        "cancer_0.parquet": 0,
-                        "cancer_1.parquet": 1,
-                        "cancer_2.parquet": 2,
-                        "normal_0.parquet": 3,
-                        "normal_1.parquet": 4,
-                        "normal_2.parquet": 5,
-                    }
-                )
-            ],
-            label=[
-                x
-                for x in df.type.map(
-                    {
-                        "cancer_0.parquet": 0,
-                        "cancer_1.parquet": 1,
-                        "cancer_2.parquet": 2,
-                        "normal_0.parquet": 3,
-                        "normal_1.parquet": 4,
-                        "normal_2.parquet": 5,
-                    }
-                )
-            ],
-        )
-        # lgened
-        cancer_patch_0 = mpatches.Patch(color=sns.color_palette()[0], label="Cancer 0")
-        cancer_patch_1 = mpatches.Patch(color=sns.color_palette()[1], label="Cancer 1")
-        cancer_patch_2 = mpatches.Patch(color=sns.color_palette()[2], label="Cancer 2")
-        normal_patch_0 = mpatches.Patch(color=sns.color_palette()[3], label="Normal 0")
-        normal_patch_1 = mpatches.Patch(color=sns.color_palette()[4], label="Normal 1")
-        normal_patch_2 = mpatches.Patch(color=sns.color_palette()[5], label="Normal 2")
-        plt.legend(
-            handles=[
-                cancer_patch_0,
-                cancer_patch_1,
-                cancer_patch_2,
-                normal_patch_0,
-                normal_patch_1,
-                normal_patch_2,
-            ]
-        )
-        plt.gca().set_aspect("equal", "datalim")
-        plt.title("UMAP projection of the dataset", fontsize=24)
-        plt.show()
+        plot_umap(data_feats_scaled, df)
 
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
+
+    X, Y, train_indices_main, test_indices_main = prep_for_sklearn(
+        data_feats_scaled, data_labels, names, args
+    )
+
+    # 4. Logistic regression
+    if "log_reg" in config.keys():
+        parameters = config["log_reg"]
+        log_reg(X, Y, train_indices_main, test_indices_main, features, parameters)
+
+    # 5. Decision tree
+    if "dec_tree" in config.keys():
+        parameters = config["dec_tree"]
+        dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters)
+
+    # 6. SVM
+    if "svm" in config.keys():
+        parameters = config["svm"]
+        svm(X, Y, train_indices_main, test_indices_main, parameters)
+
+    # 8. K-NN
+    if "knn" in config.keys():
+        parameters = config["knn"]
+        knn(X, Y, train_indices_main, test_indices_main, parameters)
+
+
+def analyse_nn_feats(project_directory, label_map, config, args):
+    """Analyse the features of the clusters from neural network
+
+    Args:
+        project_directory (str): Location of the project directory
+        label_map (dict): Map from the label name to number
+        config (dict): Configuration for this script
+        args (dict): Arguments passed to this script
+
+    Raises:
+        ValueError: If device specified is neither cpu or gpu
+    """
+
+    # ----------------------------
+
+    dim = config["nn_feat"]["dim"]
+    if config["nn_feat"]["device"] == "gpu":
+        device = torch.device("cuda")
+    elif config["nn_feat"]["device"] == "cpu":
+        device = torch.device("cpu")
+    else:
+        raise ValueError("Device should be cpu or gpu")
+
+    model_type = config["nn_feat"]["model"]
+
+    # initialise model
+    model = model_choice(
+        model_type,
+        # this should parameterise the chosen model
+        config["nn_feat"][model_type],
+        dim=dim,
+        device=device,
+    )
+
+    print("\n")
+    print("Loading in best model")
+    print("\n")
+    # needs to be from same fold as below
+    fold = config["nn_feat"]["fold"]
+    model_name = config["nn_feat"]["model_name"]
+    model_loc = os.path.join(project_directory, "models", f"fold_{fold}", model_name)
+    model.load_state_dict(torch.load(model_loc))
+    model.to(device)
+
+    # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
+    data_folder = os.path.join(project_directory, "processed", "featanalysis")
+
+    input_train_folder = os.path.join(
+        project_directory, "processed", f"fold_{fold}", "train"
+    )
+    output_train_folder = os.path.join(data_folder, "train")
+    input_val_folder = os.path.join(
+        project_directory, "processed", f"fold_{fold}", "val"
+    )
+    output_val_folder = os.path.join(data_folder, "val")
+    input_test_folder = os.path.join(
+        project_directory, "processed", f"fold_{fold}", "test"
+    )
+    output_test_folder = os.path.join(data_folder, "test")
+
+    output_folders = [output_train_folder, output_val_folder, output_test_folder]
+    for folder in output_folders:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+    train_set = datastruc.ClusterDataset(
+        input_train_folder,
+        output_train_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_cluster_loc=True,
+        loc_net=model.loc_net,
+        device=device,
+    )
+
+    val_set = datastruc.ClusterDataset(
+        input_val_folder,
+        output_val_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_cluster_loc=True,
+        loc_net=model.loc_net,
+        device=device,
+    )
+
+    test_set = datastruc.ClusterDataset(
+        input_test_folder,
+        output_test_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_cluster_loc=True,
+        loc_net=model.loc_net,
+        device=device,
+    )
+
+    dataset = torch.utils.data.ConcatDataset([train_set, val_set, test_set])
+
+    # aggregate cluster features into collated df
+    dfs = []
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    for _, data in enumerate(dataset):
+        # gt label
+        gt_label = int(data.y)
+        label = gt_label_map[gt_label]
+
+        # file name
+        file_name = data.name + ".parquet"
+
+        # convert to polars
+        data = data.x.detach().cpu().numpy()
+        cluster_df = pl.DataFrame(data)
+        cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
+        cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
+        dfs.append(cluster_df)
+
+    # --------------------------
+
+    # aggregate dfs into one big df
+    df = pl.concat(dfs)
+    df = df.to_pandas()
+
+    # get features present in the dataframe
+    not_features = ["type", "file_name"]
+    features = [x for x in df.columns if x not in not_features]
+
+    # feature vector
+    data_feats = df[features].values
+    data_feats_scaled = StandardScaler().fit_transform(data_feats)
+
+    # label vector
+    unique_vals = sorted(df.type.unique())
+    labs = sorted(label_map.keys())
+    assert labs == unique_vals
+    data_labels = df.type.map(label_map).values
+
+    # file names
+    names = df.file_name
+
+    # Analyses
+    # 1. Plot boxplots of features
+    if config["boxplots"]:
+        plot_boxplots(features, df)
+
+    # ---------------------------------------------------------------------- #
+    # Prediction methods taking in the folds
+    # ---------------------------------------------------------------------- #
+
+    X, Y, train_indices_main, test_indices_main = prep_for_sklearn(
+        data_feats_scaled, data_labels, names, args
+    )
+
+    # 2. Logistic regression
+    if "log_reg" in config.keys():
+        parameters = config["log_reg"]
+        log_reg(X, Y, train_indices_main, test_indices_main, features, parameters)
+
+    # 3. Decision tree
+    if "dec_tree" in config.keys():
+        parameters = config["dec_tree"]
+        dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters)
+
+    # 4. SVM
+    if "svm" in config.keys():
+        parameters = config["svm"]
+        svm(X, Y, train_indices_main, test_indices_main, parameters)
+
+    # 5. K-NN
+    if "knn" in config.keys():
+        parameters = config["knn"]
+        knn(X, Y, train_indices_main, test_indices_main, parameters)
+
+
+def plot_boxplots(features, df):
+    """Plot boxplots of the features
+
+    Args:
+        features (list): List of the features in the data to plot
+        df (pl.DataFrame): Dataframe with the localisation data"""
+    for f in features:
+        sns.boxplot(data=df, x=f, y="type")
+        plt.show()
+
+
+def plot_umap(data_feats_scaled, df):
+    """Plot UMAP for the features
+
+    Args:
+        data_feats_scaled (array): Features scaled between 0 and 1
+        df (pl.DataFrame): Dataframe with the localisation data
+    """
+
+    warnings.warn("Not generic code")
+    reducer = umap.UMAP()
+    embedding = reducer.fit_transform(data_feats_scaled)
+
+    # Plot UMAP - normal vs cancer
+    plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=[
+            sns.color_palette()[x] for x in df.type.map({"normal": 0, "cancer": 1})
+        ],  # edit
+        label=[x for x in df.type.map({"normal": 0, "cancer": 1})],  # edit
+    )
+    normal_patch = mpatches.Patch(color=sns.color_palette()[0], label="Normal")  # edit
+    cancer_patch = mpatches.Patch(color=sns.color_palette()[1], label="Cancer")  # edit
+    plt.legend(handles=[normal_patch, cancer_patch])  # edit
+    plt.gca().set_aspect("equal", "datalim")
+    plt.title("UMAP projection of the dataset", fontsize=24)
+    plt.show()
+
+    # edit
+    # --------------------
+    # Plot UMAP patients
+    plt.scatter(
+        embedding[:, 0],
+        embedding[:, 1],
+        c=[
+            sns.color_palette()[x]
+            for x in df.file_name.map(
+                {
+                    "cancer_0.parquet": 0,
+                    "cancer_1.parquet": 1,
+                    "cancer_2.parquet": 2,
+                    "normal_0.parquet": 3,
+                    "normal_1.parquet": 4,
+                    "normal_2.parquet": 5,
+                }
+            )
+        ],
+        label=[
+            x
+            for x in df.type.map(
+                {
+                    "cancer_0.parquet": 0,
+                    "cancer_1.parquet": 1,
+                    "cancer_2.parquet": 2,
+                    "normal_0.parquet": 3,
+                    "normal_1.parquet": 4,
+                    "normal_2.parquet": 5,
+                }
+            )
+        ],
+    )
+    # lgened
+    cancer_patch_0 = mpatches.Patch(color=sns.color_palette()[0], label="Cancer 0")
+    cancer_patch_1 = mpatches.Patch(color=sns.color_palette()[1], label="Cancer 1")
+    cancer_patch_2 = mpatches.Patch(color=sns.color_palette()[2], label="Cancer 2")
+    normal_patch_0 = mpatches.Patch(color=sns.color_palette()[3], label="Normal 0")
+    normal_patch_1 = mpatches.Patch(color=sns.color_palette()[4], label="Normal 1")
+    normal_patch_2 = mpatches.Patch(color=sns.color_palette()[5], label="Normal 2")
+    plt.legend(
+        handles=[
+            cancer_patch_0,
+            cancer_patch_1,
+            cancer_patch_2,
+            normal_patch_0,
+            normal_patch_1,
+            normal_patch_2,
+        ]
+    )
+    # ------------------------
+    # edit
+    plt.gca().set_aspect("equal", "datalim")
+    plt.title("UMAP projection of the dataset", fontsize=24)
+    plt.show()
+
+
+def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
+    """Get data ready for sklearn analysis
+
+    Args:
+        data_feats_scaled (array): Features scaled between 0 and 1
+        data_labels (array): Label for each data item
+        names (array): Names for each data item
+        args (dict): Arguments passed to the script
+
+    Raises:
+        ValueError: If overlap between train and test indices
+
+    Returns:
+        X (array): Feature data in array
+        Y (array): The labels for each data point
+        train_indices_main (list): List of indices of train data
+        test_indices_main (list): List of indices of test data
+    """
 
     warnings.warn(
         "There must be a config file for k_fold.yaml in the directory for this to work"
@@ -257,7 +559,7 @@ def main(argv=None):
     val_folds = splits["val"]
     test_folds = splits["test"]
 
-    df = pl.DataFrame(
+    df_scaled = pl.DataFrame(
         {
             "X": data_feats_scaled,
             "Y": data_labels,
@@ -273,9 +575,9 @@ def main(argv=None):
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
-        train_bool = df["name"].is_in(train_fold).to_list()
-        val_bool = df["name"].is_in(val_fold).to_list()
-        test_bool = df["name"].is_in(test_fold).to_list()
+        train_bool = df_scaled["name"].is_in(train_fold).to_list()
+        val_bool = df_scaled["name"].is_in(val_fold).to_list()
+        test_bool = df_scaled["name"].is_in(test_fold).to_list()
 
         train_indices = np.where(train_bool)[0]
         val_indices = np.where(val_bool)[0]
@@ -289,150 +591,173 @@ def main(argv=None):
         if any(i in train_indices for i in test_indices):
             raise ValueError("Should not share common values")
 
-    num_features = len(df["X"][0])
+    num_features = len(df_scaled["X"][0])
     print("Num features: ", num_features)
 
-    X = df["X"].to_list()
-    Y = df["Y"].to_list()
+    X = df_scaled["X"].to_list()
+    Y = df_scaled["Y"].to_list()
 
-    # 4. Logistic regression
-    if config["log_reg"]:
-        cv = iter(zip(train_indices_main, test_indices_main))
+    return X, Y, train_indices_main, test_indices_main
 
-        model = LogisticRegression(max_iter=1000)
-        parameters = {"penalty": ["l1", "l2"], "C": [0.1, 0.5, 1]}
-        clf = GridSearchCV(model, parameters, cv=cv)
 
-        print("-----Log reg.-------")
-        print("--------------------")
+def log_reg(X, Y, train_indices_main, test_indices_main, features, parameters):
+    """Perform logistic reggression on the dataset
 
-        clf.fit(X, Y)
-        df = pl.DataFrame(clf.cv_results_)
-        df = df.select(
-            pl.col(
-                [
-                    "param_C",
-                    "param_penalty",
-                    "mean_test_score",
-                    "std_test_score",
-                    "rank_test_score",
-                ]
-            )
+    Args:
+        X (array): Feature data in array
+        Y (array): The labels for each data point
+        train_indices_main (list): List of the indices of the training data
+        test_indices_main (list): List of the indices of the test data
+        features (list): List of features analysing
+        parameters (dict): Parameters to try logistic regression for
+    """
+    cv = iter(zip(train_indices_main, test_indices_main))
+
+    model = LogisticRegression(max_iter=1000)
+    clf = GridSearchCV(model, parameters, cv=cv)
+
+    print("-----Log reg.-------")
+    print("--------------------")
+
+    clf.fit(X, Y)
+    df = pl.DataFrame(clf.cv_results_)
+    df = df.select(
+        pl.col(
+            [
+                "param_C",
+                "param_penalty",
+                "mean_test_score",
+                "std_test_score",
+                "rank_test_score",
+            ]
         )
-        print(df.sort("rank_test_score"))
+    )
+    print(df.sort("rank_test_score"))
 
-        best_model = clf.best_estimator_
-        best_feats = dict(zip(features, best_model.coef_[0].tolist()))
-        print(
-            "Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
+    best_model = clf.best_estimator_
+    best_feats = dict(zip(features, best_model.coef_[0].tolist()))
+    print("Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
+
+
+def dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters):
+    """Perform decision tree on the dataset
+
+    Args:
+        X (array): Feature data in array
+        Y (array): The labels for each data point
+        train_indices_main (list): List of the indices of the training data
+        test_indices_main (list): List of the indices of the test data
+        features (list): List of features analysing
+        parameters (dict): Parameters to try logistic regression for
+    """
+    cv = iter(zip(train_indices_main, test_indices_main))
+
+    model = DecisionTreeClassifier()
+
+    clf = GridSearchCV(model, parameters, cv=cv)
+
+    print("-----Dec tree.------")
+    print("--------------------")
+
+    clf.fit(X, Y)
+    df = pl.DataFrame(clf.cv_results_)
+    print(df.columns)
+    df = df.select(
+        pl.col(
+            [
+                "param_max_depth",
+                "param_max_features",
+                "mean_test_score",
+                "std_test_score",
+                "rank_test_score",
+            ]
         )
+    )
+    print(df.sort("rank_test_score"))
 
-    # 5. Decision tree
-    if config["dec_tree"]:
-        cv = iter(zip(train_indices_main, test_indices_main))
+    best_model = clf.best_estimator_
+    print("length", best_model.feature_importances_.tolist())
+    best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
+    print("Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
 
-        model = DecisionTreeClassifier()
 
-        parameters = {
-            "max_depth": [40, 45, 50],
-            "max_features": [4, 5, 6],
-        }
-        clf = GridSearchCV(model, parameters, cv=cv)
+def svm(X, Y, train_indices_main, test_indices_main, parameters):
+    """Perform svm on the dataset
 
-        print("-----Dec tree.------")
-        print("--------------------")
+    Args:
+        X (array): Feature data in array
+        Y (array): The labels for each data point
+        train_indices_main (list): List of the indices of the training data
+        test_indices_main (list): List of the indices of the test data
+        parameters (dict): Parameters to try logistic regression for
+    """
 
-        clf.fit(X, Y)
-        df = pl.DataFrame(clf.cv_results_)
-        print(df.columns)
-        df = df.select(
-            pl.col(
-                [
-                    "param_max_depth",
-                    "param_max_features",
-                    "mean_test_score",
-                    "std_test_score",
-                    "rank_test_score",
-                ]
-            )
+    cv = iter(zip(train_indices_main, test_indices_main))
+
+    model = SVC()
+
+    clf = GridSearchCV(model, parameters, cv=cv, verbose=4)
+
+    print("--------SVM---------")
+    print("--------------------")
+
+    clf.fit(X, Y)
+    df = pl.DataFrame(clf.cv_results_)
+    df = df.select(
+        pl.col(
+            [
+                "param_C",
+                "param_kernel",
+                "param_gamma",
+                "mean_test_score",
+                "std_test_score",
+                "rank_test_score",
+            ]
         )
-        print(df.sort("rank_test_score"))
+    )
+    print(df.sort("rank_test_score"))
 
-        best_model = clf.best_estimator_
-        print("length", best_model.feature_importances_.tolist())
-        best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
-        print(
-            "Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
+
+def knn(X, Y, train_indices_main, test_indices_main, parameters):
+    """Perform knn on the dataset
+
+    Args:
+        X (array): Feature data in array
+        Y (array): The labels for each data point
+        train_indices_main (list): List of the indices of the training data
+        test_indices_main (list): List of the indices of the test data
+        parameters (dict): Parameters to try logistic regression for
+    """
+
+    cv = iter(zip(train_indices_main, test_indices_main))
+
+    model = KNeighborsClassifier()
+
+    clf = GridSearchCV(model, parameters, cv=cv)
+
+    print("--------KNN---------")
+    print("--------------------")
+
+    clf.fit(X, Y)
+    df = pl.DataFrame(clf.cv_results_)
+    df = df.select(
+        pl.col(
+            [
+                "param_n_neighbors",
+                "param_weights",
+                "mean_test_score",
+                "std_test_score",
+                "rank_test_score",
+            ]
         )
+    )
+    print(df.sort("rank_test_score"))
 
-    # 6. SVM
-    if config["svm"]:
-        cv = iter(zip(train_indices_main, test_indices_main))
 
-        model = SVC()
-
-        parameters = {
-            "C": [1],
-            #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
-            "kernel": ["rbf"],
-            "gamma": ["scale"],  # , 'auto']
-        }
-
-        clf = GridSearchCV(model, parameters, cv=cv, verbose=4)
-
-        print("--------SVM---------")
-        print("--------------------")
-
-        clf.fit(X, Y)
-        df = pl.DataFrame(clf.cv_results_)
-        df = df.select(
-            pl.col(
-                [
-                    "param_C",
-                    "param_kernel",
-                    "param_gamma",
-                    "mean_test_score",
-                    "std_test_score",
-                    "rank_test_score",
-                ]
-            )
-        )
-        print(df.sort("rank_test_score"))
-
-    # 8. K-NN
-    if config["knn"]:
-        cv = iter(zip(train_indices_main, test_indices_main))
-
-        model = KNeighborsClassifier(
-            n_neighbors=3,
-        )
-
-        parameters = {"n_neighbors": [3], "weights": ["distance"]}
-
-        clf = GridSearchCV(model, parameters, cv=cv)
-
-        print("--------KNN---------")
-        print("--------------------")
-
-        clf.fit(X, Y)
-        df = pl.DataFrame(clf.cv_results_)
-        df = df.select(
-            pl.col(
-                [
-                    "param_n_neighbors",
-                    "param_weights",
-                    "mean_test_score",
-                    "std_test_score",
-                    "rank_test_score",
-                ]
-            )
-        )
-        print(df.sort("rank_test_score"))
-
-    # save yaml file
-    # yaml_save_loc = os.path.join(project_directory, "featextract.yaml")
-    # with open(yaml_save_loc, "w") as outfile:
-    #    yaml.dump(config, outfile)
+# save yaml file
+# yaml_save_loc = os.path.join(project_directory, "featextract.yaml")
+# with open(yaml_save_loc, "w") as outfile:
+#    yaml.dump(config, outfile)
 
 
 if __name__ == "__main__":
