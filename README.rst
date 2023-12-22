@@ -411,7 +411,7 @@ k-fold
 *Arguments*
 
     - -i Path to the project folder
-    - -c Path to configuration .yaml file
+    - -c Path to folder with configuration .yaml file
     - -r (Optional) If specified this integer defines the number of random splits to perform
 
 
