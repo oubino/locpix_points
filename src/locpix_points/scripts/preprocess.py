@@ -137,6 +137,7 @@ def main(argv=None):
     #    exit()
 
     # go through files -> convert to datastructure -> save
+    gt_label_map = None
     for index, file in enumerate(files):
         item = functions.file_to_datastruc(
             file,
@@ -171,6 +172,22 @@ def main(argv=None):
             drop_zero_label=False,
             drop_pixel_col=config["drop_pixel_col"],
         )
+
+        if gt_label_map is None:
+            gt_label_map = item.gt_label_map
+        else:
+            assert gt_label_map == item.gt_label_map
+
+    # save gt label map to metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        metadata["gt_label_map"] = gt_label_map
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
 
     # save yaml file
     yaml_save_loc = os.path.join(project_directory, "preprocess.yaml")
