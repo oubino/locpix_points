@@ -307,7 +307,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
-        from_cluster_loc=True,
+        from_hetero_loc_cluster=True,
         loc_net=model.loc_net,
         device=device,
     )
@@ -322,7 +322,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
-        from_cluster_loc=True,
+        from_hetero_loc_cluster=True,
         loc_net=model.loc_net,
         device=device,
     )
@@ -337,7 +337,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
-        from_cluster_loc=True,
+        from_hetero_loc_cluster=True,
         loc_net=model.loc_net,
         device=device,
     )

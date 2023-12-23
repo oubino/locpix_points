@@ -274,7 +274,20 @@ class LocDataset(SMLMDataset):
 
 
 class ClusterDataset(SMLMDataset):
-    """Dataset for clusters"""
+    """Dataset for clusters.
+    Can also take in data already processed into a heterogeneous data item with locs & clusters,
+    and pass the data through just the loc_net. This takes the localisations and applies the model,
+    then aggregates the features into each cluster. This then creates a homogeneous dataset
+    with only the clusters and the associated features. This occurs if from_hetero_loc_cluster
+    is True and if loc_net is not None. Note that raw_cluster_dir_root is misleading name for input
+    data in this case as the raw data has both localisations and clusters in a heterogeneous data
+    item!
+
+    Args:
+        from_hetero_loc_cluster (bool): If True then processes heterogeneous loc cluster processed
+            data item into a homogeneous graph
+        loc_net (torch network): The localisation network which is applied to the heterogeneous data
+        device (torch device): The device to store data on"""
 
     def __init__(
         self,
@@ -287,11 +300,11 @@ class ClusterDataset(SMLMDataset):
         pre_transform,
         fov_x,
         fov_y,
-        from_cluster_loc=False,
+        from_hetero_loc_cluster=False,
         loc_net=None,
         device=torch.device("cpu"),
     ):
-        self.from_cluster_loc = from_cluster_loc
+        self.from_hetero_loc_cluster = from_hetero_loc_cluster
         self.loc_net = loc_net
         self.device = device
 
@@ -312,7 +325,7 @@ class ClusterDataset(SMLMDataset):
         """Processes data with just clusters"""
 
         # Processes data into homogeneous graph
-        if self.from_cluster_loc:
+        if self.from_hetero_loc_cluster:
             assert self.loc_net is not None
 
             # work through tensors
