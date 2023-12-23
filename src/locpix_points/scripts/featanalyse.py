@@ -408,6 +408,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     X, Y, train_indices_main, test_indices_main = prep_for_sklearn(
         data_feats_scaled, data_labels, names, args
     )
+    # train/test indices are list of lists
+    # with one list for each fold
+    train_indices_main = [train_indices_main[fold]]
+    test_indices_main = [test_indices_main[fold]]
 
     # 2. Logistic regression
     if "log_reg" in config.keys():
@@ -586,7 +590,7 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         train_indices = np.append(train_indices, val_indices)
 
         train_indices_main.append(train_indices)
-        test_indices_main.append(val_indices)
+        test_indices_main.append(test_indices)
 
         if any(i in train_indices for i in test_indices):
             raise ValueError("Should not share common values")
