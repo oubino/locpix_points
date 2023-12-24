@@ -69,6 +69,14 @@ def main(argv=None):
         "net is analysed rather than the manual features",
     )
 
+    parser.add_argument(
+        "-t",
+        "--test",
+        action="store_true",
+        help="if present then we are testing in which case"
+        "we load in the only model present",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -272,7 +280,14 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # needs to be from same fold as below
     fold = config["nn_feat"]["fold"]
     model_name = config["nn_feat"]["model_name"]
-    model_loc = os.path.join(project_directory, "models", f"fold_{fold}", model_name)
+    if not args.test:
+        model_loc = os.path.join(
+            project_directory, "models", f"fold_{fold}", model_name
+        )
+    elif args.test:
+        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+        model_name = os.listdir(model_dir)[0]
+        model_loc = os.path.join(model_dir, model_name)
     model.load_state_dict(torch.load(model_loc))
     model.to(device)
 
@@ -554,7 +569,7 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
     )
 
     # load config
-    config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
+    config_path = os.path.join(args.project_directory, "k_fold.yaml")
     with open(config_path, "r") as ymlfile:
         k_fold_config = yaml.safe_load(ymlfile)
 
@@ -753,7 +768,7 @@ def knn(X, Y, train_indices_main, test_indices_main, parameters):
         pl.col(
             [
                 "param_n_neighbors",
-                "param_weights",
+                # "param_weights",
                 "mean_test_score",
                 "std_test_score",
                 "rank_test_score",
