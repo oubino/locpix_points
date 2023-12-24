@@ -24,7 +24,7 @@ Create new environment
 
 .. code-block:: python
 
-    micromamba create -n locpix-points python=3.11
+    micromamba create -n locpix-points -c conda-forge python=3.11
 
 Then install this repository
 
