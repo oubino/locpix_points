@@ -32,8 +32,7 @@ jobs:
       - name: Set up second environment
         run: |
           micromamba create -n locpix-points -c conda-forge python=3.11
-      #   eval "$(micromamba shell hook --shell bash)"
-          micromamba shell init --shell bash --root-prefix=~/micromamba
+          micromamba shell init --shell bash --root-prefix=~/micromamba 
           micromamba activate locpix-points
           pip install -e .
           pip install -r requirements.txt
