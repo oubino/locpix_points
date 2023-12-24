@@ -4,6 +4,7 @@
 mkdir tests/output
 
 # Retrieve micromamba
+eval "$(micromamba shell hook --shell bash)"
 source /root/micromamba/etc/profile.d/micromamba.sh
 
 # Activate correct environment
