@@ -43,11 +43,16 @@ def train_loop(
         label_level (string) : Either node or graph
         num_train_graph (int) : Number of graphs in train set
         num_val_graph (int) : Number of graphs in val set
-        model_path (string) : Where to save the model to"""
+        model_path (string) : Where to save the model to
+
+    Raises:
+        ValueError: If device is not cpu or gpu
+    """
 
     model.to(device)
 
-    scaler = torch.cuda.amp.GradScaler()
+    if device == "gpu":
+        scaler = torch.cuda.amp.GradScaler()
 
     best_loss = 1e10
 
@@ -77,16 +82,22 @@ def train_loop(
                 running_train_loss += loss
 
             # scales loss - calls backward on scaled loss creating scaled gradients
-            scaler.scale(loss).backward()
+            if device == torch.device("cuda"):
+                scaler.scale(loss).backward()
+
+                # unscales the gradients of optimiser then optimiser.step is called
+                scaler.step(optimiser)
+
+                # update scale for next iteration
+                scaler.update()
+            elif device == torch.device("cpu"):
+                loss.backward()
+                optimiser.step()
+            else:
+                raise ValueError("Device should be cpu or gpu")
 
             # metrics
             num_train_node += data.num_nodes
-
-            # unscales the gradients of optimiser then optimiser.step is called
-            scaler.step(optimiser)
-
-            # update scale for next iteration
-            scaler.update()
 
         # val data
         # TODO: make sure torch.no_grad() somewhere
