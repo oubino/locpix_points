@@ -468,13 +468,20 @@ The packages required are  installed in the locpix-points environment. These inc
 
     - -i Path to the project folder
     - -c Path to configuration .yaml file
+    - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
+    - -t (Optional) If present we are testing therefore use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
 
 *Long description*
 
-Loads in .parquet files for clusters and localisations and visualises the extracted features.
-Including
-    - box plots
-    - UMAPs
+Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
+This includes
+  - Box plots of the features 
+  - UMAP
+  - Classification of the fields of view using scikit-learn
+    - Logisitic regression
+    - Decision trees 
+    - SVM 
+    - KNN  
 
 Visualise
 ---------
