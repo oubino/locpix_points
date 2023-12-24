@@ -9,19 +9,18 @@ pos: 'xy'
 
 # what to load into features
 # Options: uniform (ones), xy, ...
-loc_feat:
-  - 'duration[]'
-  - 'variance_x[nm^2]'
-cluster_feat:
-  - 'count'
-  - 'RGyration'
-  - 'linearity'
-  - 'planarity'
-  - 'length_pca'
-  - 'area_pca'
-  - 'perimeter'
-  - 'area_convex_hull'
-  - 'length_convex_hull'
+loc_feat: null
+
+cluster_feat: 
+  - count
+  - RGyration
+  - linearity
+  - planarity
+  - length_pca
+  - area_pca
+  - perimeter
+  #- area_convex_hull
+  #- length_convex_hul
 
 # label level
 # graph or node
@@ -41,5 +40,5 @@ kneighbourslocs: 3
 save_on_gpu: False
 
 # size of fov
-fov_x: 50000.0
-fov_y: 80000.0
+fov_x: 40000.0
+fov_y: 40000.0

@@ -1,13 +1,13 @@
 # device to train on (gpu or cpu)
-train_on_gpu: True
+train_on_gpu: False
 load_data_from_gpu: False
 
 # model parameters
 model: locclusternet
 
 locclusternet:
-  LocEncoderChannels: [[4, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
-  ClusterEncoderChannels: [17, 18, 24, 32]
+  LocEncoderChannels: [[2, 2, 2, 2], [4, 2, 2, 2], [4, 2, 2, 2]]
+  ClusterEncoderChannels: [[9, 2],[2,2], [2, 2]]
   OutputChannels: 2
 
 # optimiser parameters
@@ -16,7 +16,7 @@ lr: 0.001
 weight_decay: 0.0001
 
 # training parameters
-epochs: 2
+epochs: 50
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
@@ -26,15 +26,19 @@ label_level: graph # graph
 
 # train/val transforms
 # options: ['normalisescale', 'jitter', 'flip', 'randscale', 'rotate', 'subsample', 'shear'] # null
-transforms:
+transforms: 
   z_rotate: null
-  jitter: 15 # number of nm
+  # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
+  # fov_x/fov_y is defined in process.yaml
+  # here 1 unit = 20,000nm
+  # therefore 15nm = 0.00075 units
+  jitter: 0.00075
   x_flip: null
-  y_flip: null
+  y_flip: null 
   randscale: [0.95,1.05]
   shear: 0.05
   # subsample
 
 # wandb parameters
-wandb_project: test_locclusternet
-wandb_dataset: tma
+wandb_project: semore_test
+wandb_dataset: semore
