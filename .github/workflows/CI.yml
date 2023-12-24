@@ -40,6 +40,7 @@ jobs:
           cd GraphXAI
           pip install -e .
           cd ..
+          ls
       #    python -m pip install tox tox-gh-actions
       - name: Test
         run: |
