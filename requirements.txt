@@ -1,0 +1,9 @@
+# requirements that need to be installed post set up
+
+torch-scatter
+torch-sparse
+torch-cluster
+torch-geometric
+torch-summary
+torchmetrics
+
