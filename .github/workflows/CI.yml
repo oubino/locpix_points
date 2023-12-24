@@ -39,6 +39,7 @@ jobs:
           git clone https://github.com/mims-harvard/GraphXAI.git
           cd GraphXAI
           pip install -e .
+          cd ..
       #    python -m pip install tox tox-gh-actions
       - name: Test
         run: |
