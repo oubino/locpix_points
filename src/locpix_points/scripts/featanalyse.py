@@ -597,6 +597,11 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
 
     num_features = len(df_scaled["X"][0])
     print("Num features: ", num_features)
+    warnings.warn(
+        "Be careful, if analysing neural net features"
+        "Is this the number of features you expect"
+        "Did this task use manual features as well"
+    )
 
     X = df_scaled["X"].to_list()
     Y = df_scaled["Y"].to_list()
