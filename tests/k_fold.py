@@ -1,6 +1,6 @@
 """Test pipeline"""
 
-from locpix_points.scripts.train import main
+from locpix_points.scripts.k_fold import main
 
 
 def test_pipeline():
@@ -10,6 +10,8 @@ def test_pipeline():
             "-i",
             "tests/output",
             "-c",
-            "tests/templates/train.yaml",
+            "tests/config/",
+            "-r",
+            "5",
         ]
     )

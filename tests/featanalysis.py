@@ -1,6 +1,6 @@
 """Test pipeline"""
 
-from locpix_points.scripts.featextract import main
+from locpix_points.scripts.featanalyse import main
 
 
 def test_pipeline():
@@ -10,6 +10,8 @@ def test_pipeline():
             "-i",
             "tests/output",
             "-c",
-            "tests/config/featextract.yaml",
+            "tests/config/featanalyse.yaml",
+            "-n",
+            "-t"
         ]
     )

@@ -10,6 +10,6 @@ def test_pipeline():
             "-i",
             "tests/output",
             "-c",
-            "tests/templates/process.yaml",
+            "tests/config/process.yaml",
         ]
     )

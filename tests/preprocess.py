@@ -8,9 +8,9 @@ def test_pipeline():
     main(
         [
             "-i",
-            "../../../../mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/data/tma_genetech/data/raw/locs",
+            "tests/test_data",
             "-c",
-            "tests/templates/preprocess.yaml",
+            "tests/config/preprocess.yaml",
             "-o",
             "tests/output",
         ]
