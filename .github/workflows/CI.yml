@@ -44,7 +44,16 @@ jobs:
       #    python -m pip install tox tox-gh-actions
       - name: Test
         run: |
-          bash tests/tests.sh
+          eval "$(micromamba shell hook --shell bash)"
+          micromamba activate locpix-points
+          bash tests/tests_github_1.sh
+          eval "$(micromamba shell hook --shell bash)"
+          micromamba activate rapids=23.10
+          bash tests/tests_github_2.sh
+          eval "$(micromamba shell hook --shell bash)"
+          micromamba activate locpix-points
+          bash tests/tests_github_3.sh
+
       #- name: Test with tox
       #  run: tox
       #- name: Add .env file to allow subsequent steps
