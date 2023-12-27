@@ -17,6 +17,7 @@ Currently available models:
 
 from .cluster_net import ClusterNet
 from .loc_cluster_net import LocClusterNet
+from .simple_nn import ClusterMLP
 
 # from .simple_gcn_1 import SimpleGCN1
 from .point_net import PointNetClassification, PointNetSegmentation
@@ -54,5 +55,7 @@ def model_choice(name, *args, **kwargs):
         return LocClusterNet(*args, device=device)
     elif name == "clusternet":
         return ClusterNet(*args)
+    elif name == "clustermlp":
+        return ClusterMLP(*args)
     else:
         raise ValueError(f"{name} is not a supported model")
