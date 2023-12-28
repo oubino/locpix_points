@@ -1,0 +1,14 @@
+clustermlp:
+  channels:
+  - 7
+  - 32
+  - 128
+  - 32
+  - 2
+eval_on_gpu: true
+label_level: graph
+load_data_from_gpu: false
+model: clustermlp
+num_classes: 2
+wandb_dataset: semore
+wandb_project: semore_task4
