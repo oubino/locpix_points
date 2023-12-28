@@ -7,6 +7,7 @@ Network takes in cluster features and uses simple MLP without using edges
 
 import torch
 from torch_geometric.nn import MLP
+from torch_geometric.nn.pool import global_mean_pool
 
 
 class ClusterMLP(torch.nn.Module):
@@ -45,5 +46,6 @@ class ClusterMLP(torch.nn.Module):
         except KeyError:
             raise KeyError("Clusters need to have features present")
         x = self.MLP(x, batch=data["clusters"].batch)
+        x = global_mean_pool(x, batch=data["clusters"].batch)
 
         return x.log_softmax(dim=-1)

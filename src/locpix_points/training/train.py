@@ -51,7 +51,7 @@ def train_loop(
 
     model.to(device)
 
-    if device == "gpu":
+    if device == torch.device("cuda"):
         scaler = torch.cuda.amp.GradScaler()
 
     best_loss = 1e10
