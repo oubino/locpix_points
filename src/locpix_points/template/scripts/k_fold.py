@@ -8,9 +8,9 @@ def main():
     main_k(
         [
             "-i",
-            "semore_expts/task_1",
+            ".",
             "-c",
-            "semore_expts/task_1/config",
+            "./config",
         ]
     )
 

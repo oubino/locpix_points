@@ -7,4 +7,4 @@ source /root/micromamba/etc/profile.d/micromamba.sh
 micromamba activate locpix-points
 
 # Preprocess
-python semore_expts/task_1/preprocess.py
+python scripts/preprocess.py

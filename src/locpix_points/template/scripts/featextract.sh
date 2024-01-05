@@ -7,4 +7,4 @@ source /root/micromamba/etc/profile.d/micromamba.sh
 micromamba activate rapids=23.10
 
 # Test feat extract
-python semore_expts/task_1/featextract.py
+python scripts/featextract.py

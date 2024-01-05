@@ -14,45 +14,6 @@ import yaml
 from locpix_points.preprocessing import functions
 
 
-class project_info:
-    """Project information metadata
-
-    Attributes:
-        metadata (dictionary) : Python dictionary containing
-            the metadata"""
-
-    def __init__(self, time, name):
-        """Initialises metadata with args
-
-        Args:
-            time (string) : Time of project initialisation
-            name (string) : Name of the project"""
-
-        # dictionary
-        self.metadata = {
-            "machine": socket.gethostname(),
-            "name": name,
-            "init_time": time,
-        }
-
-    def save(self, path):
-        """Save the metadata as a .csv
-
-        Args:
-            path (string) : Path to save to"""
-
-        with open(path, "w") as outfile:
-            json.dump(self.metadata, outfile)
-
-    def load(self, path):
-        """Load the metadata
-
-        Args:
-            path (string) : Path to load from"""
-
-        self.metadata = json.load(path)
-
-
 def main(argv=None):
     """Main script for the module with variable arguments
 
@@ -100,16 +61,26 @@ def main(argv=None):
     project_directory = args.project_directory
     input_folder = args.input
 
-    # create project directory
+    # create preprocessed directory
     output_folder = os.path.join(project_directory, "preprocessed")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-        # initialise metadata and save
-        metadata = project_info(
-            time.asctime(time.gmtime(time.time())), project_directory
-        )
-        metadata.save(os.path.join(project_directory, "metadata.json"))
+    # save to metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        file = os.path.basename(__file__)
+        if file not in metadata:
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        else:
+            print("Overwriting metadata...")
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
 
     # load config
     with open(args.config, "r") as ymlfile:
