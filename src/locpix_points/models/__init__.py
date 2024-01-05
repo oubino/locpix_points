@@ -15,9 +15,7 @@ Currently available models:
     point_transformer
 """
 
-from .cluster_net import ClusterNet
-from .loc_cluster_net import LocClusterNet
-from .simple_nn import ClusterMLP
+from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP
 
 # from .simple_gcn_1 import SimpleGCN1
 from .point_net import PointNetClassification, PointNetSegmentation
@@ -54,7 +52,7 @@ def model_choice(name, *args, **kwargs):
         device = kwargs["device"]
         return LocClusterNet(*args, device=device)
     elif name == "clusternet":
-        return ClusterNet(*args)
+        return ClusterNetHetero(*args)
     elif name == "clustermlp":
         return ClusterMLP(*args)
     else:
