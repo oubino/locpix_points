@@ -38,6 +38,7 @@ dependencies = [
     "ipdb",
     "pgmpy",
     "pre-commit",
+    "importlib_resources",
     # need to install https://github.com/mims-harvard/GraphXAI
 
     # "torchvision",  check actually need this
@@ -47,6 +48,7 @@ dependencies = [
 ]
 
 [project.scripts]
+initialise = "locpix_points.scripts.initialise:main"
 preprocess = "locpix_points.scripts.preprocess:main"
 process = "locpix_points.scripts.process:main"
 annotate = "locpix_points.scripts.annotate:main"

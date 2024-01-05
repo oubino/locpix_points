@@ -1,34 +1,23 @@
 # train/test/val splits
-train_ratio: 0.5
-val_ratio: 0.25
-test_ratio: 0.25
+train_ratio: 0.7
+val_ratio: 0.15
+test_ratio: 0.15
 
 # what to load into position
 # Options: xy, xyz
-pos: 'xy'
+pos: xy
 
 # what to load into features
 # Options: uniform (ones), xy, ...
-loc_feat:
-  - 'duration[]'
-  - 'variance_x[nm^2]'
-cluster_feat:
-  - 'count'
-  - 'RGyration'
-  - 'linearity'
-  - 'planarity'
-  - 'length_pca'
-  - 'area_pca'
-  - 'perimeter'
-  - 'area_convex_hull'
-  - 'length_convex_hull'
+loc_feat: null
+cluster_feat: null
 
 # label level
 # graph or node
-label_level: 'graph'
+label_level: graph
 
 # model type
-model: 'ClusterLoc' # ClusterLoc, Loc or Cluster
+model: ClusterLoc # ClusterLoc, Loc or Cluster
 
 # number of nearest neighbours to connect clusters to in graph
 kneighboursclusters: 3
@@ -41,5 +30,5 @@ kneighbourslocs: 3
 save_on_gpu: False
 
 # size of fov
-fov_x: 50000.0
-fov_y: 80000.0
+fov_x: 40000.0
+fov_y: 40000.0
