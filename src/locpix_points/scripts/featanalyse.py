@@ -20,6 +20,7 @@ import pyarrow.parquet as pq
 import seaborn as sns
 import umap
 from sklearn.linear_model import LogisticRegression
+from sklearn.metrics import classification_report
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
@@ -183,6 +184,7 @@ def analyse_manual_feats(
 
     # feature vector
     data_feats = df[features].values
+    raise ValueError("this should be fit to train only")
     data_feats_scaled = StandardScaler().fit_transform(data_feats)
 
     # label vector
@@ -215,29 +217,67 @@ def analyse_manual_feats(
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
 
-    X, Y, train_indices_main, test_indices_main = prep_for_sklearn(
+    X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
         data_feats_scaled, data_labels, names, args
     )
 
     # 4. Logistic regression
     if "log_reg" in config.keys():
         parameters = config["log_reg"]
-        log_reg(X, Y, train_indices_main, test_indices_main, features, parameters)
+        log_reg(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            features,
+            parameters,
+            names,
+            args,
+        )
 
     # 5. Decision tree
     if "dec_tree" in config.keys():
         parameters = config["dec_tree"]
-        dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters)
+        dec_tree(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            features,
+            parameters,
+            names,
+            args,
+        )
 
     # 6. SVM
     if "svm" in config.keys():
         parameters = config["svm"]
-        svm(X, Y, train_indices_main, test_indices_main, parameters)
+        svm(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            parameters,
+            names,
+            args,
+        )
 
     # 8. K-NN
     if "knn" in config.keys():
         parameters = config["knn"]
-        knn(X, Y, train_indices_main, test_indices_main, parameters)
+        knn(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            parameters,
+            names,
+            args,
+        )
 
 
 def analyse_nn_feats(project_directory, label_map, config, args):
@@ -400,6 +440,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # feature vector
     data_feats = df[features].values
+    raise ValueError("this should be fit to train only")
     data_feats_scaled = StandardScaler().fit_transform(data_feats)
 
     # label vector
@@ -420,7 +461,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
 
-    X, Y, train_indices_main, test_indices_main = prep_for_sklearn(
+    X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
         data_feats_scaled, data_labels, names, args
     )
     # train/test indices are list of lists
@@ -431,22 +472,105 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # 2. Logistic regression
     if "log_reg" in config.keys():
         parameters = config["log_reg"]
-        log_reg(X, Y, train_indices_main, test_indices_main, features, parameters)
+        best_model = log_reg(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            features,
+            parameters,
+            names,
+            args,
+            fold=fold,
+        )
 
     # 3. Decision tree
     if "dec_tree" in config.keys():
         parameters = config["dec_tree"]
-        dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters)
+        best_model = dec_tree(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            features,
+            parameters,
+            names,
+            args,
+            fold=fold,
+        )
 
     # 4. SVM
     if "svm" in config.keys():
         parameters = config["svm"]
-        svm(X, Y, train_indices_main, test_indices_main, parameters)
+        best_model = svm(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            parameters,
+            names,
+            args,
+            fold=fold,
+        )
 
     # 5. K-NN
     if "knn" in config.keys():
         parameters = config["knn"]
-        knn(X, Y, train_indices_main, test_indices_main, parameters)
+        best_model = knn(
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+            parameters,
+            names,
+            args,
+            fold=fold,
+        )
+
+
+def class_report(predicted, Y, names, test_indices, args, fold):
+    """Produce report on classification for test set, for particular fold using
+    the best model
+
+    Args:
+        predicted (array): Predicted data
+        Y (array): Target data
+        names (list): Names associated with each cluster
+        test_indices (list): Indices of the clusters that are part
+            of the test set
+        args (parser args): Arguments passed to the script
+        fold (int): Integer representing the fold we are evaluating on
+    """
+
+    # prediction by the best model
+    df_output = pl.DataFrame({"name": names, "output": predicted, "target": Y})
+    # filter dataframe by only test items
+    df_output = df_output[test_indices]
+    # take average prediction across all the clusters for each fov
+    df_output = df_output.group_by("name").mean()
+    # if average prediction is above 0.5 then predict as 1 otherwise 0
+    df_output = df_output.with_columns(
+        pl.when(pl.col("output") < 0.5).then(0).otherwise(1).alias("output")
+    )
+    # load config
+    config_path = os.path.join(args.project_directory, "k_fold.yaml")
+    with open(config_path, "r") as ymlfile:
+        k_fold_config = yaml.safe_load(ymlfile)
+
+    # double check that test files agree
+    # splits = k_fold_config["splits"]
+    # test_fold = splits["test"][fold]
+    # assert (sorted(test_fold) == sorted(df_output['name'].to_list()))
+
+    # calculate classification report
+    print(f"--- Classification report (test set) for fold {fold} ---")
+    y_true = df_output["target"].to_list()
+    y_pred = df_output["output"].to_list()
+    print(classification_report(y_true, y_pred))
 
 
 def plot_boxplots(features, df):
@@ -561,6 +685,7 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         X (array): Feature data in array
         Y (array): The labels for each data point
         train_indices_main (list): List of indices of train data
+        val_indices_main (list): List of indices of validation data
         test_indices_main (list): List of indices of test data
     """
 
@@ -588,6 +713,7 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
 
     # get indices of train/test for CV
     train_indices_main = []
+    val_indices_main = []
     test_indices_main = []
 
     for index, train_fold in enumerate(train_folds):
@@ -602,12 +728,15 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         val_indices = np.where(val_bool)[0]
         test_indices = np.where(test_bool)[0]
 
-        train_indices = np.append(train_indices, val_indices)
-
         train_indices_main.append(train_indices)
+        val_indices_main.append(val_indices)
         test_indices_main.append(test_indices)
 
         if any(i in train_indices for i in test_indices):
+            raise ValueError("Should not share common values")
+        if any(i in train_indices for i in val_indices):
+            raise ValueError("Should not share common values")
+        if any(i in test_indices for i in val_indices):
             raise ValueError("Should not share common values")
 
     num_features = len(df_scaled["X"][0])
@@ -621,21 +750,86 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
     X = df_scaled["X"].to_list()
     Y = df_scaled["Y"].to_list()
 
-    return X, Y, train_indices_main, test_indices_main
+    return X, Y, train_indices_main, val_indices_main, test_indices_main
 
 
-def log_reg(X, Y, train_indices_main, test_indices_main, features, parameters):
+def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args, fold):
+    """foo
+
+    Args:
+        X (array): Input data
+        Y (array): Target data
+        model (sklearn model): Model to be evaluated
+        train_indices_main (list): List of the indices of the training data
+        test_indices_main (list): List of the indices of the test data
+        names (list): FOV for each cluster
+        args (parser args): Args passed to script
+        fold (int): denotes the fold we are evaluating or is None
+    """
+
+    print("---- Fit to the specified fold or each fold ----")
+    # set up arrays
+    X = np.array(X)
+    Y = np.array(Y)
+    cv = iter(zip(train_indices_main, test_indices_main))
+
+    if fold is not None:
+        assert type(fold) is int
+        fold_index = fold
+        evaluated = False
+    else:
+        fold_index = 0
+
+    for train_fold, test_fold in cv:
+        train_fold = np.array(train_fold)
+        test_fold = np.array(test_fold)
+        model = model.fit(X[train_fold], Y[train_fold])
+        output = model.predict(X)
+        class_report(
+            output,
+            Y,
+            names,
+            test_fold,
+            args,
+            fold_index,
+        )
+        fold_index += 1
+
+        # if fold is specified should only enter iterator once
+        if fold is not None:
+            if not evaluated:
+                evaluated = True
+            else:
+                raise ValueError("Error from designer")
+
+
+def log_reg(
+    X,
+    Y,
+    train_indices_main,
+    val_indices_main,
+    test_indices_main,
+    features,
+    parameters,
+    names,
+    args,
+    fold=None,
+):
     """Perform logistic reggression on the dataset
 
     Args:
         X (array): Feature data in array
         Y (array): The labels for each data point
         train_indices_main (list): List of the indices of the training data
+        val_indices_main (list): List of the indices of the validation data
         test_indices_main (list): List of the indices of the test data
         features (list): List of features analysing
         parameters (dict): Parameters to try logistic regression for
+        names (list): FOV for each cluster
+        args (parser args): Args passed to script
+        fold (int): If specified denotes the fold we are evaluating
     """
-    cv = iter(zip(train_indices_main, test_indices_main))
+    cv = iter(zip(train_indices_main, val_indices_main))
 
     model = LogisticRegression(max_iter=1000)
     clf = GridSearchCV(model, parameters, cv=cv)
@@ -656,25 +850,53 @@ def log_reg(X, Y, train_indices_main, test_indices_main, features, parameters):
             ]
         )
     )
+    print("------ Best parameters (ignore values) ---")
     print(df.sort("rank_test_score"))
 
     best_model = clf.best_estimator_
     best_feats = dict(zip(features, best_model.coef_[0].tolist()))
-    print("Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
+    print("------ Coefficients --------")
+    print(sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
+
+    model = LogisticRegression(max_iter=1000, **clf.best_params_)
+    for index, value in enumerate(train_indices_main):
+        train_indices_main[index] = np.append(value, val_indices_main[index])
+        if any(i in train_indices_main[index] for i in test_indices_main[index]):
+            raise ValueError("Should not share common values")
+    fold_results(
+        X, Y, model, train_indices_main, test_indices_main, names, args, fold=fold
+    )
+
+    return best_model
 
 
-def dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters):
+def dec_tree(
+    X,
+    Y,
+    train_indices_main,
+    val_indices_main,
+    test_indices_main,
+    features,
+    parameters,
+    names,
+    args,
+    fold=None,
+):
     """Perform decision tree on the dataset
 
     Args:
         X (array): Feature data in array
         Y (array): The labels for each data point
         train_indices_main (list): List of the indices of the training data
+        val_indices_main (list): List of the indices of the validation data
         test_indices_main (list): List of the indices of the test data
         features (list): List of features analysing
-        parameters (dict): Parameters to try logistic regression for
+        parameters (dict): Parameters to try decision tree for
+        names (list): FOV for each cluster
+        args (parser args): Args passed to script
+        fold (int): If specified denotes the fold we are evaluating
     """
-    cv = iter(zip(train_indices_main, test_indices_main))
+    cv = iter(zip(train_indices_main, val_indices_main))
 
     model = DecisionTreeClassifier()
 
@@ -697,26 +919,53 @@ def dec_tree(X, Y, train_indices_main, test_indices_main, features, parameters):
             ]
         )
     )
+    print("------ Best parameters (ignore values) ---")
     print(df.sort("rank_test_score"))
 
     best_model = clf.best_estimator_
     print("length", best_model.feature_importances_.tolist())
     best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
-    print("Coeffs", sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
+    print("------ Coefficients --------")
+    print(sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True))
+
+    model = DecisionTreeClassifier(**clf.best_params_)
+    for index, value in enumerate(train_indices_main):
+        train_indices_main[index] = np.append(value, val_indices_main[index])
+        if any(i in train_indices_main[index] for i in test_indices_main[index]):
+            raise ValueError("Should not share common values")
+    fold_results(
+        X, Y, model, train_indices_main, test_indices_main, names, args, fold=fold
+    )
+
+    return best_model
 
 
-def svm(X, Y, train_indices_main, test_indices_main, parameters):
+def svm(
+    X,
+    Y,
+    train_indices_main,
+    val_indices_main,
+    test_indices_main,
+    parameters,
+    names,
+    args,
+    fold=None,
+):
     """Perform svm on the dataset
 
     Args:
         X (array): Feature data in array
         Y (array): The labels for each data point
         train_indices_main (list): List of the indices of the training data
+        val_indices_main (list): List of the indices of the validation data
         test_indices_main (list): List of the indices of the test data
-        parameters (dict): Parameters to try logistic regression for
+        parameters (dict): Parameters to try svm for
+        names (list): FOV for each cluster
+        args (parser args): Args passed to script
+        fold (int): If specified denotes the fold we are evaluating
     """
 
-    cv = iter(zip(train_indices_main, test_indices_main))
+    cv = iter(zip(train_indices_main, val_indices_main))
 
     model = SVC()
 
@@ -739,21 +988,49 @@ def svm(X, Y, train_indices_main, test_indices_main, parameters):
             ]
         )
     )
+    print("------ Best parameters (ignore values) ---")
     print(df.sort("rank_test_score"))
 
+    best_model = clf.best_estimator_
 
-def knn(X, Y, train_indices_main, test_indices_main, parameters):
+    model = SVC(**clf.best_params_)
+    for index, value in enumerate(train_indices_main):
+        train_indices_main[index] = np.append(value, val_indices_main[index])
+        if any(i in train_indices_main[index] for i in test_indices_main[index]):
+            raise ValueError("Should not share common values")
+    fold_results(
+        X, Y, model, train_indices_main, test_indices_main, names, args, fold=fold
+    )
+
+    return best_model
+
+
+def knn(
+    X,
+    Y,
+    train_indices_main,
+    val_indices_main,
+    test_indices_main,
+    parameters,
+    names,
+    args,
+    fold=None,
+):
     """Perform knn on the dataset
 
     Args:
         X (array): Feature data in array
         Y (array): The labels for each data point
         train_indices_main (list): List of the indices of the training data
+        val_indices_main (list): List of the indices of the validation data
         test_indices_main (list): List of the indices of the test data
-        parameters (dict): Parameters to try logistic regression for
+        parameters (dict): Parameters to try knn for
+        names (list): FOV for each cluster
+        args (parser args): Args passed to script
+        fold (int): If specified denotes the fold we are evaluating
     """
 
-    cv = iter(zip(train_indices_main, test_indices_main))
+    cv = iter(zip(train_indices_main, val_indices_main))
 
     model = KNeighborsClassifier()
 
@@ -775,7 +1052,21 @@ def knn(X, Y, train_indices_main, test_indices_main, parameters):
             ]
         )
     )
+    print("------ Best parameters (ignore values) ---")
     print(df.sort("rank_test_score"))
+
+    best_model = clf.best_estimator_
+
+    model = KNeighborsClassifier(**clf.best_params_)
+    for index, value in enumerate(train_indices_main):
+        train_indices_main[index] = np.append(value, val_indices_main[index])
+        if any(i in train_indices_main[index] for i in test_indices_main[index]):
+            raise ValueError("Should not share common values")
+    fold_results(
+        X, Y, model, train_indices_main, test_indices_main, names, args, fold=fold
+    )
+
+    return best_model
 
 
 # save yaml file

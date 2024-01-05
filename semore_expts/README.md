@@ -30,6 +30,14 @@ We used the preprocessed/feat extracted files from task 1 and the same splits fo
 
 Now however we use cluster features (only) and a cluster network to make the classficiation
 
+## Task 3
+
+Dataset 1: Dataset of pure fibrils vs pure iso (/w 10% noise) therefore have per FOV label
+
+We used the preprocessed/feat extracted files from task 1 and the same splits for k-fold
+
+Now however we use cluster features (only) and a MLP on these features for each cluster, then aggregate over all the clusters in a FOV by taking the mean, then use softmax to get the probability for the FOV of belonging to the class.
+
 ## Methods
 
 Data generated according to semore folder - for tasks 1-3 all use same dataset 1 - which has pure iso vs pure fibrils.

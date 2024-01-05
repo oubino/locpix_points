@@ -1,1 +1,1 @@
-{"machine": "LAPTOP-20HGGS5A", "name": "semore_expts/output", "init_time": "Wed Nov 22 08:50:35 2023", "featextract.py": "Fri Nov 24 15:45:10 2023", "gt_label_map": {"0": "iso", "1": "fib"}, "process.py": "Thu Dec 28 08:19:52 2023"}
+{"machine": "LAPTOP-20HGGS5A", "name": "semore_expts/output", "init_time": "Wed Nov 22 08:50:35 2023", "featextract.py": "Fri Nov 24 15:45:10 2023", "gt_label_map": {"0": "iso", "1": "fib"}, "process.py": "Thu Dec 28 08:19:52 2023", "featanalyse.py": "Thu Jan  4 12:26:32 2024"}
