@@ -8,7 +8,8 @@ Recipe :
 
 import argparse
 import os
-
+import json
+import time
 import yaml
 from sklearn.model_selection import KFold
 
@@ -67,6 +68,22 @@ def main(argv=None):
     k_fold_yaml = os.path.join(args.config, "k_fold.yaml")
     with open(k_fold_yaml, "r") as ymlfile:
         config = yaml.safe_load(ymlfile)
+
+    # metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        file = os.path.basename(__file__)
+        if file not in metadata:
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        else:
+            print("Overwriting metadata...")
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
 
     # define data split
     if args.random is not None:
