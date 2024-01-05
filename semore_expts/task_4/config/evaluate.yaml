@@ -4,10 +4,6 @@ load_data_from_gpu: False
 # what trying to predict
 label_level: graph # graph
 
-# wandb parameters
-wandb_project: semore_task4
-wandb_dataset: semore
-
 # model parameters
 model: clustermlp
 

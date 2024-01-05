@@ -8,6 +8,7 @@ Recipe :
 
 import argparse
 import os
+import json
 import time
 
 import torch.optim
@@ -98,6 +99,15 @@ def main(argv=None):
     num_workers = config["num_workers"]
     loss_fn = config["loss_fn"]
     label_level = config["label_level"]
+
+    # load metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        project_name = metadata["project_name"]
+        dataset_name = metadata["dataset_name"]
 
     # define device
     if train_on_gpu is True and not torch.cuda.is_available():
@@ -272,12 +282,12 @@ def main(argv=None):
     # start a new wandb run to track this script
     wandb.init(
         # set the wandb project where this run will be logged
-        project=config["wandb_project"],
+        project=project_name,
         # track hyperparameters and run metadata
         config={
             "learning_rate": lr,
             "architecture": model.name,
-            "dataset": config["wandb_dataset"],
+            "dataset": dataset_name,
             "epochs": epochs,
         },
     )
@@ -304,7 +314,7 @@ def main(argv=None):
         os.makedirs(model_folder)
     time_o = time.gmtime(time.time())
     time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
-    model_path = f"{config['wandb_project']}_{config['wandb_dataset']}_{time_o}_.pt"
+    model_path = f"{project_name}_{dataset_name}_{time_o}_.pt"
     model_path = os.path.join(model_folder, model_path)
 
     # train loop

@@ -20,7 +20,6 @@ knn:
   n_neighbors: [3]
   #weights": ["distance"]
 
-
 label_map:
   fib: 0
   iso: 1

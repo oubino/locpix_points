@@ -7,6 +7,7 @@ Recipe :
 """
 
 import argparse
+import json
 import os
 import time
 import warnings
@@ -21,7 +22,7 @@ import wandb
 from locpix_points.data_loading import datastruc
 from locpix_points.evaluation import evaluate
 from locpix_points.models import model_choice
-from locpix_points.models.loc_cluster_net import ClusterNetHomogeneous
+from locpix_points.models.cluster_nets import ClusterNetHomogeneous
 
 # import torch
 # import torch_geometric.transforms as T
@@ -92,6 +93,15 @@ def main(argv=None):
     load_data_from_gpu = config["load_data_from_gpu"]
     eval_on_gpu = config["eval_on_gpu"]
     num_classes = config["num_classes"]
+
+    # load metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        project_name = metadata["project_name"]
+        dataset_name = metadata["dataset_name"]
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
@@ -186,12 +196,12 @@ def main(argv=None):
     # start a new wandb run to track this script
     wandb.init(
         # set the wandb project where this run will be logged
-        project=config["wandb_project"],
+        project=project_name,
         # track hyperparameters and run metadata
         config={
             "model": args.model_loc,
             "architecture": model.name,
-            "dataset": config["wandb_dataset"],
+            "dataset": dataset_name,
         },
     )
 

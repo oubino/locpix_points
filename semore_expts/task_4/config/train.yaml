@@ -36,7 +36,3 @@ transforms:
   randscale: [0.95,1.05]
   shear: 0.05
   # subsample
-
-# wandb parameters
-wandb_project: semore_task4
-wandb_dataset: semore
