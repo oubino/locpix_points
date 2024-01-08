@@ -1,7 +1,7 @@
-# train/test/val splits
-train_ratio: 0.7
-val_ratio: 0.15
-test_ratio: 0.15
+# train/test/val splits only specify it not using k-fold
+# train_ratio: 0.7
+# val_ratio: 0.15
+# test_ratio: 0.15
 
 # what to load into position
 # Options: xy, xyz
