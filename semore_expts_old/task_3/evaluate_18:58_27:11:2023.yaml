@@ -1,0 +1,14 @@
+clusternet:
+  ClusterEncoderChannels:
+  - 7
+  - 18
+  - 24
+  - 32
+  OutputChannels: 2
+eval_on_gpu: true
+label_level: graph
+load_data_from_gpu: false
+model: clusternet
+num_classes: 2
+wandb_dataset: semore
+wandb_project: semore_task3

@@ -1,0 +1,29 @@
+batch_size: 2
+clusternet:
+  ClusterEncoderChannels:
+  - 7
+  - 18
+  - 24
+  - 32
+  OutputChannels: 2
+epochs: 100
+label_level: graph
+load_data_from_gpu: false
+loss_fn: nll
+lr: 0.001
+model: clusternet
+num_workers: 1
+optimiser: adam
+train_on_gpu: true
+transforms:
+  jitter: 0.00075
+  randscale:
+  - 0.95
+  - 1.05
+  shear: 0.05
+  x_flip: null
+  y_flip: null
+  z_rotate: null
+wandb_dataset: semore
+wandb_project: semore_task3
+weight_decay: 0.0001

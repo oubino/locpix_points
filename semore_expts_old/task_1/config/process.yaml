@@ -1,0 +1,13 @@
+cluster_feat: null
+fov_x: 40000.0
+fov_y: 40000.0
+kneighboursclusters: 3
+kneighbourslocs: 3
+label_level: graph
+loc_feat: null
+model: ClusterLoc
+pos: xy
+save_on_gpu: false
+#test_ratio: 0.15
+#train_ratio: 0.7
+#val_ratio: 0.15

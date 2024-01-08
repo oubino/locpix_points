@@ -1,0 +1,16 @@
+# params 
+load_data_from_gpu: False
+
+# what trying to predict
+label_level: graph # graph
+
+# model parameters
+model: clusternet
+
+clusternet:
+  ClusterEncoderChannels: [[7, 15, 25],[25, 25, 25], [25, 28, 32]]
+  OutputChannels: 2
+
+num_classes: 2
+
+eval_on_gpu: True
