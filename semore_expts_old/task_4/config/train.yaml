@@ -6,7 +6,7 @@ load_data_from_gpu: False
 model: clustermlp
 
 clustermlp:
-  channels: [7, 32, 128, 32, 2]
+  channels: [8, 32, 128, 32, 2]
 
 # optimiser parameters
 optimiser: adam

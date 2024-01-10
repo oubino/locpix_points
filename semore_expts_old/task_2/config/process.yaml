@@ -19,6 +19,7 @@ cluster_feat:
   - length_pca
   - area_pca
   - perimeter
+  - density_pca
   #- area_convex_hull
   #- length_convex_hul
 

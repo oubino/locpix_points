@@ -9,7 +9,7 @@ model: locclusternet
 
 locclusternet:
   LocEncoderChannels: [[2, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
-  ClusterEncoderChannels: [[15, 20, 25],[25, 25, 25], [25, 28, 32]]
+  ClusterEncoderChannels: [[16, 20, 25],[25, 25, 25], [25, 28, 32]]
   OutputChannels: 2
 
 num_classes: 2
