@@ -12,7 +12,8 @@ import pyarrow.parquet as pq
 import json
 import time
 import yaml
-from sklearn.model_selection import StratifiedKFold, StratifiedShuffleSplit
+from sklearn.model_selection import StratifiedKFold, train_test_split
+import wandb
 
 from locpix_points.scripts.evaluate import main as main_eval
 from locpix_points.scripts.process import main as main_process
@@ -90,8 +91,15 @@ def main(argv=None):
         else:
             print("Overwriting metadata...")
             metadata[file] = time.asctime(time.gmtime(time.time()))
+        # Get config params
+        project_name = metadata["project_name"]
+        dataset_name = metadata["dataset_name"]
+        user = metadata["user"]
         with open(metadata_path, "w") as outfile:
             json.dump(metadata, outfile)
+
+    # login to wandb
+    wandb.login()
 
     # split data
     if config is None:
@@ -135,41 +143,44 @@ def main(argv=None):
                     os.path.join(project_directory, "preprocessed/gt_label", file)
                 )
                 gt_label = int(target.schema.metadata[b"gt_label"])
-                targets.append(target)
-            print(targets)
-            input("stop")
+                targets.append(gt_label)
             train_folds = []
             val_folds = []
             test_folds = []
-            for train_index, test_index in kf.split(file_list, targets):
-                train_fold = []
-                val_fold = []
-                test_fold = []
+            for train_index, test_indices in kf.split(file_list, targets):
+                if any(i in train_index for i in test_indices):
+                    raise ValueError("Should not share common values!!!")
 
                 # split train into train/val: 80/20
-                splitter = StratifiedShuffleSplit(n_splits=1, test_size=0.2)
-                raise ValueError("is this correct? + don't specify the val size here")
-                train_indices, val_indices = next(
-                    splitter.split(train_index, targets[train_index])
+                train_indices, val_indices = train_test_split(
+                    train_index,
+                    test_size=0.2,
+                    shuffle=True,
+                    stratify=[targets[idx] for idx in train_index],
                 )
-                print("train indices", train_indices)
-                print("val indices", val_indices)
-                train_fold.append(file_list[train_indices])
-                val_fold.append(file_list[val_indices])
-                raise ValueError("is this correct!!")
 
-                for index in test_index:
-                    test_fold.append(file_list[index])
-                train_folds.append(train_fold)
-                val_folds.append(val_fold)
-                test_folds.append(test_fold)
+                train_folds.append([file_list[idx] for idx in train_indices])
+                val_folds.append([file_list[idx] for idx in val_indices])
+                test_folds.append([file_list[idx] for idx in test_indices])
 
             for index, train_fold in enumerate(train_folds):
                 val_fold = val_folds[index]
                 test_fold = test_folds[index]
-                assert train_fold != val_fold
-                assert train_fold != test_fold
-                assert val_fold != test_fold
+
+                if any(i in train_fold for i in val_fold):
+                    raise ValueError("Should not share common values 1")
+                if any(i in val_fold for i in train_fold):
+                    raise ValueError("Should not share common values 2")
+
+                if any(i in train_fold for i in test_fold):
+                    raise ValueError("Should not share common values 3")
+                if any(i in test_fold for i in train_fold):
+                    raise ValueError("Should not share common values 4")
+
+                if any(i in test_fold for i in val_fold):
+                    raise ValueError("Should not share common values 5")
+                if any(i in val_fold for i in test_fold):
+                    raise ValueError("Should not share common values 6")
 
             # save to config
             splits["train"] = train_folds
@@ -190,6 +201,18 @@ def main(argv=None):
         train_fold = [x.rstrip(".parquet") for x in train_fold]
         val_fold = [x.rstrip(".parquet") for x in val_fold]
         test_fold = [x.rstrip(".parquet") for x in test_fold]
+
+        # initialise wandb
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project=dataset_name,
+            # set the entity to the user
+            entity=user,
+            # group by dataset
+            group=project_name,
+            # name for this run
+            name=f"fold_{index}",
+        )
 
         # process
         main_process(
@@ -220,6 +243,7 @@ def main(argv=None):
                 f"processed/fold_{index}",
                 "-m",
                 f"models/fold_{index}",
+                "-w",
             ]
         )
 
@@ -234,8 +258,11 @@ def main(argv=None):
                 f"{args.config}/evaluate.yaml",
                 "-m",
                 model_path,
+                "-w",
             ]
         )
+
+        wandb.finish()
 
         # print('Cleaning up')
 

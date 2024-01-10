@@ -11,6 +11,9 @@ from tkinter import filedialog
 
 
 def main():
+    # Get user name (needs to match weights and bias entity)
+    user = input("Please input the user name (should match entity on wandbai): ")
+
     # Get project name/location
     project_name = input("Please input the project name: ")
 
@@ -36,6 +39,7 @@ def main():
 
     # Initialise & save metadata
     metadata = {
+        "user": user,
         "project_name": project_name,
         "project_path": project_path,  # location in which project folder is created
         "data_path": data_path,  # needs to be relative to the project folder
