@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [tool.setuptools.packages.find]
-where = ["src"]  
+where = ["src"]
 
 [project]
 name = "locpix_points"
@@ -28,16 +28,18 @@ dependencies = [
     "PyQt5", # napari needs this
     "torch",
     "pyarrow",
-    "torch-scatter",
-    # "torch-scatter @ https://data.pyg.org/whl/torch-1.12.0+cu116.html",
-    "torch-sparse",
-    "torch-cluster",
-    #"torch-spline-conv",
-    "torch-geometric",
-    "torch-summary",
     "wandb",
-    "torchmetrics",
-    
+    "python-dotenv",
+    "pyyaml",
+    "flake8",
+    "tox",
+    "pytest",
+    "seaborn",
+    "ipdb",
+    "pgmpy",
+    "pre-commit",
+    "importlib_resources",
+    # need to install https://github.com/mims-harvard/GraphXAI
 
     # "torchvision",  check actually need this
     # conda install pyg -c pyg
@@ -46,6 +48,7 @@ dependencies = [
 ]
 
 [project.scripts]
+initialise = "locpix_points.scripts.initialise:main"
 preprocess = "locpix_points.scripts.preprocess:main"
 process = "locpix_points.scripts.process:main"
 annotate = "locpix_points.scripts.annotate:main"
@@ -59,21 +62,20 @@ clean_up = "locpix_points.scripts.clean_up:main"
 
 [tool.tox]
 legacy_tox_ini = """
+
 [tox]
-envlist = py37, py38, py39, py310
+envlist = py311 # py37, py38, py39, py310
 isolated_build = True
 
 [gh-actions]
 python =
-    3.7: py37
-    3.8: py38
-    3.9: py39
-    3.10: py310
+    #3.8: py38
+    #3.9: py39
+    #3.10: py310
+    3.11: py311
 
 [testenv]
-changedir = tests
-deps = pytest
-       torch # this is required as torch-scatter, geometric etc.
-             # all depend on having torch
-commands = pytest
+commands =
+    pytest tests/
+
 """

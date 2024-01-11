@@ -5,14 +5,16 @@ SMLM dataitem will be parsed as.
 
 """
 
-import numpy as np
-import napari
+import ast
+import json
+import os
+import warnings
+
 import matplotlib.pyplot as plt
+import napari
+import numpy as np
 import polars as pl
 import pyarrow.parquet as pq
-import ast
-import os
-import json
 
 _interpolate = {
     "log2": lambda d: np.log2(d),
@@ -56,8 +58,11 @@ class item:
             0 is reserved for background, is of form [X,Y,Z]
         bin_sizes (tuple of floats): Size of bins of the histogram
             e.g. (23.2, 34.5, 21.3)
-        gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
-            localisatoin then they are in column "gt_label"
+        gt_label_scope (string) : If not specified (None) there are no gt labels. If
+            specified then is either 'loc' - gt label per localisatoin or 'fov' - gt
+            label for field-of-view
+        gt_label (int) : Value of the gt label for the fov or None is gt_label_scope
+            is None or loc
         gt_label_map (dict):  Dictionary with keys represetning the gt label present
             in the dataset and the values erepresenting the
             real concept e.g. 0:'dog', 1:'cat'
@@ -74,11 +79,10 @@ class item:
         histo_edges=None,
         histo_mask=None,
         bin_sizes=None,
-        gt_label_fov=None,
+        gt_label_scope=None,
+        gt_label=None,
         gt_label_map=None,
     ):
-        """Initialises item"""
-
         self.name = name
         self.df = df
         self.histo = histo
@@ -88,14 +92,36 @@ class item:
         self.bin_sizes = bin_sizes
         self.channels = channels
         self.channel_label = channel_label
-        self.gt_label_fov = gt_label_fov
+        self.gt_label_scope = gt_label_scope
+        self.gt_label = gt_label
         self.gt_label_map = gt_label_map
+
+        if self.gt_label_scope == "loc":
+            if self.gt_label is not None:
+                raise ValueError("Cannot have gt label per fov and loc")
+            if self.gt_label_map is None:
+                raise ValueError("Need a label map")
+        if self.gt_label_scope is None:
+            if self.gt_label_map is not None:
+                raise ValueError("Cant have gt label map and no labels")
+            if self.gt_label is not None:
+                raise ValueError("Cant have no scope and a gt label")
+        if self.gt_label_scope == "fov":
+            if self.gt_label is None:
+                raise ValueError("Need a gt label")
+            if "gt_label" in self.df.columns:
+                raise ValueError("Cannot have gt label column for fov label")
+            if self.gt_label_map is None:
+                raise ValueError("Need a label map")
 
     def chan_2_label(self, chan):
         """Returns the label associated with the channel specified
 
         Args:
-            chan (int) : Integer representing the channel"""
+            chan (int) : Integer representing the channel
+
+        Returns:
+            self.channel_label[chan] (string) : Protein imaged in that channel"""
 
         return self.channel_label[chan]
 
@@ -105,12 +131,18 @@ class item:
 
         Args:
             label (string) : String representing the label you want
-                to find the channel for"""
+                to find the channel for
+
+        Returns:
+            list(self.channel_label.keys())[
+                list(self.channel_label.values()).index(label)
+            ] (int) : channel integer from the channel label as a string
+
+        Raises:
+            ValueError: If label specified is not present"""
 
         if label not in self.channel_label.values():
-            raise ValueError(
-                "The label specified is not present in" "the channel labels"
-            )
+            raise ValueError("The label specified is not present in the channel labels")
 
         return list(self.channel_label.keys())[
             list(self.channel_label.values()).index(label)
@@ -132,7 +164,6 @@ class item:
                 bins/pixels in x,y,z
             cmap (list of strings) : The colourmaps used to
                 plot the histograms
-            plot (bool): Whether to plot the output
             vis_interpolation (string): How to inerpolate
                 the image for visualisation"""
 
@@ -313,6 +344,9 @@ class item:
         Args:
             cmap (list of strings) : Colourmaps napari uses to
                 plot the histograms
+
+        Raises:
+            ValueError: If try to manually segment file which already has gt labels
         """
 
         # if already has gt label raise error
@@ -386,7 +420,6 @@ class item:
         """
 
         if self.dim == 2:
-
             # create dataframe
             flatten_mask = np.ravel(self.histo_mask)
             mesh_grid = np.meshgrid(
@@ -433,12 +466,12 @@ class item:
 
         Args:
             img_mask (np.ndarray): Mask over the image -
-            to reiterate, to convert this to histogram space need
-            to transpose it
+                to reiterate, to convert this to histogram space need
+                to transpose it
 
         Returns:
             df (polars dataframe): Original dataframe with
-            additional column with the predicted label"""
+                additional column with the predicted label"""
 
         if self.dim == 2:
             # list of mask dataframes, each mask dataframe contains
@@ -501,8 +534,11 @@ class item:
                 additional column for each localisation
                 containing the label for each channel
 
-        Returns:
-            None"""
+        Raises:
+            NotImplementedError: This method is not implemented yet
+            ValueError: If try to drop zero label when none is present"""
+
+        raise NotImplementedError
 
         save_df = self.df
 
@@ -525,13 +561,12 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if "gt_label" in save_df.columns():
-                # change so checks scope
+            if self.gt_label_scope == "loc":
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
 
-        if "gt_label" in save_df.columns() and self.gt_label_fov is not None:
+        if self.gt_label_scope == "fov":
             raise ValueError(
                 "Have not worked out how to deal with this yet - how should we save"
                 "fov label for .csv"
@@ -542,7 +577,6 @@ class item:
             print(
                 "channel label is now a dictionary which changes below line so need to change"
             )
-            channel_label = ["egfr", "ereg"]
             label_df = pl.DataFrame({"chan_label": self.channel_label}).with_row_count(
                 "channel"
             )
@@ -561,8 +595,6 @@ class item:
         save_folder,
         drop_zero_label=False,
         drop_pixel_col=False,
-        gt_label_fov=None,
-        gt_label_map=None,
         overwrite=False,
     ):
         """Save the dataframe to a parquet with option to drop positions which
@@ -575,17 +607,12 @@ class item:
                 label positions are saved to parquet
             drop_pixel_col (bool): If True then don't save
                 the column with x,y,z pixel
-            # change
-            gt_label_fov (int) : Value of the gt label for the fov if present; If gt are per
-            localisatoin then they are in column "gt_label"
-            gt_label_map (dict): Dictionary with integer keys
-                representing the gt labels for each localisation
-                with value being a string, representing the
-                real concept e.g. 0:'dog', 1:'cat'
             overwrite (bool): Whether to overwrite
 
-        Returns:
-            None
+        Raises:
+            ValueError: If try to drop zero label but no gt label; If the
+                gt label and gt label scope are incompatible; If try
+                to overwrite without manually saying want to do this
         """
 
         save_df = self.df
@@ -599,7 +626,7 @@ class item:
 
         # drop rows with zero label
         if drop_zero_label:
-            if "gt_label" in save_df.columns():
+            if self.gt_label_scope == "loc":
                 save_df = save_df.filter(pl.col("gt_label") != 0)
             else:
                 raise ValueError("Can't drop zero label as no gt label column")
@@ -611,15 +638,34 @@ class item:
         old_metadata = arrow_table.schema.metadata
 
         # convert to bytes
-        gt_label_map = json.dumps(gt_label_map).encode("utf-8")
+        gt_label_map = json.dumps(self.gt_label_map).encode("utf-8")
+
+        if self.gt_label_scope == "loc":
+            if self.gt_label is not None:
+                raise ValueError("Cannot have gt label per fov and loc")
+            if self.gt_label_map is None:
+                raise ValueError("Need a label map")
+        if self.gt_label_scope is None:
+            warnings.warn("No ground truth label or gt label map")
+            if self.gt_label_map is not None:
+                raise ValueError("Cant have gt label map and no labels")
+            if self.gt_label is not None:
+                raise ValueError("Cant have no scope and a gt label")
+        if self.gt_label_scope == "fov":
+            if self.gt_label is None:
+                raise ValueError("Need a gt label")
+            if "gt_label" in self.df.columns:
+                raise ValueError("Cannot have gt label column for fov label")
+            if self.gt_label_map is None:
+                raise ValueError("Need a label map")
 
         meta_data = {
             "name": self.name,
             "dim": str(self.dim),
             "channels": str(self.channels),
             "channel_label": str(self.channel_label),
-            # change
-            "gt_label_fov": str(gt_label_fov),
+            "gt_label_scope": self.gt_label_scope,
+            "gt_label": str(self.gt_label),
             "gt_label_map": gt_label_map,
             "bin_sizes": str(self.bin_sizes),
         }
@@ -674,19 +720,14 @@ class item:
         dim = int(dim)
         channels = arrow_table.schema.metadata[b"channels"]
         channels = ast.literal_eval(channels.decode("utf-8"))
-        gt_label_fov = arrow_table.schema.metadata[b"gt_label_fov"]
-        gt_label_fov = int(dim)
-        print(
-            "channel label is now a dictionary which changes below line so need to change"
-        )
-        exit()
+        gt_label = arrow_table.schema.metadata[b"gt_label"]
+        gt_label = int(gt_label)
+        gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
         channel_label = arrow_table.schema.metadata[b"channel_label"]
         channel_label = ast.literal_eval(channel_label.decode("utf-8"))
         bin_sizes = arrow_table.schema.metadata[b"bin_sizes"]
         bin_sizes = ast.literal_eval(bin_sizes.decode("utf-8"))
         df = pl.from_arrow(arrow_table)
-
-        # print("channel label", channel_label)
 
         self.__init__(
             name=name,
@@ -694,8 +735,9 @@ class item:
             dim=dim,
             channels=channels,
             channel_label=channel_label,
-            gt_label_fov=gt_label_fov,
+            gt_label=gt_label,
             gt_label_map=gt_label_map,
+            gt_label_scope=gt_label_scope,
             bin_sizes=bin_sizes,
         )
 
@@ -754,7 +796,7 @@ class item:
             df = self.df.filter(pl.col("channel") == chan)
 
             histo = np.zeros((x_bins, y_bins))
-            df = df.groupby(by=["x_pixel", "y_pixel"]).count()
+            df = df.group_by(by=["x_pixel", "y_pixel"]).count()
             x_pixels = df["x_pixel"].to_numpy()
             y_pixels = df["y_pixel"].to_numpy()
             counts = df["count"].to_numpy()
@@ -768,7 +810,10 @@ class item:
         return histo, channel_map, label_map
 
     def render_seg(self):
-        """Render the segmentation of the histogram"""
+        """Render the segmentation of the histogram
+
+        Returns:
+            histo (np.histogram) : Segmentation of the histogram"""
 
         labels = self.df.select(pl.col("gt_label")).to_numpy()
         x_pixels = self.df.select(pl.col("x_pixel")).to_numpy()

@@ -1,20 +1,18 @@
 """PointTransformer
 
 
-PointTransformer adapted from 
+PointTransformer adapted from
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transformer_classification.py
 and
 https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transformer_segmentation.py
 
-Originally in 
-PointTransformer http://arxiv.org/abs/2012.09164 
+Originally in
+PointTransformer http://arxiv.org/abs/2012.09164
 """
-
 
 import torch
 import torch.nn.functional as F
 from torch.nn import Linear as Lin
-import warnings
 from torch_geometric.nn import (
     MLP,
     PointTransformerConv,
@@ -36,15 +34,18 @@ class TransformerBlock(torch.nn.Module):
         # !TODO: Below needs to depend on the dimensions and in paper it says
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
-        self.pos_nn = MLP([dim, pos_nn_layers, out_channels], norm=None, plain_last=False)
+        self.pos_nn = MLP(
+            [dim, pos_nn_layers, out_channels], norm=None, plain_last=False
+        )
 
         # HARDCODE
-        self.attn_nn = MLP([out_channels, attn_nn_layers, out_channels], norm=None,
-                           plain_last=False)
+        self.attn_nn = MLP(
+            [out_channels, attn_nn_layers, out_channels], norm=None, plain_last=False
+        )
 
-        self.transformer = PointTransformerConv(in_channels, out_channels,
-                                                pos_nn=self.pos_nn,
-                                                attn_nn=self.attn_nn)
+        self.transformer = PointTransformerConv(
+            in_channels, out_channels, pos_nn=self.pos_nn, attn_nn=self.attn_nn
+        )
 
     def forward(self, x, pos, edge_index):
         x = self.lin_in(x).relu()
@@ -54,10 +55,11 @@ class TransformerBlock(torch.nn.Module):
 
 
 class TransitionUp(torch.nn.Module):
-    '''
-        Reduce features dimensionnality and interpolate back to higher
-        resolution and cardinality
-    '''
+    """
+    Reduce features dimensionnality and interpolate back to higher
+    resolution and cardinality
+    """
+
     def __init__(self, in_channels, out_channels, k):
         super().__init__()
         self.mlp_sub = MLP([in_channels, out_channels], plain_last=False)
@@ -69,8 +71,9 @@ class TransitionUp(torch.nn.Module):
         x_sub = self.mlp_sub(x_sub)
 
         # interpolate low-res feats to high-res points
-        x_interpolated = knn_interpolate(x_sub, pos_sub, pos, k=self.k,
-                                         batch_x=batch_sub, batch_y=batch)
+        x_interpolated = knn_interpolate(
+            x_sub, pos_sub, pos, k=self.k, batch_x=batch_sub, batch_y=batch
+        )
 
         x = self.mlp(x) + x_interpolated
 
@@ -78,10 +81,11 @@ class TransitionUp(torch.nn.Module):
 
 
 class TransitionDown(torch.nn.Module):
-    '''
-        Samples the input point cloud by a ratio percentage to reduce
-        cardinality and uses an mlp to augment features dimensionnality
-    '''
+    """
+    Samples the input point cloud by a ratio percentage to reduce
+    cardinality and uses an mlp to augment features dimensionnality
+    """
+
     def __init__(self, in_channels, out_channels, ratio, k):
         super().__init__()
         self.k = k
@@ -96,15 +100,21 @@ class TransitionDown(torch.nn.Module):
         # a cluster despite being just points in the first layer) t
         # he k nearest points & beware of self loop
         sub_batch = batch[id_clusters] if batch is not None else None
-        id_k_neighbor = knn(pos, pos[id_clusters], k=self.k, batch_x=batch,
-                            batch_y=sub_batch)
+        id_k_neighbor = knn(
+            pos, pos[id_clusters], k=self.k, batch_x=batch, batch_y=sub_batch
+        )
 
         # transformation of features through a simple MLP
         x = self.mlp(x)
 
         # Max pool onto each cluster the features from knn in points
-        x_out = scatter(x[id_k_neighbor[1]], id_k_neighbor[0], dim=0,
-                        dim_size=id_clusters.size(0), reduce='max')
+        x_out = scatter(
+            x[id_k_neighbor[1]],
+            id_k_neighbor[0],
+            dim=0,
+            dim_size=id_clusters.size(0),
+            reduce="max",
+        )
 
         # keep only the clusters and their max-pooled features
         sub_pos, out = pos[id_clusters], x_out
@@ -116,15 +126,14 @@ class Classifier(torch.nn.Module):
         super().__init__()
 
         self.name = "PointTransformerClassifier"
-        self.k = config['k']
-        in_channels = config['in_channels']
-        out_channels = config['out_channels']
-        dim_model = config['dim_model']
+        self.k = config["k"]
+        in_channels = config["in_channels"]
+        out_channels = config["out_channels"]
+        dim_model = config["dim_model"]
         output_mlp_layers = config["output_mlp_layers"]
-        ratio = config['ratio']
+        ratio = config["ratio"]
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
-        
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -132,11 +141,13 @@ class Classifier(torch.nn.Module):
         # first block
         self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
 
-        self.transformer_input = TransformerBlock(in_channels=dim_model[0],
-                                                  out_channels=dim_model[0],
-                                                  dim=dim,
-                                                  pos_nn_layers=pos_nn_layers,
-                                                  attn_nn_layers=attn_nn_layers)
+        self.transformer_input = TransformerBlock(
+            in_channels=dim_model[0],
+            out_channels=dim_model[0],
+            dim=dim,
+            pos_nn_layers=pos_nn_layers,
+            attn_nn_layers=attn_nn_layers,
+        )
         # backbone layers
         self.transformers_down = torch.nn.ModuleList()
         self.transition_down = torch.nn.ModuleList()
@@ -144,21 +155,29 @@ class Classifier(torch.nn.Module):
         for i in range(len(dim_model) - 1):
             # Add Transition Down block followed by a Transformer block
             self.transition_down.append(
-                TransitionDown(in_channels=dim_model[i],
-                               out_channels=dim_model[i + 1], ratio=ratio, k=self.k))
+                TransitionDown(
+                    in_channels=dim_model[i],
+                    out_channels=dim_model[i + 1],
+                    ratio=ratio,
+                    k=self.k,
+                )
+            )
 
             self.transformers_down.append(
-                TransformerBlock(in_channels=dim_model[i + 1],
-                                 out_channels=dim_model[i + 1]),
-                                 dim=dim,
-                                 pos_nn_layers=pos_nn_layers,
-                                 attn_nn_layers=attn_nn_layers)
+                TransformerBlock(
+                    in_channels=dim_model[i + 1], out_channels=dim_model[i + 1]
+                ),
+                dim=dim,
+                pos_nn_layers=pos_nn_layers,
+                attn_nn_layers=attn_nn_layers,
+            )
 
         # class score computation
-        self.mlp_output = MLP([dim_model[-1], output_mlp_layers, out_channels], norm=None)
+        self.mlp_output = MLP(
+            [dim_model[-1], output_mlp_layers, out_channels], norm=None
+        )
 
     def forward(self, x, pos, batch=None):
-
         # add dummy features in case there is none
         if x is None:
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
@@ -186,17 +205,16 @@ class Classifier(torch.nn.Module):
 
 
 class Segmenter(torch.nn.Module):
-
     def __init__(self, config, dim=2):
         super().__init__()
 
         self.name = "PointTransformerSegmenter"
-        self.k = config['k']
-        k_up = config['k_up']
-        in_channels = config['in_channels']
-        out_channels = config['out_channels']
-        dim_model = config['dim_model']
-        ratio = config['ratio']
+        self.k = config["k"]
+        k_up = config["k_up"]
+        in_channels = config["in_channels"]
+        out_channels = config["out_channels"]
+        dim_model = config["dim_model"]
+        ratio = config["ratio"]
         output_mlp_layers = config["output_mlp_layers"]
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
@@ -219,52 +237,62 @@ class Segmenter(torch.nn.Module):
         self.transition_down = torch.nn.ModuleList()
 
         for i in range(0, len(dim_model) - 1):
-
             # Add Transition Down block followed by a Point Transformer block
             self.transition_down.append(
-                TransitionDown(in_channels=dim_model[i],
-                               out_channels=dim_model[i + 1], ratio=ratio, k=self.k))
+                TransitionDown(
+                    in_channels=dim_model[i],
+                    out_channels=dim_model[i + 1],
+                    ratio=ratio,
+                    k=self.k,
+                )
+            )
 
             self.transformers_down.append(
-                TransformerBlock(in_channels=dim_model[i + 1],
-                                 out_channels=dim_model[i + 1], 
-                                 dim=dim,
-                                 pos_nn_layers=pos_nn_layers,
-                                 attn_nn_layers=attn_nn_layers)
+                TransformerBlock(
+                    in_channels=dim_model[i + 1],
+                    out_channels=dim_model[i + 1],
+                    dim=dim,
+                    pos_nn_layers=pos_nn_layers,
+                    attn_nn_layers=attn_nn_layers,
+                )
             )
 
             # Add Transition Up block followed by Point Transformer block
             self.transition_up.append(
-                TransitionUp(in_channels=dim_model[i + 1],
-                             out_channels=dim_model[i],
-                             k=k_up)
+                TransitionUp(
+                    in_channels=dim_model[i + 1], out_channels=dim_model[i], k=k_up
+                )
             )
 
             self.transformers_up.append(
-                TransformerBlock(in_channels=dim_model[i],
-                                 out_channels=dim_model[i],
-                                 dim=dim,
-                                 pos_nn_layers=pos_nn_layers,
-                                 attn_nn_layers=attn_nn_layers)
+                TransformerBlock(
+                    in_channels=dim_model[i],
+                    out_channels=dim_model[i],
+                    dim=dim,
+                    pos_nn_layers=pos_nn_layers,
+                    attn_nn_layers=attn_nn_layers,
+                )
             )
 
         # summit layers
-        self.mlp_summit = MLP([dim_model[-1], dim_model[-1]], norm=None,
-                              plain_last=False)
+        self.mlp_summit = MLP(
+            [dim_model[-1], dim_model[-1]], norm=None, plain_last=False
+        )
 
         self.transformer_summit = TransformerBlock(
             in_channels=dim_model[-1],
             out_channels=dim_model[-1],
             dim=dim,
             pos_nn_layers=pos_nn_layers,
-            attn_nn_layers=attn_nn_layers
+            attn_nn_layers=attn_nn_layers,
         )
 
         # class score computation
-        self.mlp_output = MLP([dim_model[0], output_mlp_layers, out_channels], norm=None)
+        self.mlp_output = MLP(
+            [dim_model[0], output_mlp_layers, out_channels], norm=None
+        )
 
     def forward(self, data):
-
         x = data.x
         pos = data.pos
         batch = data.batch
@@ -301,14 +329,16 @@ class Segmenter(torch.nn.Module):
         # backbone up : augment cardinality and reduce dimensionnality
         n = len(self.transformers_down)
         for i in range(n):
-            x = self.transition_up[-i - 1](x=out_x[-i - 2], x_sub=x,
-                                           pos=out_pos[-i - 2],
-                                           pos_sub=out_pos[-i - 1],
-                                           batch_sub=out_batch[-i - 1],
-                                           batch=out_batch[-i - 2])
+            x = self.transition_up[-i - 1](
+                x=out_x[-i - 2],
+                x_sub=x,
+                pos=out_pos[-i - 2],
+                pos_sub=out_pos[-i - 1],
+                batch_sub=out_batch[-i - 1],
+                batch=out_batch[-i - 2],
+            )
 
-            edge_index = knn_graph(out_pos[-i - 2], k=self.k,
-                                   batch=out_batch[-i - 2])
+            edge_index = knn_graph(out_pos[-i - 2], k=self.k, batch=out_batch[-i - 2])
             x = self.transformers_up[-i - 1](x, out_pos[-i - 2], edge_index)
 
         # Class score

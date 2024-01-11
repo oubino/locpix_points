@@ -1,99 +1,212 @@
 """ Features module
 
-This module defines some feature representations that are used repeatedly
+Extracts features for the data
 """
 
+import itertools
+import warnings
+
+import numpy as np
+import polars as pl
 import torch
+from torch_geometric.nn import knn_graph
+from torch_geometric.utils import (
+    add_self_loops,
+    to_undirected,
+)
 
 
-def load_pos_feat(arrow_table, data, pos, feat, min_feat, max_feat):
-    """Decided how to load in position and features to each node
+def load_loc_cluster(
+    data,
+    loc_table,
+    cluster_table,
+    loc_feat,
+    cluster_feat,
+    min_feat_locs,
+    max_feat_locs,
+    min_feat_clusters,
+    max_feat_clusters,
+    kneighboursclusters,
+    fov_x,
+    fov_y,
+    kneighbourslocs=None,
+):
+    """Load in position, features and edge index to each node
 
     Args:
-        arrow_table (parquet arrow table) : Data
-            in form of parquet file
         data (torch_geometric data) : Data item to
-            load position and features into
-        pos (string) : How to load in position data
-        feat (string) : How to load in feature data
-        min_feat (dict) : Minimum values of features for the training dataset
-        max_feat (dict) : Maxmimum values of features over training dataset
+            load position, features and edge index into
+        loc_table (parquet arrow table) : Localisation data
+            in form of parquet file
+        cluster_table (parquet arrow table) : Cluster data
+            in form of parquet file
+        loc_feat (list) : List of features to consider in localisation dataset
+        cluster_feat (list) : List of features to consider in cluster dataset
+        min_feat_locs (dict) : Minimum values of features for the locs training dataset
+        max_feat_locs (dict) : Maxmimum values of features over locs training dataset
+        min_feat_clusters (dict) : Minimum values of features for the clusters training dataset
+        max_feat_clusters (dict) : Maxmimum values of features over clusters training dataset
+        kneighboursclusters (int) : How many nearest neighbours to consider constructing knn graph for
+            cluster dataset
+        fov_x (float) : Size of fov (x) in units of data
+        fov_y (float) : Size of fov (y) in units of data
+        kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
+            loc loc dataset. If None then connects all locs within each cluster. Default (None)
+
     Returns:
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
 
-    if pos == "xy":
-        coord_data, data = xy_pos(arrow_table, data)
-    elif pos == "xyz":
-        coord_data, data = xyz_pos(arrow_table, data)
-    # define coord data in else if position doesn't use
+    # load in positions
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
 
-    if feat is None:
-        data.x = None
-    elif feat == "uniform":
-        data.x = torch.ones((data.pos.shape[0],1))
-    elif feat == "xy" or feat == "xyz":
-        data.x = coord_data
-    elif (type(feat) is list):
-        # first need to check same features used for max/min calc as loaded in
-        assert list(min_feat.keys()) == feat
-        assert list(max_feat.keys()) == feat
-        feat_data = torch.tensor(arrow_table.select(feat).to_pandas().to_numpy())
-        min_vals = torch.tensor(list(min_feat.values()))
-        max_vals = torch.tensor(list(max_feat.values()))
-        feat_data = (feat_data - min_vals)/(max_vals - min_vals)
+    # load in features
+    if min_feat_locs is None:
+        assert loc_feat is None or (type(loc_feat) is list and len(loc_feat) == 0)
+        data["locs"].x = None
+    else:
+        assert list(min_feat_locs.keys()) == loc_feat
+        assert list(max_feat_locs.keys()) == loc_feat
+
+        feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
+        min_vals = torch.tensor(list(min_feat_locs.values()))
+        max_vals = torch.tensor(list(max_feat_locs.values()))
+        feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+        # clamp needed if val/test data has min/max greater than train set min/max
         feat_data = torch.clamp(feat_data, min=0, max=1)
-        data.x = feat_data
+        data["locs"].x = feat_data.float()  # might not need .float()
+
+    if min_feat_clusters is None:
+        assert cluster_feat is None or (
+            type(cluster_feat) is list and len(cluster_feat) == 0
+        )
+        data["clusters"].x = None
+    else:
+        assert list(min_feat_clusters.keys()) == cluster_feat
+        assert list(max_feat_clusters.keys()) == cluster_feat
+
+        feat_data = torch.tensor(
+            cluster_table.select(cluster_feat).to_pandas().to_numpy()
+        )
+        min_vals = torch.tensor(list(min_feat_clusters.values()))
+        max_vals = torch.tensor(list(max_feat_clusters.values()))
+        feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+        # clamp needed if val/test data has min/max greater than train set min/max
+        feat_data = torch.clamp(feat_data, min=0, max=1)
+        data["clusters"].x = feat_data.float()  # might not need .float()
+
+    # compute edge connections - use polars for loc table
+    loc_table = pl.from_arrow(loc_table)
+
+    # locs with clusterID connected to that cluster clusterID
+    loc_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table["clusterID"]])
+    loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
+    # loc_cluster_edges = loc_cluster_edges.to(torch.int64)
+
+    # knn on clusters
+    x = torch.tensor(cluster_table["x_mean"].to_numpy())
+    y = torch.tensor(cluster_table["y_mean"].to_numpy())
+    # first need to check that clusterID is also in correct ordered from 0 to max cluster ID
+    assert np.array_equal(cluster_table["clusterID"].to_numpy(), np.arange(0, len(x)))
+    coords = torch.stack([x, y], axis=-1)
+    batch = torch.zeros(len(coords))
+    # add 1 as with loop = True considers itself as one of the k neighbours
+    cluster_cluster_edges = knn_graph(
+        coords, k=kneighboursclusters + 1, batch=batch, loop=True
+    )
+    cluster_cluster_edges = to_undirected(cluster_cluster_edges)
+
+    # first need to check locs in correct form
+    assert np.array_equal(
+        loc_cluster_edges[0].numpy(), np.arange(0, len(loc_cluster_edges[0]))
+    )
+    if kneighbourslocs is None:
+        # locs with same clusterID
+        edges = []
+        # iterate through clusters
+        for i in range(torch.max(loc_cluster_edges[1])):
+            # get the loc indices for the clusters
+            loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1] == i)]
+            combos = list(itertools.permutations(loc_indices, 2))
+            combos = np.ascontiguousarray(np.transpose(combos))
+            edges.append(combos)
+        loc_loc_edges = np.concatenate(edges, axis=-1)
+        loc_loc_edges = torch.from_numpy(loc_loc_edges)
+        loc_loc_edges, _ = add_self_loops(loc_loc_edges)
+    else:
+        batch_loc_loc = torch.tensor(loc_table["clusterID"].to_numpy())
+        indices = torch.sort(batch_loc_loc).indices
+        x_locs_idx = x_locs[indices]
+        y_locs_idx = y_locs[indices]
+        batch_loc_loc = batch_loc_loc[indices]
+        loc_indices = np.arange(0, len(loc_table))[indices]
+        loc_coords = torch.stack([x_locs_idx, y_locs_idx], axis=-1)
+        # add 1 as with loop = True considers itself as one of the k neighbours
+        loc_loc_edges = knn_graph(
+            loc_coords, k=kneighbourslocs + 1, batch=batch_loc_loc, loop=True
+        )
+        # loc loc edges [0] is the neighbours
+        # loc loc edges [1] is the original points
+        locs_zero = loc_indices[loc_loc_edges[0]]
+        locs_one = loc_indices[loc_loc_edges[1]]
+        loc_loc_edges = np.stack([locs_zero, locs_one])
+        loc_loc_edges = torch.from_numpy(loc_loc_edges)
+    # loc_loc_edges = loc_loc_edges.to(torch.int64)
+
+    # Load in positions afterwards as scale data to between -1 and 1 - this might affect
+    # above code
+    # scale positions
+    min_x = x_locs.min()
+    min_y = y_locs.min()
+    x_range = x_locs.max() - min_x
+    y_range = y_locs.max() - min_y
+    if x_range < 0.95 * fov_x:
+        warnings.warn(
+            f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}"
+        )
+    if y_range < 0.95 * fov_y:
+        warnings.warn(
+            f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
+        )
+    range_xy = max(x_range, y_range)
+
+    # scale position
+    # shift and scale biggest axis from -1 to 1
+    x_locs = (x_locs - min_x) / range_xy
+    y_locs = (y_locs - min_y) / range_xy
+    # scale to between -1 and 1
+    x_locs = 2.0 * x_locs - 1.0
+    y_locs = 2.0 * y_locs - 1.0
+    assert x_locs.min() == -1.0 or y_locs.min() == 1.0
+    assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    data["locs"].pos = loc_coords.float()
+
+    # scale cluster coordinates
+    x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
+    y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
+
+    # scale from -1 to 1
+    x_clusters = (x_clusters - min_x) / range_xy
+    y_clusters = (y_clusters - min_y) / range_xy
+    # scale from -1 to 1
+    x_clusters = 2.0 * x_clusters - 1.0
+    y_clusters = 2.0 * y_clusters - 1.0
+    cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
+
+    data["clusters"].pos = cluster_coords.float()
+
+    data["locs", "in", "clusters"].edge_index = loc_cluster_edges
+    data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
+    data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
+
+    # warnings.warn(f'Loc to cluster edges are undirected: {is_undirected(loc_cluster_edges)}')
+    # warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
+    # warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
+
+    # warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
+    # warnings.warn("Need to check that graph is connected correctly")
+    # warnings.warn("Data should be normalised and scaled correctly")
+
     return data
-
-
-def xy_pos(arrow_table, data):
-    """Load in xy data to each node as position
-
-    Args:
-        arrow_table (parquet arrow table) : Data
-                in form of parquet file
-        data (torch_geometric data) : Data item to load
-            position to
-
-    Returns:
-        coord_data (tensor) : the coordinates for the
-            data point
-        data (torch geometric data) : Data item with
-            position loaded in now"""
-
-    # convert to tensor (Number of points x 2 (dimensions))
-    x = torch.tensor(arrow_table["x"].to_numpy())
-    y = torch.tensor(arrow_table["y"].to_numpy())
-    coord_data = torch.stack((x, y), dim=1)
-    data.pos = coord_data
-
-    return coord_data, data
-
-
-def xyz_pos(arrow_table, data, dimensions):
-    """Load in xyz data to each node as position
-
-    Args:
-        arrow_table (parquet arrow table) : Data
-                    in form of parquet file
-        data (torch_geometric data) : Data item to load
-            position to
-        dimensions (int) : Dimensions of the data
-    Returns:
-        coord_data (tensor) : the coordinates for the
-            data point
-        data (torch geometric data) : Data item with
-            position loaded in now"""
-
-    if dimensions == 2:
-        raise ValueError("Can't load in xyz data as only have two dimensions")
-
-    # convert to tensor (Number of points x 3 (dimensions))
-    x = torch.tensor(arrow_table["x"].to_numpy())
-    y = torch.tensor(arrow_table["y"].to_numpy())
-    z = torch.tensor(arrow_table["z"].to_numpy())
-    coord_data = torch.stack((x, y, z), dim=1)
-    data.pos = coord_data
-
-    return coord_data, data

@@ -1,0 +1,19 @@
+channel_choice:
+- 0
+channel_col: channel
+channel_label:
+  0: unk
+dim: 2
+drop_pixel_col: false
+features: []
+frame_col: frame
+gt_label_loc:
+  gt_label_col: null
+  gt_label_map:
+    0: null
+    1: null
+gt_label_scope: fov
+include_files: all
+x_col: x
+y_col: y
+z_col: null

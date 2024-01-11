@@ -4,19 +4,21 @@ Recipe :
     1. Create dataset
     2. Process dataset - pre-transform and save to .pt
 """
-import random
-import os
-import yaml
-from locpix_points.data_loading import datastruc
-from functools import partial
 import argparse
+import ast
 import json
+import os
+import random
 import time
 import warnings
-import torch
-import ast
-import polars as pl
+from functools import partial
+
 import numpy as np
+import polars as pl
+import torch
+import yaml
+
+from locpix_points.data_loading import datastruc
 
 # import torch_geometric.transforms as T
 
@@ -30,29 +32,97 @@ def pre_filter(data, inclusion_list=[]):
         data (torch.geometric.data) : The pytorch
             geometric dataitem part of the dataset
         inclusion_list (list) : List of names
-            indicating which data should be included"""
+            indicating which data should be included
+
+    Returns:
+        0/1: 0 if file shouldn't be included in final dataset and 1
+            if it should"""
 
     if data.name in inclusion_list:
         return 1
     else:
         return 0
-    
+
+
 def load_pre_filter(path):
     """Load in a pre-filter from previous run
-    
+
     Args:
-        path (string) : Path to the pre-filter.pt"""
+        path (string) : Path to the pre-filter.pt
+
+    Returns:
+        pre_filter (?) : Pre filter saved
+
+    Raises:
+        ValueError : If pre-filter is not correct type"""
 
     pre_filter = torch.load(path)
-    if pre_filter.startswith("functools.partial(<function>, inclusion_list=") and pre_filter[-1] == ")":
-        pre_filter = pre_filter.removeprefix("functools.partial(<function>, inclusion_list=")
+    if (
+        pre_filter.startswith("functools.partial(<function>, inclusion_list=")
+        and pre_filter[-1] == ")"
+    ):
+        pre_filter = pre_filter.removeprefix(
+            "functools.partial(<function>, inclusion_list="
+        )
         pre_filter = pre_filter[:-1:]
-        return ast.literal_eval(pre_filter)  
+        return ast.literal_eval(pre_filter)
     else:
         raise ValueError("Unknown pre-filter type")
 
 
-def main():
+def minmax(config, feat_str, file_directory, train_list):
+    """Calculate minimum and maximum values of the features
+    in the file
+
+    Args:
+        config (dict): Configuration for processing
+        feat_str (str): loc_feat or cluster_feat depending on if
+            calculating for the localisations or clusters
+        file_directory (str): Directory containing the files
+        train_list (list): List of files to load in
+
+    Returns:
+        min_vals (dict): Dictioanry containing the minimum values for the
+            features
+        max_vals (dict): Dictioanry containing the maximum values for the
+            features
+
+    Raises:
+        NotImplementedError: If the features in the config file
+            are not correct
+    """
+    if type(config[feat_str]) is list and len(config[feat_str]) != 0:
+        for index, file in enumerate(train_list):
+            df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
+            min_df = df.select(pl.col(config[feat_str]).min())
+            max_df = df.select(pl.col(config[feat_str]).max())
+            if index == 0:
+                min_vals = min_df.to_numpy()[0]
+                max_vals = max_df.to_numpy()[0]
+            else:
+                min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
+                max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
+    elif type(config[feat_str]) is list and len(config[feat_str]) == 0:
+        return None, None
+    elif config[feat_str] is None:
+        return None, None
+    else:
+        raise NotImplementedError
+
+    min_vals = dict(zip(config[feat_str], min_vals))
+    max_vals = dict(zip(config[feat_str], max_vals))
+
+    return min_vals, max_vals
+
+
+def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        NotImplementedError: If model type not recognised"""
 
     # parse arugments
     parser = argparse.ArgumentParser(
@@ -79,6 +149,15 @@ def main():
         required=True,
     )
 
+    parser.add_argument(
+        "-o",
+        "--output_folder",
+        action="store",
+        type=str,
+        help="location of the output folder, if not specified defaults\
+                to project_directory/procseed",
+    )
+
     group = parser.add_mutually_exclusive_group()
 
     group.add_argument(
@@ -95,15 +174,24 @@ def main():
         "-m",
         "--manual_split",
         type=str,
-        nargs='+',
-        action='append',
+        nargs="+",
+        action="append",
         default=None,
         help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files",
     )
 
-    args = parser.parse_args()
+    group.add_argument(
+        "-k",
+        "--k_split",
+        type=str,
+        nargs="+",
+        action="append",
+        default=None,
+        help="list of lists, list[0]=train files, list[1] = val files, list[2] = test files\
+              has to be slightly different to manual split",
+    )
 
-    print(args.manual_split)
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
 
@@ -129,13 +217,16 @@ def main():
     # Directory of the .parquet files have been
     # preprocessed by preprocessing module but
     # are raw with respect to pytorch/analysis
-    processed_dir_root = os.path.join(project_directory, "processed")
+    if args.output_folder is not None:
+        processed_dir_root = os.path.join(project_directory, args.output_folder)
+    else:
+        processed_dir_root = os.path.join(project_directory, "processed")
 
     # split into train/val/test using pre filter
 
     # split randomly
-    if args.split is None and args.manual_split is None:
-        file_list = os.listdir(os.path.join(project_directory, "preprocessed/annotated"))
+    if args.split is None and args.manual_split is None and args.k_split is None:
+        file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
         # split into train/test/val
@@ -146,10 +237,12 @@ def main():
         val_list = file_list[train_length : train_length + val_length]
         test_list = file_list[train_length + val_length : len(file_list)]
 
-    elif args.split is not None and args.manual_split is None:
-        warnings.warn("Known omission is if pre-transform is done to dataset"
-                      "this is not currently also done to this dataset as well")
-        
+    elif args.split is not None and args.manual_split is None and args.k_split is None:
+        warnings.warn(
+            "Known omission is if pre-transform is done to dataset"
+            "this is not currently also done to this dataset as well"
+        )
+
         train_list_path = os.path.join(args.split, "processed/train/pre_filter.pt")
         val_list_path = os.path.join(args.split, "processed/val/pre_filter.pt")
         test_list_path = os.path.join(args.split, "processed/test/pre_filter.pt")
@@ -157,11 +250,16 @@ def main():
         train_list = load_pre_filter(train_list_path)
         val_list = load_pre_filter(val_list_path)
         test_list = load_pre_filter(test_list_path)
-    
-    elif args.split is None and args.manual_split is not None:
+
+    elif args.split is None and args.k_split is None and args.manual_split is not None:
         train_list = args.manual_split[0]
         val_list = args.manual_split[1]
         test_list = args.manual_split[2]
+
+    elif args.split is None and args.k_split is not None and args.manual_split is None:
+        train_list = ast.literal_eval(args.k_split[0][0])
+        val_list = ast.literal_eval(args.k_split[1][0])
+        test_list = ast.literal_eval(args.k_split[2][0])
 
     # bind arguments to functions
     train_pre_filter = partial(pre_filter, inclusion_list=train_list)
@@ -180,78 +278,97 @@ def main():
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
 
-    # calculate min/max for each column of training data and save to config file
-    if type(config['feat']) is list:
-        for index, file in enumerate(train_list):
-            df = pl.read_parquet(os.path.join(project_directory, 'preprocessed/annotated', file + '.parquet'))
-            min_df = df.select(pl.col(config['feat']).min())
-            max_df = df.select(pl.col(config['feat']).max())
-            if index == 0:
-                min_vals = min_df.to_numpy()[0]
-                max_vals = max_df.to_numpy()[0]
-            else:
-                min_vals = np.min((min_vals, min_df.to_numpy()[0]), axis=0)
-                max_vals = np.max((max_vals, max_df.to_numpy()[0]), axis=0)
-    min_vals = dict(zip(config['feat'], min_vals))
-    max_vals = dict(zip(config['feat'], max_vals))
+    # calculate min/max features
+    if config["model"] == "ClusterLoc":
+        file_directory = os.path.join(
+            project_directory, "preprocessed/featextract/locs"
+        )
+        min_feat_locs, max_feat_locs = minmax(
+            config, "loc_feat", file_directory, train_list
+        )
+        file_directory = os.path.join(
+            project_directory, "preprocessed/featextract/clusters"
+        )
+        min_feat_clusters, max_feat_clusters = minmax(
+            config, "cluster_feat", file_directory, train_list
+        )
 
-    # TODO: #3 Add in pre-transforms to process @oubino
+        print("Train set...")
+        # create train dataset
+        _ = datastruc.ClusterLocDataset(
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            train_folder,
+            config["label_level"],
+            train_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform introduced in train script
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config["kneighboursclusters"],
+            config["fov_x"],
+            config["fov_y"],
+            kneighbourslocs=config["kneighbourslocs"],
+        )
 
-    print("Train set...")
-    # create train dataset
-    trainset = datastruc.SMLMDataset(
-        config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
-        train_folder,
-        transform=None,
-        pre_transform=None,
-        # e.g. pre_transform =
-        # T.RadiusGraph(r=0.0000003,
-        # max_num_neighbors=1),
-        pos=config["pos"],
-        feat=config["feat"],
-        label_level=config["label_level"],
-        pre_filter=train_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
-    )
+        print("Val set...")
+        # create val dataset
+        _ = datastruc.ClusterLocDataset(
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            val_folder,
+            config["label_level"],
+            val_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config["kneighboursclusters"],
+            config["fov_x"],
+            config["fov_y"],
+            kneighbourslocs=config["kneighbourslocs"],
+        )
 
-    print("Val set...")
-    # create val dataset
-    valset = datastruc.SMLMDataset(
-        config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
-        val_folder,
-        transform=None,
-        pre_transform=None,
-        pos=config["pos"],
-        feat=config["feat"],
-        label_level=config["label_level"],
-        pre_filter=val_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
-    )
+        print("Test set...")
+        # create test dataset
+        _ = datastruc.ClusterLocDataset(
+            os.path.join(project_directory, "preprocessed/featextract/locs"),
+            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            test_folder,
+            config["label_level"],
+            test_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["loc_feat"],
+            config["cluster_feat"],
+            min_feat_locs,
+            max_feat_locs,
+            min_feat_clusters,
+            max_feat_clusters,
+            config["kneighboursclusters"],
+            config["fov_x"],
+            config["fov_y"],
+            kneighbourslocs=config["kneighbourslocs"],
+        )
 
-    print("Test set...")
-    # create test dataset
-    testset = datastruc.SMLMDataset(
-        config["hetero"],
-        os.path.join(project_directory, "preprocessed/annotated"),
-        test_folder,
-        transform=None,
-        pre_transform=None,
-        pos=config["pos"],
-        feat=config["feat"],
-        label_level=config["label_level"],
-        pre_filter=test_pre_filter,
-        min_feat=min_vals,
-        max_feat=max_vals,
-    )
+        # save yaml file
+        yaml_save_loc = os.path.join(project_directory, "process.yaml")
+        with open(yaml_save_loc, "w") as outfile:
+            yaml.dump(config, outfile)
 
-    # save yaml file
-    yaml_save_loc = os.path.join(project_directory, "process.yaml")
-    with open(yaml_save_loc, "w") as outfile:
-        yaml.dump(config, outfile)
+    else:
+        raise NotImplementedError
 
 
 if __name__ == "__main__":

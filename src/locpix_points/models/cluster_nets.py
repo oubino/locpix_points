@@ -1,0 +1,436 @@
+"""LocClusterNet
+
+Network embeds localisations within clusters.
+Concatenates this embedding to user derived cluster features.
+GraphNet operates on clusters, goes through linear layer, prediction!
+
+Helped using https://github.com/pyg-team/pytorch_geometric/blob/master/examples/hetero/bipartite_sage.py
+&
+https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sharing
+
+"""
+
+import torch
+from torch.nn import Linear
+from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
+from torch_geometric.nn.pool import global_max_pool, global_mean_pool
+
+
+class LocEncoder(torch.nn.Module):
+    """Module that encodes the localisations
+
+    Attributes:
+        nn (torch.nn.Module) : Neural network used by the PointNetConvolution"""
+
+    def __init__(self, nn):
+        super().__init__()
+        # raise ValueError("Need to define how many channels custom")
+        self.conv = PointNetConv(nn, add_self_loops=False)
+
+    def forward(self, x_locs, pos_locs, edge_index_dict):
+        """The method called when the encoder is used on a data item
+
+        Args:
+            x_locs (torch.tensor): Features of the localisation
+            pos_locs (torch.tensor): Positions of the localisation
+            edge_index_dict (torch.tensor): Edge connections between
+                localisations
+
+        Returns:
+            loc_x (torch.tensor):
+        """
+        # raise ValueError("check + do we need a relu?")
+        loc_x = self.conv(
+            x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
+        ).relu()
+        return loc_x
+
+
+class Loc2Cluster(torch.nn.Module):
+    """Module that takes the features from localisations and
+    aggregates them to the cluster"""
+
+    def __init__(self):
+        super().__init__()
+        # raise ValueError("Max or sum?")
+        self.conv = HeteroConv(
+            {("locs", "in", "clusters"): conv.SimpleConv(aggr="max")}, aggr=None
+        )
+
+    def forward(self, x_dict, edge_index_dict, cluster_feats_present=True):
+        """The method called when this module is used on a data item
+
+        Args:
+            x_dict (dict): Feature dictionaries, with keys
+                'clusters' and 'locs' both containing the features
+                for the respective nodes
+            edge_index_dict (dict): Edge index dictionaries, with keys
+                for the connections between 'locs'-'locs', 'locs'-'clusters' &
+                'clusters'-'clusters'
+            cluster_feats_present (bool): Whether the clusters have features
+                or not
+
+        Returns:
+            x_dict['clusters'] (torch.tensor): Features for the cluster
+        """
+        out = self.conv(x_dict, edge_index_dict)
+        # raise ValueError("Do I need torch.squeeze")
+        # raise ValueError("is dimension concatenating in correct")
+        out["clusters"] = torch.squeeze(out["clusters"])
+        if cluster_feats_present:
+            x_dict["clusters"] = torch.cat(
+                (x_dict["clusters"], out["clusters"]), dim=-1
+            )
+        else:
+            x_dict["clusters"] = out["clusters"]
+        return x_dict["clusters"]
+
+
+class ClusterEncoder(torch.nn.Module):
+    """Module for encoding clusters
+
+    Attributes:
+        channel_list (list): Channel sizes for the MLP used in the neural network
+            used in GINConv"""
+
+    def __init__(self, channel_list):
+        super().__init__()
+        # raise ValueError("Is number of channels correct, and max or average aggregate")
+        nn = MLP(channel_list)
+        # note here as all the same relation the aggr has no effect
+        self.conv = HeteroConv(
+            {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
+        )
+
+    def forward(self, x_dict, edge_index_dict):
+        """The method called when the encoder is used on a data item
+
+        Args:
+            x_dict (dict): Features of the locs/clusters
+            edge_index_dict (dict): Edge connections between
+                locs/clusters
+
+        Returns:
+            out["clusters"].relu() (torch.tensor): Encoded cluster features
+        """
+        out = self.conv(x_dict, edge_index_dict)
+        return out["clusters"].relu()
+        # raise ValueError("Wrong axis when have batch")
+
+
+class LocNet(torch.nn.Module):
+    """Network that encodes the localisations and aggregates to the clusters
+
+    Attributes:
+        encoder_0 (torch.nn.module): First encoder for the localisations
+        encoder_1 (torch.nn.module): Second encoder for the localisations
+        encoder_2 (torch.nn.module): Third encoder for the localisations
+        loc2cluster (torch.nn.module): Module that aggregates features from localisations
+            to clusters
+        device (torch.device): cpu or gpu"""
+
+    def __init__(self, encoder_0, encoder_1, encoder_2, loc2cluster, device):
+        super().__init__()
+        self.device = device
+        self.encoder_0 = encoder_0
+        self.encoder_1 = encoder_1
+        self.encoder_2 = encoder_2
+        self.loc2cluster = loc2cluster
+
+    def forward(self, data):
+        """The method called when locnet is used on a dataitem
+
+        Args:
+            data (torch_geometric.data): Date item from torch geometric
+                that is passing through the network
+
+        Returns:
+            x_dict (dict): Features of the localisation
+            pos_dict (dict): Positions of the localisation
+            edge_index_dict (dict): Edge connections between locs/clusters
+        """
+
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
+            data, self.device
+        )
+
+        x_dict["locs"] = self.encoder_0(
+            x_dict["locs"], pos_dict["locs"], edge_index_dict
+        )
+        x_dict["locs"] = self.encoder_1(
+            x_dict["locs"], pos_dict["locs"], edge_index_dict
+        )
+        x_dict["locs"] = self.encoder_2(
+            x_dict["locs"], pos_dict["locs"], edge_index_dict
+        )
+
+        # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
+        x_dict["clusters"] = self.loc2cluster(
+            x_dict, edge_index_dict, cluster_feats_present
+        )
+
+        return x_dict, pos_dict, edge_index_dict
+
+
+class ClusterNet(torch.nn.Module):
+    """Network for taking the cluster embeddings and making a classification
+
+    Attributes:
+        cluster_encoder_0 (torch.nn.module): First encoder for the clusters
+        cluster_encoder_1 (torch.nn.module): Second encoder for the clusters
+        cluster_encoder_2 (torch.nn.module): Third encoder for the clusters
+        linear (torch.nn.module): Linear layer that operates on cluster embeddings
+            and returns a classification
+    """
+
+    def __init__(self, cluster_encoder_0, cluster_encoder_1, cluster_encoder_2, linear):
+        super().__init__()
+        self.cluster_encoder_0 = cluster_encoder_0
+        self.cluster_encoder_1 = cluster_encoder_1
+        self.cluster_encoder_2 = cluster_encoder_2
+        self.linear = linear
+
+    def forward(self, x_dict, edge_index_dict, batch):
+        """The method called when ClusterNet is used on a dataitem
+
+        Args:
+            x_dict (dict): dictionary with the features for the
+                clusters/locs
+            edge_index_dict (dict): contains the edge connections
+                between the locs/clusters
+            batch (torch.tensor): batch for the clusters
+
+        Returns:
+            self.linear(x_dict['clusters']): Log-probability for the two classes
+                for that FOV
+        """
+        x_dict["clusters"] = self.cluster_encoder_0(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.cluster_encoder_1(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.cluster_encoder_2(x_dict, edge_index_dict)
+
+        # pooling step so end up with one feature vector per fov
+        x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+
+        # linear layer on each fov feature vector
+        return self.linear(x_dict["clusters"])
+
+
+def parse_data(data, device):
+    """Parses a data item into the respective components
+    x_dict, pos_dict, edge_index_dict and also returns whether
+    there are cluster features present
+
+    Args:
+        data (torch.tensor): Data item to be parsed
+        device (torch.device): Device to put the data on
+
+    Returns:
+        x_dict (dict): dictionary containing the features for
+            the data
+        pos_dict (dict): dictionary containing the positions for
+            the data
+        edge_index_dict (dict): dictionary containing the edge
+            connections for the data
+        cluster_feats_present (bool): Whether the clusters have
+            features
+    """
+    try:
+        x_dict = data.x_dict
+        try:
+            x_dict["locs"]
+        except KeyError:
+            x_dict["locs"] = None
+        try:
+            x_dict["clusters"]
+            cluster_feats_present = True
+        except KeyError:
+            num_clusters = data.pos_dict["clusters"].shape[0]
+            x_dict["clusters"] = torch.ones((num_clusters, 1), device=device)
+            cluster_feats_present = False
+    # neither locs nor clusters have features
+    except KeyError:
+        num_clusters = data.pos_dict["clusters"].shape[0]
+        x_dict = {
+            "locs": None,
+            "clusters": torch.ones((num_clusters, 1), device=device),
+        }
+        cluster_feats_present = False
+
+    pos_dict = data.pos_dict
+    edge_index_dict = data.edge_index_dict
+
+    return x_dict, pos_dict, edge_index_dict, cluster_feats_present
+
+
+class ClusterNetHomogeneous(torch.nn.Module):
+    """ClusterNetwork for a homogeneous graph instantiated from a heterogeneous graph
+    This is used for PGExplainer which expects unnormalized class score therefore last layer
+    is unnormalised class score
+
+    Attributes:
+        cluster_net_hetero (torch.nn.Module): The heterogeneous ClusterNetwork from which
+            we will instantiate a homogeneous one
+        config (dict): Configuration for the Network"""
+
+    def __init__(self, cluster_net_hetero, config):
+        super().__init__()
+        # first
+        self.cluster_encoder_0 = conv.GINConv(MLP(config["ClusterEncoderChannels"][0]))
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
+        }
+        self.cluster_encoder_0.load_state_dict(state_dict_saved)
+        # second
+        self.cluster_encoder_1 = conv.GINConv(MLP(config["ClusterEncoderChannels"][1]))
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
+        }
+        self.cluster_encoder_1.load_state_dict(state_dict_saved)
+        # third
+        self.cluster_encoder_2 = conv.GINConv(MLP(config["ClusterEncoderChannels"][2]))
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
+        }
+        self.cluster_encoder_2.load_state_dict(state_dict_saved)
+        # linear
+        self.linear = Linear(
+            config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+        )
+        state_dict_saved = cluster_net_hetero.linear.state_dict()
+        self.linear.load_state_dict(state_dict_saved)
+
+    def forward(self, x, edge_index, batch):
+        """The method called when ClusterNetHomogeneous is used on a dataitem
+
+        Args:
+            x (torch.tensor): cluster features
+            edge_index (torch.tensor): contains the edge connections
+                between the clusters
+            batch (torch.tensor): batch for the clusters
+
+        Returns:
+            self.linear(x): Log probabilities for the classes for the
+                FOV
+        """
+
+        x = self.cluster_encoder_0(x, edge_index).relu()
+        x = self.cluster_encoder_1(x, edge_index).relu()
+        x = self.cluster_encoder_2(x, edge_index).relu()
+
+        # pooling step so end up with one feature vector per fov
+        x = global_max_pool(x, batch)
+
+        # linear layer on each fov feature vector
+        return self.linear(x)
+
+
+class LocClusterNet(torch.nn.Module):
+    """Network that embeds the localisations aggregates this with cluster
+    features if present, then embeds the clusters using a graph network before
+    using a linear layer to make a prediction for the FOV
+
+    Args:
+        config (dict): Dictionary containing the configuration for the network
+        device (torch.device): Whether to run on cpu or gpu"""
+
+    def __init__(self, config, device="cpu"):
+        super().__init__()
+        self.name = "loc_cluster_net"
+        # wrong input channel size 2 might change if locs have features
+        self.loc_net = LocNet(
+            LocEncoder(MLP(config["LocEncoderChannels"][0])),
+            LocEncoder(MLP(config["LocEncoderChannels"][1])),
+            LocEncoder(MLP(config["LocEncoderChannels"][2])),
+            Loc2Cluster(),
+            device,
+        )
+        self.cluster_net = ClusterNet(
+            ClusterEncoder(config["ClusterEncoderChannels"][0]),
+            ClusterEncoder(config["ClusterEncoderChannels"][1]),
+            ClusterEncoder(config["ClusterEncoderChannels"][2]),
+            Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
+        )
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+        # embed each localisation
+        x_dict, _, edge_index_dict = self.loc_net(data)
+
+        # operate graph net on clusters, finish with
+        output = self.cluster_net(x_dict, edge_index_dict, data["clusters"].batch)
+
+        return output.log_softmax(dim=-1)
+
+
+class ClusterNetHetero(torch.nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.name = "cluster_net"
+        self.cluster_net = ClusterNet(
+            ClusterEncoder(config["ClusterEncoderChannels"][0]),
+            ClusterEncoder(config["ClusterEncoderChannels"][1]),
+            ClusterEncoder(config["ClusterEncoderChannels"][2]),
+            Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
+        )
+
+    def forward(self, data):
+        x_dict = data.x_dict
+        edge_index_dict = data.edge_index_dict
+
+        output = self.cluster_net(x_dict, edge_index_dict, data["clusters"].batch)
+
+        return output.log_softmax(dim=-1)
+
+
+class ClusterMLP(torch.nn.Module):
+    """Simple neural network with series of MLPs
+
+    Attributes:
+        name (str): Name of the model
+        MLP (nn.Module): MLP for the module
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.name = "clustermlp"
+        channels = config["channels"]
+        # needs to have two channels at end for each probability
+        # needs to have 7 channels input for the cluster features
+        assert channels[0] == 7
+        assert channels[-1] == 2
+        self.MLP = MLP(config["channels"])
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Raises:
+            KeyError: If clusters don't have features
+            ValueError: Temporary
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        # embed each localisation
+        try:
+            x = data.x_dict["clusters"]
+        except KeyError:
+            raise KeyError("Clusters need to have features present")
+        x = self.MLP(x, batch=data["clusters"].batch)
+        raise ValueError(
+            "Change so that global mean pool while still more than 2 features, then final MLP after"
+        )
+        x = global_mean_pool(x, batch=data["clusters"].batch)
+
+        return x.log_softmax(dim=-1)

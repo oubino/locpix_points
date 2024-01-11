@@ -3,55 +3,25 @@
 Module takes in the .csv files and processes saving the datastructures
 """
 
-import os
-import yaml
-from locpix_points.preprocessing import functions
 import argparse
-import socket
 import json
+import os
+import socket
 import time
 
+import yaml
 
-class project_info:
-    """Project information metadata
-
-    Attributes:
-        metadata (dictionary) : Python dictionary containing
-            the metadata"""
-
-    def __init__(self, time, name):
-        """Initialises metadata with args
-
-        Args:
-            time (string) : Time of project initialisation
-            name (string) : Name of the project"""
-
-        # dictionary
-        self.metadata = {
-            "machine": socket.gethostname(),
-            "name": name,
-            "init_time": time,
-        }
-
-    def save(self, path):
-        """Save the metadata as a .csv
-
-        Args:
-            path (string) : Path to save to"""
-
-        with open(path, "w") as outfile:
-            json.dump(self.metadata, outfile)
-
-    def load(self, path):
-        """Load the metadata
-
-        Args:
-            path (string) : Path to load from"""
-
-        self.metadata = json.load(path)
+from locpix_points.preprocessing import functions
 
 
-def main():
+def main(argv=None):
+    """Main script for the module with variable arguments
+
+    Args:
+        argv : Custom arguments to run script with
+
+    Raises:
+        ValueError: If try to preprocess but already files there"""
 
     # parse arugments
     parser = argparse.ArgumentParser(
@@ -85,28 +55,32 @@ def main():
         help="the location of the project directory",
         required=True,
     )
-    parser.add_argument(
-        "-p",
-        "--parquet",
-        action="store_true",
-        help="if true will process as parquet files",
-    )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
 
     project_directory = args.project_directory
     input_folder = args.input
 
-    # create project directory
+    # create preprocessed directory
     output_folder = os.path.join(project_directory, "preprocessed")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-        # initialise metadata and save
-        metadata = project_info(
-            time.asctime(time.gmtime(time.time())), project_directory
-        )
-        metadata.save(os.path.join(project_directory, "metadata.json"))
+    # save to metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        file = os.path.basename(__file__)
+        if file not in metadata:
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        else:
+            print("Overwriting metadata...")
+            metadata[file] = time.asctime(time.gmtime(time.time()))
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
 
     # load config
     with open(args.config, "r") as ymlfile:
@@ -121,44 +95,23 @@ def main():
 
     # check with user
     print("List of files which will be processed")
-    if args.parquet is False:
-        files = [os.path.join(input_folder, f"{file}.csv") for file in include_files]
-        # check file not already present
-        for file in files:
-            file_name = os.path.basename(file)
-            output_path = os.path.join(
-                output_folder, f"{file_name.replace('.csv', '.parquet')}"
-            )
-            if os.path.exists(output_path):
-                raise ValueError("Can't preprocess as output file already exists")
-        print(files)
-        # check = input("If you are happy with these csvs type YES: ")
-        # if check != "YES":
-        #    exit()
-    elif args.parquet is True:
-        files = [
-            os.path.join(input_folder, f"{file}.parquet") for file in include_files
-        ]
-        # check file not already present
-        for file in files:
-            file_name = os.path.basename(file)
-            output_path = os.path.join(output_folder, f"{file_name}")
-            if os.path.exists(output_path):
-                raise ValueError("Can't preprocess as output file already exists")
-        print(files)
-        # check = input("If you are happy with these parquets type YES: ")
-        # if check != "YES":
-        #    exit()
+    files = [os.path.join(input_folder, f"{file}.parquet") for file in include_files]
+    # check file not already present
+    for file in files:
+        file_name = os.path.basename(file)
+        output_path = os.path.join(output_folder, f"{file_name}")
+        if os.path.exists(output_path):
+            raise ValueError("Can't preprocess as output file already exists")
+    print(files)
+    # check = input("If you are happy with these parquets type YES: ")
+    # if check != "YES":
+    #    exit()
 
     # go through files -> convert to datastructure -> save
-    if args.parquet is True:
-        file_type = "parquet"
-    else:
-        file_type = "csv"
+    gt_label_map = None
     for index, file in enumerate(files):
         item = functions.file_to_datastruc(
             file,
-            file_type,
             config["dim"],
             config["channel_col"],
             config["frame_col"],
@@ -168,36 +121,47 @@ def main():
             config["channel_choice"],
             config["channel_label"],
             config["gt_label_scope"],
-            config["gt_label"],
-            config["gt_label_map"],
+            config["gt_label_loc"],
             config["features"],
         )
 
         # if succesfully get to here on first occasion create folder for data
         if index == 0:
-            if config["gt_label"] is not None:
+            if config["gt_label_scope"] is not None:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/annotated"
+                    project_directory, "preprocessed/gt_label"
                 )
                 os.makedirs(output_directory)
             else:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/not_annotated"
+                    project_directory, "preprocessed/no_gt_label"
                 )
                 os.makedirs(output_directory)
 
-        # have to not drop zero label
-        # as no gt_label yet
         item.save_to_parquet(
             output_directory,
             drop_zero_label=False,
             drop_pixel_col=config["drop_pixel_col"],
         )
 
+        if gt_label_map is None:
+            gt_label_map = item.gt_label_map
+        else:
+            assert gt_label_map == item.gt_label_map
+
+    # save gt label map to metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        metadata["gt_label_map"] = gt_label_map
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
+
     # save yaml file
-    yaml_save_loc = os.path.join(
-        project_directory, f"preprocess_{os.path.basename(input_folder)}.yaml"
-    )
+    yaml_save_loc = os.path.join(project_directory, "preprocess.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
