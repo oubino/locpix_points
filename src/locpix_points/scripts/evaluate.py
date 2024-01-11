@@ -79,6 +79,13 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-w",
+        "--wandbstarted",
+        action="store_true",
+        help="if specified then wandb has already been initialised",
+    )
+
     parser.add_argument("-e", "--explain", action="store_true")
 
     args = parser.parse_args(argv)
@@ -102,6 +109,7 @@ def main(argv=None):
         metadata = json.load(file)
         project_name = metadata["project_name"]
         dataset_name = metadata["dataset_name"]
+        user = metadata["user"]
 
     # if data is on gpu then don't need to pin memory
     # and this causes errors if try
@@ -190,20 +198,28 @@ def main(argv=None):
         batch_size=1,
     )
 
-    wandb.login()
+    if not args.wandbstarted:
+        wandb.login()
 
     # initialise wandb
-    # start a new wandb run to track this script
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project=project_name,
-        # track hyperparameters and run metadata
-        config={
-            "model": args.model_loc,
-            "architecture": model.name,
-            "dataset": dataset_name,
-        },
-    )
+    if not args.wandbstarted:
+        # start a new wandb run to track this script
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project=dataset_name,
+            # set the entity to the user
+            entity=user,
+            # group by dataset
+            group=project_name,
+            # track hyperparameters and run metadata
+            config={
+                "model": args.model_loc,
+                "architecture": model.name,
+                "dataset": dataset_name,
+            },
+        )
+    else:
+        wandb.config["model"] = args.model_loc
 
     # explain
     if args.explain:
@@ -351,7 +367,8 @@ def main(argv=None):
         yaml.dump(config, outfile)
 
     # exit wandb
-    wandb.finish()
+    if not args.wandbstarted:
+        wandb.finish()
 
 
 if __name__ == "__main__":

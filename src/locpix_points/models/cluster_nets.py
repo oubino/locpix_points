@@ -20,12 +20,16 @@ class LocEncoder(torch.nn.Module):
     """Module that encodes the localisations
 
     Attributes:
-        nn (torch.nn.Module) : Neural network used by the PointNetConvolution"""
+        local_nn (torch.nn.Module) : Neural network used by the PointNetConvolution local
+        global_nn (torch.nn.Module) : Neural network used by the PointNetConvolution global
+    """
 
-    def __init__(self, nn):
+    def __init__(self, local_nn, global_nn):
         super().__init__()
         # raise ValueError("Need to define how many channels custom")
-        self.conv = PointNetConv(nn, add_self_loops=False)
+        self.conv = PointNetConv(
+            local_nn=local_nn, global_nn=global_nn, add_self_loops=False
+        )
 
     def forward(self, x_locs, pos_locs, edge_index_dict):
         """The method called when the encoder is used on a data item
@@ -42,7 +46,7 @@ class LocEncoder(torch.nn.Module):
         # raise ValueError("check + do we need a relu?")
         loc_x = self.conv(
             x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
-        ).relu()
+        )  # .relu()
         return loc_x
 
 
@@ -91,12 +95,13 @@ class ClusterEncoder(torch.nn.Module):
 
     Attributes:
         channel_list (list): Channel sizes for the MLP used in the neural network
-            used in GINConv"""
+            used in GINConv
+        dropout (int): Dropout to apply to MLP"""
 
-    def __init__(self, channel_list):
+    def __init__(self, channel_list, dropout):
         super().__init__()
         # raise ValueError("Is number of channels correct, and max or average aggregate")
-        nn = MLP(channel_list)
+        nn = MLP(channel_list, plain_last=False, dropout=dropout)
         # note here as all the same relation the aggr has no effect
         self.conv = HeteroConv(
             {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
@@ -114,7 +119,7 @@ class ClusterEncoder(torch.nn.Module):
             out["clusters"].relu() (torch.tensor): Encoded cluster features
         """
         out = self.conv(x_dict, edge_index_dict)
-        return out["clusters"].relu()
+        return out["clusters"]  # .relu()
         # raise ValueError("Wrong axis when have batch")
 
 
@@ -153,7 +158,6 @@ class LocNet(torch.nn.Module):
         x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
             data, self.device
         )
-
         x_dict["locs"] = self.encoder_0(
             x_dict["locs"], pos_dict["locs"], edge_index_dict
         )
@@ -163,12 +167,10 @@ class LocNet(torch.nn.Module):
         x_dict["locs"] = self.encoder_2(
             x_dict["locs"], pos_dict["locs"], edge_index_dict
         )
-
         # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
         x_dict["clusters"] = self.loc2cluster(
             x_dict, edge_index_dict, cluster_feats_present
         )
-
         return x_dict, pos_dict, edge_index_dict
 
 
@@ -275,21 +277,39 @@ class ClusterNetHomogeneous(torch.nn.Module):
     def __init__(self, cluster_net_hetero, config):
         super().__init__()
         # first
-        self.cluster_encoder_0 = conv.GINConv(MLP(config["ClusterEncoderChannels"][0]))
+        self.cluster_encoder_0 = conv.GINConv(
+            MLP(
+                config["ClusterEncoderChannels"][0],
+                plain_last=False,
+                dropout=config["dropout"],
+            )
+        )
         state_dict_saved = {
             key[40:]: value
             for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
         }
         self.cluster_encoder_0.load_state_dict(state_dict_saved)
         # second
-        self.cluster_encoder_1 = conv.GINConv(MLP(config["ClusterEncoderChannels"][1]))
+        self.cluster_encoder_1 = conv.GINConv(
+            MLP(
+                config["ClusterEncoderChannels"][1],
+                plain_last=False,
+                dropout=config["dropout"],
+            )
+        )
         state_dict_saved = {
             key[40:]: value
             for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
         }
         self.cluster_encoder_1.load_state_dict(state_dict_saved)
         # third
-        self.cluster_encoder_2 = conv.GINConv(MLP(config["ClusterEncoderChannels"][2]))
+        self.cluster_encoder_2 = conv.GINConv(
+            MLP(
+                config["ClusterEncoderChannels"][2],
+                plain_last=False,
+                dropout=config["dropout"],
+            )
+        )
         state_dict_saved = {
             key[40:]: value
             for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
@@ -316,9 +336,9 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 FOV
         """
 
-        x = self.cluster_encoder_0(x, edge_index).relu()
-        x = self.cluster_encoder_1(x, edge_index).relu()
-        x = self.cluster_encoder_2(x, edge_index).relu()
+        x = self.cluster_encoder_0(x, edge_index)  # .relu()
+        x = self.cluster_encoder_1(x, edge_index)  # .relu()
+        x = self.cluster_encoder_2(x, edge_index)  # .relu()
 
         # pooling step so end up with one feature vector per fov
         x = global_max_pool(x, batch)
@@ -341,16 +361,55 @@ class LocClusterNet(torch.nn.Module):
         self.name = "loc_cluster_net"
         # wrong input channel size 2 might change if locs have features
         self.loc_net = LocNet(
-            LocEncoder(MLP(config["LocEncoderChannels"][0])),
-            LocEncoder(MLP(config["LocEncoderChannels"][1])),
-            LocEncoder(MLP(config["LocEncoderChannels"][2])),
+            LocEncoder(
+                MLP(
+                    config["LocEncoderChannels_local"][0],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+                MLP(
+                    config["LocEncoderChannels_global"][0],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+            ),
+            LocEncoder(
+                MLP(
+                    config["LocEncoderChannels_local"][1],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+                MLP(
+                    config["LocEncoderChannels_global"][1],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+            ),
+            LocEncoder(
+                MLP(
+                    config["LocEncoderChannels_local"][2],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+                MLP(
+                    config["LocEncoderChannels_global"][2],
+                    dropout=config["dropout"],
+                    plain_last=False,
+                ),
+            ),
             Loc2Cluster(),
             device,
         )
         self.cluster_net = ClusterNet(
-            ClusterEncoder(config["ClusterEncoderChannels"][0]),
-            ClusterEncoder(config["ClusterEncoderChannels"][1]),
-            ClusterEncoder(config["ClusterEncoderChannels"][2]),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][0], dropout=config["dropout"]
+            ),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][1], dropout=config["dropout"]
+            ),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][2], dropout=config["dropout"]
+            ),
             Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
         )
 
@@ -376,9 +435,15 @@ class ClusterNetHetero(torch.nn.Module):
         super().__init__()
         self.name = "cluster_net"
         self.cluster_net = ClusterNet(
-            ClusterEncoder(config["ClusterEncoderChannels"][0]),
-            ClusterEncoder(config["ClusterEncoderChannels"][1]),
-            ClusterEncoder(config["ClusterEncoderChannels"][2]),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][0], dropout=config["dropout"]
+            ),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][1], dropout=config["dropout"]
+            ),
+            ClusterEncoder(
+                config["ClusterEncoderChannels"][2], dropout=config["dropout"]
+            ),
             Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
         )
 
@@ -404,10 +469,10 @@ class ClusterMLP(torch.nn.Module):
         self.name = "clustermlp"
         channels = config["channels"]
         # needs to have two channels at end for each probability
-        # needs to have 7 channels input for the cluster features
-        assert channels[0] == 7
+        # needs to have 8 channels input for the cluster features
+        assert channels[0] == 8
         assert channels[-1] == 2
-        self.MLP = MLP(config["channels"])
+        self.MLP = MLP(config["channels"], plain_last=True, dropout=config["dropout"])
 
     def forward(self, data):
         """Method called when data runs through network

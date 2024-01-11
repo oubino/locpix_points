@@ -1,0 +1,23 @@
+# params 
+load_data_from_gpu: False
+
+# what trying to predict
+label_level: graph # graph
+
+# model parameters
+model: clustermlp
+
+clustermlp:
+  channels: [8, 32, 128, 32, 2]
+
+num_classes: 2
+
+eval_on_gpu: True
+
+#pgex:
+#  emb_layer_name: cluster_encoder_2
+#  coeff_size: 0.00000001
+#  coeff_ent: 0.00000001
+#  explain_graph: True
+#  max_epochs: 50
+#  lr: 0.1

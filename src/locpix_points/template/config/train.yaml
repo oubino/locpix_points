@@ -7,9 +7,12 @@ model: locclusternet
 
 # parameters for the network
 locclusternet:
-  ClusterEncoderChannels: [[8, 18],[18, 24], [24, 32]]
-  LocEncoderChannels: [[2, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
+  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
+  LocEncoderChannels_local: [[2, 8], [18, 32], [66, 32]]
+  LocEncoderChannels_global: [[8, 16], [32, 64], [32, 8]]
   OutputChannels: 2
+  dropout: 0.5
+
 # optimiser parameters
 optimiser: adam
 lr: 0.001
@@ -31,12 +34,11 @@ transforms:
   # here 1 unit = 20,000nm
   # therefore 15nm = 0.00075 units
   jitter: 0.00075 # number of nm
+  randscale: [0.95,1.05]
+  shear: 0.05
   x_flip: null
   y_flip: null
-  randscale: [0.95,1.05]
   z_rotate: null
-  shear: 0.05
-  normalisescale: null
 
 # pointnetclass:
 #   ratio : [0.5,0.25]

@@ -1,3 +1,20 @@
+Overview
+========
+
+This repository allows for analysis of SMLM data using graph neural networks.
+
+All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
+
+This repository then does the following:
+    - Initialise a project directory
+    - Feature extraction
+    - Preprocess for Pytorch geometric
+    - Annotate or prepare GT labels
+    - Process for Pytorch geometric
+    - Train
+    - Evaluate
+    - Allow visualisation
+
 Installation
 ============
 
@@ -77,44 +94,91 @@ Environment 3 (visualise)
     pip install matplotlib numpy open3d polars torch
 
 
-Layout
-======
+Quickstart (Linux)
+==================
 
-All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
+1. Initialise a project directory 
 
-This repository then does the following:
-    - Feature extraction
-    - Preprocess for Pytorch geometric
-    - Annotate or prepare GT labels
-    - Process for Pytorch geometric
-    - Train
-    - Evaluate
-    - Allow visualisation
+*Run*
+
+.. code-block:: python
+
+    initialise
+
+2. Navigate to the project directory
+
+3. Amend all config files
+
+4. Preprocess the data
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/preprocess.sh
+
+5. Extract features
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/featextract.sh
+
+6. Run k-fold training
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/k_fold.sh
 
 
-Model architectures
-===================
+Longer description
+==================
 
+If not running on Linux or want to run a different workflow please keep reading...
 
-Recipes
-=======
+The workflow above is
 
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 and visualise which must be run with Environment 3
+Workflow 1
+----------
 
-Here are some different recipes one might use
+    - Initialise
+    - Preprocess
+    - Featextract (use Environment 2)
+    - K-fold (does process + train + evaluate)
 
-Recipe 1
---------
+For these scripts we will need to specify the:
 
+1. Data folder
+2. Project directory
+3. Location of the configuration file/folder
+
+Recommended practice (as demosntratred in the quickstart) is to keep all configuration files for a project
+in a folder inside the project directory 
+
+project_folder/
+    config/
+        evaluate.yaml
+        ...
+
+Alternative workflows could look like:
+
+Workflow 2
+----------
+
+    - Initialise
     - Preprocess
     - Featextract (use Environment 2)
     - Process
     - Train
     - Evaluate
 
-Recipe 2
---------
+Workflow 3
+----------
 
+    - Initialise
     - Preprocess
     - Annotate
     - Featextract (use Environment 2)
@@ -122,20 +186,41 @@ Recipe 2
     - Train
     - Evaluate
 
-Recipe 3
---------
-
-    - Preprocess
-    - Featextract (use Environment 2)
-    - K-fold (does process + train + evaluate)
-
 Feat analyse can also be run after processing and visualise can be run on the .parquet files or the processed files.
 We recommend visualising the processed files as then you are able to see the graph.
 
 Scripts
 =======
 
-The recipes consist of the scripts we need to run which are detailed below
+The workflows consist of the scripts we need to run which are detailed below
+
+Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 and visualise which must be run with Environment 3
+
+Initialise
+----------
+
+*Run*
+
+.. code-block:: python
+
+    initialise
+
+*Description*
+
+Initialise a project directory, linked to the dataset you want to analyse.
+Project directory contains the configuration files, scripts and metadata required.
+
+*Structure*
+
+Project directory/
+    config/
+        evaluate.yaml
+        ...
+    scripts/
+        featextract.py
+        ...
+    metadata.json
+
 
 Preprocess
 ----------
@@ -144,7 +229,7 @@ Preprocess
 
 .. code-block:: python
 
-    python recipes/preprocess.py
+    preprocess
 
 
 *Arguments*
@@ -197,7 +282,7 @@ Annotate
 
 .. code-block:: python
 
-    python recipes/annotate.py
+    annotate
 
 
 *Arguments*
@@ -231,7 +316,7 @@ Featextract
 
 .. code-block:: python
 
-    python recipes/featextract.py
+    featextract
 
 *Arguments*
 
@@ -264,6 +349,13 @@ The convex hull for each cluster is calculated (perimeter length, area, length)
 
 The cluster density is calculated (locs/convex hull area)
 
+*Warnings*
+
+1. We drop all unclustered localisations
+2. We drop all clusters with 2 or fewer localisations otherwise convex hull/PCA fail
+3. If there are no clusters this script will fail
+4. If the script drops out mid running - simply run again and it will continue from where it left off
+
 Process
 -------
 
@@ -271,7 +363,7 @@ Process
 
 .. code-block:: python
 
-    python recipes/process.py
+    process
 
 *Arguments*
 
@@ -327,7 +419,7 @@ Train
 
 .. code-block:: python
 
-    python recipes/train.py
+    train
 
 
 *Arguments*
@@ -367,7 +459,7 @@ Evaluate
 
 .. code-block:: python
 
-    python recipes/evaluate.py
+    evaluate
 
 
 *Arguments*
@@ -406,7 +498,7 @@ k-fold
 
 .. code-block:: python
 
-    python recipes/k_fold.py
+    k_fold
 
 *Arguments*
 
@@ -462,7 +554,7 @@ The packages required are  installed in the locpix-points environment. These inc
 
 .. code-block:: python
 
-    python recipes/featanalyse.py
+    featanalyse
 
 *Arguments*
 
@@ -490,7 +582,7 @@ Visualise
 
 .. code-block:: python
 
-    python recipes/visualise.py
+    visualise
 
 *Arguments*
 
@@ -510,6 +602,10 @@ Clean up
 --------
 
 Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
+
+Model architectures
+===================
+
 
 Pytorch geometric
 =================

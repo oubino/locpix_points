@@ -55,6 +55,10 @@ annotate = "locpix_points.scripts.annotate:main"
 train = "locpix_points.scripts.train:main"
 evaluate = "locpix_points.scripts.evaluate:main"
 clean_up = "locpix_points.scripts.clean_up:main"
+featanalyse = "locpix_points.scripts.featanalyse:main"
+featextract = "locpix_points.scripts.featextract:main"
+k_fold = "locpix_points.scripts.k_fold:main"
+visualise = "locpix_points.scripts.visualise:main"
 
 [project.urls]
 "Homepage" = "https://github.com/oubino/locpix_points"

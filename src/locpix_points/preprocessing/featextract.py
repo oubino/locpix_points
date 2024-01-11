@@ -33,8 +33,6 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
     dbscan = DBSCAN(eps=eps, min_samples=minpts)
     dbscan.fit(dataframe)
 
-    print("dbscan labels", dbscan.labels_)
-
     df = df.with_columns(
         pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
     )

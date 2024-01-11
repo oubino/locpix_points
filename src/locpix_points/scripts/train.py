@@ -80,6 +80,13 @@ def main(argv=None):
                 defaults to project_directory/models",
     )
 
+    parser.add_argument(
+        "-w",
+        "--wandbstarted",
+        action="store_true",
+        help="if specified then wandb has already been initialised",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -108,6 +115,7 @@ def main(argv=None):
         metadata = json.load(file)
         project_name = metadata["project_name"]
         dataset_name = metadata["dataset_name"]
+        user = metadata["user"]
 
     # define device
     if train_on_gpu is True and not torch.cuda.is_available():
@@ -276,21 +284,31 @@ def main(argv=None):
     if loss_fn == "nll":  # CHANGE
         loss_fn = torch.nn.functional.nll_loss
 
-    wandb.login()
+    if not args.wandbstarted:
+        wandb.login()
 
     # initialise wandb
-    # start a new wandb run to track this script
-    wandb.init(
-        # set the wandb project where this run will be logged
-        project=project_name,
-        # track hyperparameters and run metadata
-        config={
-            "learning_rate": lr,
-            "architecture": model.name,
-            "dataset": dataset_name,
-            "epochs": epochs,
-        },
-    )
+    if not args.wandbstarted:
+        # start a new wandb run to track this script
+        wandb.init(
+            # set the wandb project where this run will be logged
+            project=dataset_name,
+            # set the entity to the user
+            entity=user,
+            # group by dataset
+            group=project_name,
+            # track hyperparameters and run metadata
+            config={
+                "learning_rate": lr,
+                "architecture": model.name,
+                "dataset": dataset_name,
+                "epochs": epochs,
+            },
+        )
+    else:
+        wandb.config["learning_rate"] = lr
+        wandb.config["architecture"] = model.name
+        wandb.config["epochs"] = epochs
 
     # model summary
     # print("\n")
@@ -375,7 +393,8 @@ def main(argv=None):
         yaml.dump(config, outfile)
 
     # exit wandb
-    wandb.finish()
+    if not args.wandbstarted:
+        wandb.finish()
 
     return model_path
 
