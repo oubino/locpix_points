@@ -30,7 +30,7 @@ We used the preprocessed/feat extracted files from task 1 and the same splits fo
 
 Now however we use cluster features (only) and a cluster network to make the classficiation
 
-## Task 3
+## Task 4
 
 Dataset 1: Dataset of pure fibrils vs pure iso (/w 10% noise) therefore have per FOV label
 
