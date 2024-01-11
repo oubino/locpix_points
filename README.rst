@@ -133,6 +133,7 @@ Quickstart (Linux)
 
     bash scripts/k_fold.sh
 
+
 Longer description
 ==================
 
@@ -347,6 +348,13 @@ PCA for each cluster is calculated (linearity, circularity)
 The convex hull for each cluster is calculated (perimeter length, area, length)
 
 The cluster density is calculated (locs/convex hull area)
+
+*Warnings*
+
+1. We drop all unclustered localisations
+2. We drop all clusters with 2 or fewer localisations otherwise convex hull/PCA fail
+3. If there are no clusters this script will fail
+4. If the script drops out mid running - simply run again and it will continue from where it left off
 
 Process
 -------
