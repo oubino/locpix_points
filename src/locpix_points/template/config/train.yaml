@@ -7,9 +7,12 @@ model: locclusternet
 
 # parameters for the network
 locclusternet:
-  ClusterEncoderChannels: [[8, 18],[18, 24], [24, 32]]
-  LocEncoderChannels: [[2, 4, 4, 4], [6, 6, 6, 6], [8, 8, 8, 8]]
+  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
+  LocEncoderChannels_local: [[2, 8], [18, 32], [66, 32]]
+  LocEncoderChannels_global: [[8, 16], [32, 64], [32, 8]]
   OutputChannels: 2
+  dropout: 0.5
+
 # optimiser parameters
 optimiser: adam
 lr: 0.001
