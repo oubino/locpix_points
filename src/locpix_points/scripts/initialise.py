@@ -60,12 +60,18 @@ def main():
     dest = os.path.join(project_directory, "scripts")
     iterdir = dir.iterdir()
     for file in iterdir:
+        if (
+            file.name == "k_fold_initialise_split.py"
+            or file.name == "k_fold_load_split.py"
+        ):
+            continue
         shutil.copy(file, dest)
 
     # Copy preprocessed files from another task
     copy_preprocessed = input(
         "Would you like to copy preprocessed files from another folder - you must type yes? "
     )
+
     if copy_preprocessed == "yes":
         folder_loc = input("Location of the project folder: ")
 
@@ -87,6 +93,36 @@ def main():
             # copy relevant metadata across
             metadata["preprocess.py"] = other_metadata["preprocess.py"]
             metadata["gt_label_map"] = other_metadata["gt_label_map"]
+
+        # Copy k fold from another task
+        copy_k_fold = input(
+            "Would you like to copy k-fold splits from this folder - you must type yes? "
+        )
+
+        if copy_k_fold == "yes":
+            # copy config
+            src = os.path.join(folder_loc, "k_fold.yaml")
+            dest = os.path.join(project_directory, "config/k_fold.yaml")
+            shutil.copy(src, dest)
+
+            # copy k fold script
+            k_fold_src = files("locpix_points.template.scripts").joinpath(
+                "k_fold_load_split.py"
+            )
+            dest = os.path.join(project_directory, "scripts/k_fold.py")
+            shutil.copy(k_fold_src, dest)
+        else:
+            k_fold_src = files("locpix_points.template.scripts").joinpath(
+                "k_fold_initialise_split.py"
+            )
+            dest = os.path.join(project_directory, "scripts/k_fold.py")
+            shutil.copy(k_fold_src, dest)
+    else:
+        k_fold_src = files("locpix_points.template.scripts").joinpath(
+            "k_fold_initialise_split.py"
+        )
+        dest = os.path.join(project_directory, "scripts/k_fold.py")
+        shutil.copy(k_fold_src, dest)
 
     # save metadata
     metadata_path = os.path.join(project_directory, "metadata.json")
