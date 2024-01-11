@@ -82,25 +82,18 @@ sandpit/output
 sandpit/data
 
 # ignore semore output
-semore_expts/task_1/*
-!semore_expts/task_1/config/
-!semore_expts/task_1/scripts/
-!semore_expts/task_1/README.md
+semore_expts/task_*/*
+!semore_expts/task_*/config/
+!semore_expts/task_*/scripts/
+!semore_expts/task_*/README.md
 
-
-semore_expts_old/task_1/*
-semore_expts_old/task_2/*
-semore_expts_old/task_3/*
-semore_expts_old/task_4/*
+# ignore old semore output
+semore_expts_old/task_*/*
 semore_expts_old/visualise/*
 semore_expts_old/templates/*
 !semore_expts_old/task_1/config
 !semore_expts_old/task_1/scripts
-!semore_expts_old/task_2/train.sh
-!semore_expts_old/task_2/k_fold.py
-!semore_expts_old/task_3/train.sh
-!semore_expts_old/task_3/k_fold.py
-!semore_expts_old/task_4/train.sh
-!semore_expts_old/task_4/k_fold.py
+!semore_expts_old/task_*/train.sh
+!semore_expts_old/task_*/k_fold.py
 #!semore_expts/task_1/config
 #!semore_expts/task_2/config
