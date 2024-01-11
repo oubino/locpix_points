@@ -182,6 +182,10 @@ def analyse_manual_feats(
     not_features = ["clusterID", "x_mean", "y_mean", "type", "file_name"]
     features = [x for x in df.columns if x not in not_features]
 
+    # print features
+    print(features)
+    raise ValueError("features not chosen")
+
     # feature vector
     data_feats = df[features].values
     raise ValueError("this should be fit to train only")
@@ -351,6 +355,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     for folder in output_folders:
         if not os.path.exists(folder):
             os.makedirs(folder)
+
+    raise ValueError("At this moment can check if clusters have input features already")
+    raise ValueError(
+        "If they do have features then we shouldn't be running this analysis"
+    )
 
     train_set = datastruc.ClusterDataset(
         input_train_folder,
