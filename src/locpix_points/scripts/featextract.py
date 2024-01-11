@@ -150,10 +150,10 @@ def main(argv=None):
         )
 
         # cluster density do this here
-        cluster_df.with_columns(
+        cluster_df = cluster_df.with_columns(
             (pl.col("count") / pl.col("area_convex_hull")).alias("density_convex_hull")
         )
-        cluster_df.with_columns(
+        cluster_df = cluster_df.with_columns(
             (pl.col("count") / pl.col("area_pca")).alias("density_pca")
         )
 
