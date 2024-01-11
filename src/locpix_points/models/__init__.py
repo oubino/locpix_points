@@ -51,6 +51,9 @@ def model_choice(name, *args, **kwargs):
     elif name == "locclusternet":
         device = kwargs["device"]
         return LocClusterNet(*args, device=device)
+    elif name == "locclusternettransformer":
+        device = kwargs["device"]
+        return LocClusterNet(*args, device=device, transformer=True)
     elif name == "clusternet":
         return ClusterNetHetero(*args)
     elif name == "clustermlp":
