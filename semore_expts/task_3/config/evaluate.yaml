@@ -5,12 +5,11 @@ load_data_from_gpu: False
 label_level: graph # graph
 
 # model parameters
-model: locclusternet
+model: clusternet
 
-locclusternet:
+# parameters for the network
+clusternet:
   ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
-  LocEncoderChannels_local: [[2, 8], [18, 32], [66, 32]]
-  LocEncoderChannels_global: [[8, 16], [32, 64], [32, 8]]
   OutputChannels: 2
   dropout: 0.0
 

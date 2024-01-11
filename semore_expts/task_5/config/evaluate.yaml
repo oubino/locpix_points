@@ -1,0 +1,15 @@
+# params
+load_data_from_gpu: False
+
+# what trying to predict
+label_level: graph # graph
+
+# model parameters
+model: locclusternettransformer
+
+# parameters for the network
+# locclusternettransformer:
+
+num_classes: 2
+
+eval_on_gpu: True
