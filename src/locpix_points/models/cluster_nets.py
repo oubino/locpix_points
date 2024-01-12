@@ -59,6 +59,7 @@ class LocEncoderTransformer(torch.nn.Module):
 
     """
 
+
     def __init__(self, channel_list):
         super().__init__()
         # raise ValueError("Need to define how many channels custom")
@@ -421,6 +422,7 @@ class LocClusterNet(torch.nn.Module):
                         dropout=config["dropout"],
                         plain_last=False,
                     ),
+
                 ),
                 encoder_1=LocEncoder(
                     MLP(
