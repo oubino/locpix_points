@@ -3,10 +3,10 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locnetonly_pointnet
+model: locpointnet
 
 # parameters for the network
-locnetonly_pointnet:
+locpointnet:
   LocEncoderChannels_local: [[2, 8], [10, 16], [10, 16]]
   LocEncoderChannels_global: [[8, 8], [16, 8], [16, 2]]
   dropout: 0.5

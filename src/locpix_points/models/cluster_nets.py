@@ -15,6 +15,7 @@ from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
 from torch_geometric.nn.pool import global_max_pool, global_mean_pool
 from .point_transformer import TransformerBlock
+from .point_net import PointNetClassification
 
 
 class LocEncoder(torch.nn.Module):
@@ -637,5 +638,60 @@ class LocNetOnly(torch.nn.Module):
         x = global_mean_pool(x_dict["clusters"], batch=data["clusters"].batch)
 
         # print('output', x.log_softmax(dim=-1).argmax(dim=1))
+
+        return x.log_softmax(dim=-1)
+
+
+class LocPointNet(torch.nn.Module):
+    """Neural network that acts on localisations but no clusternetwork after
+
+    Attributes:
+    """
+
+    def __init__(self, config, device="cpu"):
+        super().__init__()
+        self.name = "locpointnet"
+
+        config ={
+            "ratio": [1.0,1.0],
+            "radius": [1.0, 1.0],
+            "channels": [[2,64],[66,128],[130,256], [256,2]],
+            "dropout": 0.0,
+            "norm": 'batch_norm',
+        }
+
+        self.loc_net = PointNetClassification(config)
+        self.device = device
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        
+        # embed each localisation
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(data, self.device)
+        x = x_dict['locs']
+        pos = pos_dict['locs']
+        batch = edge_index_dict['locs','in','clusters'][1,:]
+        cluster_batch = data["clusters"].batch
+
+        # sort pos and batch together
+        batch_exp = torch.unsqueeze(batch, dim=1)
+        y = torch.cat((pos, batch_exp), 1)
+        y = y[y[:,-1].argsort()]
+        pos = y[:,:-1]
+        batch = y[:,-1].to(torch.int64) 
+
+        x = self.loc_net(x, pos, batch=batch)
+
+        # aggregate over fov
+        x = global_mean_pool(x, batch=cluster_batch)
+
+        #print('output', x.log_softmax(dim=-1).argmax(dim=1))
 
         return x.log_softmax(dim=-1)

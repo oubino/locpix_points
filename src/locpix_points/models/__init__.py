@@ -15,7 +15,7 @@ Currently available models:
     point_transformer
 """
 
-from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP, LocNetOnly
+from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP, LocNetOnly, LocPointNet
 
 # from .simple_gcn_1 import SimpleGCN1
 from .point_net import PointNetClassification, PointNetSegmentation
@@ -64,5 +64,8 @@ def model_choice(name, *args, **kwargs):
     elif name == "locnetonly_pointnet":
         device = kwargs["device"]
         return LocNetOnly(*args, device=device, transformer=False)
+    elif name == "locpointnet":
+        device = kwargs["device"]
+        return LocPointNet(*args, device=device)
     else:
         raise ValueError(f"{name} is not a supported model")
