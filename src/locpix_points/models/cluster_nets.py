@@ -14,6 +14,7 @@ import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
 from torch_geometric.nn.pool import global_max_pool, global_mean_pool
+from .point_transformer import TransformerBlock
 
 
 class LocEncoder(torch.nn.Module):
@@ -41,13 +42,48 @@ class LocEncoder(torch.nn.Module):
                 localisations
 
         Returns:
-            loc_x (torch.tensor):
+            loc_x (torch.tensor): x for the localisations
         """
         # raise ValueError("check + do we need a relu?")
         loc_x = self.conv(
             x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
         )  # .relu()
         return loc_x
+
+
+class LocEncoderTransformer(torch.nn.Module):
+    """Module that encodes the localisations using a PointTransformer
+
+    Attributes:
+
+    """
+
+    def __init__(self, channel_list):
+        super().__init__()
+        # raise ValueError("Need to define how many channels custom")
+        self.transform = TransformerBlock(*channel_list)
+
+    def forward(self, x_locs, pos_locs, edge_index_dict):
+        """The method called when the encoder is used on a data item
+
+        Args:
+            x_locs (torch.tensor): Features of the localisation
+            pos_locs (torch.tensor): Positions of the localisation
+            edge_index_dict (torch.tensor): Edge connections between
+                localisations
+
+        Returns:
+            x_locs (torch.tensor): x for the localisations
+        """
+
+        if x_locs is None:
+            x_locs = torch.ones((pos_locs.shape[0], 1), device=pos_locs.get_device())
+
+        x_locs = self.transform(
+            x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
+        )
+
+        return x_locs
 
 
 class Loc2Cluster(torch.nn.Module):
@@ -134,7 +170,14 @@ class LocNet(torch.nn.Module):
             to clusters
         device (torch.device): cpu or gpu"""
 
-    def __init__(self, encoder_0, encoder_1, encoder_2, loc2cluster, device):
+    def __init__(
+        self,
+        encoder_0=None,
+        encoder_1=None,
+        encoder_2=None,
+        loc2cluster=None,
+        device="cpu",
+    ):
         super().__init__()
         self.device = device
         self.encoder_0 = encoder_0
@@ -158,15 +201,18 @@ class LocNet(torch.nn.Module):
         x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
             data, self.device
         )
+
         x_dict["locs"] = self.encoder_0(
             x_dict["locs"], pos_dict["locs"], edge_index_dict
         )
-        x_dict["locs"] = self.encoder_1(
-            x_dict["locs"], pos_dict["locs"], edge_index_dict
-        )
-        x_dict["locs"] = self.encoder_2(
-            x_dict["locs"], pos_dict["locs"], edge_index_dict
-        )
+        if self.encoder_1 is not None:
+            x_dict["locs"] = self.encoder_1(
+                x_dict["locs"], pos_dict["locs"], edge_index_dict
+            )
+        if self.encoder_2 is not None:
+            x_dict["locs"] = self.encoder_2(
+                x_dict["locs"], pos_dict["locs"], edge_index_dict
+            )
         # pool the embedding for each localisation to its cluster and concatenate this embedding with previous cluster embedding
         x_dict["clusters"] = self.loc2cluster(
             x_dict, edge_index_dict, cluster_feats_present
@@ -354,52 +400,62 @@ class LocClusterNet(torch.nn.Module):
 
     Args:
         config (dict): Dictionary containing the configuration for the network
-        device (torch.device): Whether to run on cpu or gpu"""
+        device (torch.device): Whether to run on cpu or gpu
+        transformer (bool): If true use PointTransformer to encode localisations"""
 
-    def __init__(self, config, device="cpu"):
+    def __init__(self, config, device="cpu", transformer=False):
         super().__init__()
         self.name = "loc_cluster_net"
         # wrong input channel size 2 might change if locs have features
-        self.loc_net = LocNet(
-            LocEncoder(
-                MLP(
-                    config["LocEncoderChannels_local"][0],
-                    dropout=config["dropout"],
-                    plain_last=False,
+        if not transformer:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
                 ),
-                MLP(
-                    config["LocEncoderChannels_global"][0],
-                    dropout=config["dropout"],
-                    plain_last=False,
+                encoder_1=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
                 ),
-            ),
-            LocEncoder(
-                MLP(
-                    config["LocEncoderChannels_local"][1],
-                    dropout=config["dropout"],
-                    plain_last=False,
+                encoder_2=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
                 ),
-                MLP(
-                    config["LocEncoderChannels_global"][1],
-                    dropout=config["dropout"],
-                    plain_last=False,
-                ),
-            ),
-            LocEncoder(
-                MLP(
-                    config["LocEncoderChannels_local"][2],
-                    dropout=config["dropout"],
-                    plain_last=False,
-                ),
-                MLP(
-                    config["LocEncoderChannels_global"][2],
-                    dropout=config["dropout"],
-                    plain_last=False,
-                ),
-            ),
-            Loc2Cluster(),
-            device,
-        )
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
+        else:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoderTransformer(config["LocEncoderTransformer"][0]),
+                encoder_1=LocEncoderTransformer(config["LocEncoderTransformer"][1]),
+                encoder_2=LocEncoderTransformer(config["LocEncoderTransformer"][2]),
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
         self.cluster_net = ClusterNet(
             ClusterEncoder(
                 config["ClusterEncoderChannels"][0], dropout=config["dropout"]
@@ -472,7 +528,12 @@ class ClusterMLP(torch.nn.Module):
         # needs to have 8 channels input for the cluster features
         assert channels[0] == 8
         assert channels[-1] == 2
-        self.MLP = MLP(config["channels"], plain_last=True, dropout=config["dropout"])
+        self.MLP_in = MLP(
+            config["channels"][:-1], plain_last=False, dropout=config["dropout"]
+        )
+        self.MLP_out = MLP(
+            config["channels"][-2:], plain_last=True, dropout=config["dropout"]
+        )
 
     def forward(self, data):
         """Method called when data runs through network
@@ -482,7 +543,6 @@ class ClusterMLP(torch.nn.Module):
 
         Raises:
             KeyError: If clusters don't have features
-            ValueError: Temporary
 
         Returns:
             output.log_softmax(dim=-1): Log probabilities for the classes"""
@@ -492,10 +552,90 @@ class ClusterMLP(torch.nn.Module):
             x = data.x_dict["clusters"]
         except KeyError:
             raise KeyError("Clusters need to have features present")
-        x = self.MLP(x, batch=data["clusters"].batch)
-        raise ValueError(
-            "Change so that global mean pool while still more than 2 features, then final MLP after"
-        )
+        x = self.MLP_in(x, batch=data["clusters"].batch)
         x = global_mean_pool(x, batch=data["clusters"].batch)
+        x = self.MLP_out(x, batch=data["clusters"].batch)
+
+        return x.log_softmax(dim=-1)
+
+
+class LocNetOnly(torch.nn.Module):
+    """Neural network that acts on localisations but no clusternetwork after
+
+    Attributes:
+    """
+
+    def __init__(self, config, device="cpu", transformer=False):
+        super().__init__()
+        self.name = "locnetonly"
+
+        # wrong input channel size 2 might change if locs have features
+        if not transformer:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                encoder_1=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                encoder_2=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
+        else:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoderTransformer(config["LocEncoderTransformer"][0]),
+                encoder_1=LocEncoderTransformer(config["LocEncoderTransformer"][1]),
+                encoder_2=LocEncoderTransformer(config["LocEncoderTransformer"][2]),
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        
+        # embed each localisation
+        x_dict, _, edge_index_dict = self.loc_net(data)
+
+        # aggregate over fov
+        x = global_mean_pool(x_dict["clusters"], batch=data["clusters"].batch)
+
+        # print('output', x.log_softmax(dim=-1).argmax(dim=1))
 
         return x.log_softmax(dim=-1)
