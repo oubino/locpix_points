@@ -15,6 +15,7 @@ from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
 from torch_geometric.nn.pool import global_max_pool, global_mean_pool
 from .point_transformer import TransformerBlock
+from .point_net import PointNetClassification
 
 
 class LocEncoder(torch.nn.Module):
@@ -58,10 +59,11 @@ class LocEncoderTransformer(torch.nn.Module):
 
     """
 
-    def __init__(self):
+
+    def __init__(self, channel_list):
         super().__init__()
         # raise ValueError("Need to define how many channels custom")
-        self.transform = TransformerBlock(1, 8, 2, 32, 32)
+        self.transform = TransformerBlock(*channel_list)
 
     def forward(self, x_locs, pos_locs, edge_index_dict):
         """The method called when the encoder is used on a data item
@@ -73,16 +75,17 @@ class LocEncoderTransformer(torch.nn.Module):
                 localisations
 
         Returns:
-            loc_x (torch.tensor): x for the localisations
+            x_locs (torch.tensor): x for the localisations
         """
-        # raise ValueError("check + do we need a relu?")
-        if x_locs is None:
-            x = torch.ones((pos_locs.shape[0], 1), device=pos_locs.get_device())
 
-        loc_x = self.transform(
+        if x_locs is None:
+            x_locs = torch.ones((pos_locs.shape[0], 1), device=pos_locs.get_device())
+
+        x_locs = self.transform(
             x_locs, pos_locs, edge_index_dict["locs", "clusteredwith", "locs"]
-        )  # .relu()
-        return loc_x
+        )
+
+        return x_locs
 
 
 class Loc2Cluster(torch.nn.Module):
@@ -200,6 +203,7 @@ class LocNet(torch.nn.Module):
         x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
             data, self.device
         )
+
         x_dict["locs"] = self.encoder_0(
             x_dict["locs"], pos_dict["locs"], edge_index_dict
         )
@@ -418,6 +422,7 @@ class LocClusterNet(torch.nn.Module):
                         dropout=config["dropout"],
                         plain_last=False,
                     ),
+
                 ),
                 encoder_1=LocEncoder(
                     MLP(
@@ -448,9 +453,9 @@ class LocClusterNet(torch.nn.Module):
             )
         else:
             self.loc_net = LocNet(
-                encoder_0=LocEncoderTransformer(),
-                encoder_1=LocEncoderTransformer(),
-                encoder_2=LocEncoderTransformer(),
+                encoder_0=LocEncoderTransformer(config["LocEncoderTransformer"][0]),
+                encoder_1=LocEncoderTransformer(config["LocEncoderTransformer"][1]),
+                encoder_2=LocEncoderTransformer(config["LocEncoderTransformer"][2]),
                 loc2cluster=Loc2Cluster(),
                 device=device,
             )
@@ -553,5 +558,142 @@ class ClusterMLP(torch.nn.Module):
         x = self.MLP_in(x, batch=data["clusters"].batch)
         x = global_mean_pool(x, batch=data["clusters"].batch)
         x = self.MLP_out(x, batch=data["clusters"].batch)
+
+        return x.log_softmax(dim=-1)
+
+
+class LocNetOnly(torch.nn.Module):
+    """Neural network that acts on localisations but no clusternetwork after
+
+    Attributes:
+    """
+
+    def __init__(self, config, device="cpu", transformer=False):
+        super().__init__()
+        self.name = "locnetonly"
+
+        # wrong input channel size 2 might change if locs have features
+        if not transformer:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][0],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                encoder_1=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][1],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                encoder_2=LocEncoder(
+                    MLP(
+                        config["LocEncoderChannels_local"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                    MLP(
+                        config["LocEncoderChannels_global"][2],
+                        dropout=config["dropout"],
+                        plain_last=False,
+                    ),
+                ),
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
+        else:
+            self.loc_net = LocNet(
+                encoder_0=LocEncoderTransformer(config["LocEncoderTransformer"][0]),
+                encoder_1=LocEncoderTransformer(config["LocEncoderTransformer"][1]),
+                encoder_2=LocEncoderTransformer(config["LocEncoderTransformer"][2]),
+                loc2cluster=Loc2Cluster(),
+                device=device,
+            )
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        
+        # embed each localisation
+        x_dict, _, edge_index_dict = self.loc_net(data)
+
+        # aggregate over fov
+        x = global_mean_pool(x_dict["clusters"], batch=data["clusters"].batch)
+
+        # print('output', x.log_softmax(dim=-1).argmax(dim=1))
+
+        return x.log_softmax(dim=-1)
+
+
+class LocPointNet(torch.nn.Module):
+    """Neural network that acts on localisations but no clusternetwork after
+
+    Attributes:
+    """
+
+    def __init__(self, config, device="cpu"):
+        super().__init__()
+        self.name = "locpointnet"
+
+        config ={
+            "ratio": [1.0,1.0],
+            "radius": [1.0, 1.0],
+            "channels": [[2,64],[66,128],[130,256], [256,2]],
+            "dropout": 0.0,
+            "norm": 'batch_norm',
+        }
+
+        self.loc_net = PointNetClassification(config)
+        self.device = device
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        
+        # embed each localisation
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(data, self.device)
+        x = x_dict['locs']
+        pos = pos_dict['locs']
+        batch = edge_index_dict['locs','in','clusters'][1,:]
+        cluster_batch = data["clusters"].batch
+
+        # sort pos and batch together
+        batch_exp = torch.unsqueeze(batch, dim=1)
+        y = torch.cat((pos, batch_exp), 1)
+        y = y[y[:,-1].argsort()]
+        pos = y[:,:-1]
+        batch = y[:,-1].to(torch.int64) 
+
+        x = self.loc_net(x, pos, batch=batch)
+
+        # aggregate over fov
+        x = global_mean_pool(x, batch=cluster_batch)
+
+        #print('output', x.log_softmax(dim=-1).argmax(dim=1))
 
         return x.log_softmax(dim=-1)

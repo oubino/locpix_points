@@ -3,16 +3,12 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternettransformer
+model: locnetonly_transformer
 
 # parameters for the network
-locclusternettransformer:
-  # LocEncoderTransformer: [input_channels, output_channels, dimensions, posn_nn_channels, attention_nn_channels]
-  LocEncoderTransformer: [[1, 8, 2, 32, 32], [8, 16, 2, 32, 32], [16, 8, 2, 32, 32]]
-  ClusterEncoderChannels: [[8, 8],[8, 8], [8, 8]]
-  OutputChannels: 2
+locnetonly_transformer:
+  LocEncoderTransformer: [[1, 8, 2, 32, 32], [8, 8, 2, 32, 32], [8, 2, 2, 32, 32]]
   dropout: 0.5
-  
 
 # optimiser parameters
 optimiser: adam

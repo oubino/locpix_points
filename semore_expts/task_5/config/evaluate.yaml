@@ -8,7 +8,12 @@ label_level: graph # graph
 model: locclusternettransformer
 
 # parameters for the network
-# locclusternettransformer:
+locclusternettransformer:
+  # LocEncoderTransformer: [input_channels, output_channels, dimensions, posn_nn_channels, attention_nn_channels]
+  LocEncoderTransformer: [[1, 8, 2, 32, 32], [8, 16, 2, 32, 32], [16, 8, 2, 32, 32]]
+  ClusterEncoderChannels: [[8, 8],[8, 8], [8, 8]]
+  OutputChannels: 2
+  dropout: 0.0
 
 num_classes: 2
 
