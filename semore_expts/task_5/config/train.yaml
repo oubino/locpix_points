@@ -3,15 +3,16 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternet
+model: locclusternettransformer
 
 # parameters for the network
-locclusternet:
-  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
-  LocEncoderChannels_local: [[2, 8], [18, 24], [18, 8]]
-  LocEncoderChannels_global: [[8, 16], [24, 16], [8, 8]]
+locclusternettransformer:
+  # LocEncoderTransformer: [input_channels, output_channels, dimensions, posn_nn_channels, attention_nn_channels]
+  LocEncoderTransformer: [[1, 8, 2, 32, 32], [8, 16, 2, 32, 32], [16, 8, 2, 32, 32]]
+  ClusterEncoderChannels: [[8, 8],[8, 8], [8, 8]]
   OutputChannels: 2
   dropout: 0.5
+  
 
 # optimiser parameters
 optimiser: adam

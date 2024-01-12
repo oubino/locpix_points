@@ -3,14 +3,12 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternet
+model: locnetonly_pointnet
 
 # parameters for the network
-locclusternet:
-  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
-  LocEncoderChannels_local: [[2, 8], [18, 24], [18, 8]]
-  LocEncoderChannels_global: [[8, 16], [24, 16], [8, 8]]
-  OutputChannels: 2
+locnetonly_pointnet:
+  LocEncoderChannels_local: [[2, 8], [10, 16], [10, 16]]
+  LocEncoderChannels_global: [[8, 8], [16, 8], [16, 2]]
   dropout: 0.5
 
 # optimiser parameters

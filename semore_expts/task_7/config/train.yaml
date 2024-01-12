@@ -3,20 +3,18 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternet
+model: locnetonly_pointnet
 
 # parameters for the network
-locclusternet:
-  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
-  LocEncoderChannels_local: [[2, 8], [18, 24], [18, 8]]
-  LocEncoderChannels_global: [[8, 16], [24, 16], [8, 8]]
-  OutputChannels: 2
+locnetonly_pointnet:
+  LocEncoderChannels_local: [[2, 8], [10, 16], [10, 16]]
+  LocEncoderChannels_global: [[8, 8], [16, 8], [16, 2]]
   dropout: 0.5
 
 # optimiser parameters
 optimiser: adam
 lr: 0.001
-weight_decay: 0.0001
+weight_decay: 0.001
 
 # training parameters
 epochs: 100
@@ -33,9 +31,10 @@ transforms:
   # fov_x/fov_y is defined in process.yaml
   # here 1 unit = 20,000nm
   # therefore 15nm = 0.00075 units
+  # therefore 30nm = 0.00150 units
   jitter: 0.00075 # number of nm
   randscale: [0.95,1.05]
-  shear: 0.05
+  shear: 0.05 # 05
   x_flip: null
   y_flip: null
   z_rotate: null
