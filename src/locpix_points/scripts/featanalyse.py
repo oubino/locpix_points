@@ -71,11 +71,11 @@ def main(argv=None):
     )
 
     parser.add_argument(
-        "-t",
-        "--test",
+        "-a",
+        "--automatic",
         action="store_true",
-        help="if present then we are testing in which case"
-        "we load in the only model present",
+        help="if present then there should be only one model present in the folder"
+        "which we load in",
     )
 
     args = parser.parse_args(argv)
@@ -182,14 +182,15 @@ def analyse_manual_feats(
     not_features = ["clusterID", "x_mean", "y_mean", "type", "file_name"]
     features = [x for x in df.columns if x not in not_features]
 
-    # print features
-    print(features)
-    raise ValueError("features not chosen")
+    # now remove features not selected by user
+    user_selected_features = config['features']
+    removed_features = [f for f in features if f not in user_selected_features]
+    print("Removed features: ", removed_features)
+    features = [f for f in features if f in user_selected_features]
+    print("Features analysed: ", features)
 
     # feature vector
     data_feats = df[features].values
-    raise ValueError("this should be fit to train only")
-    data_feats_scaled = StandardScaler().fit_transform(data_feats)
 
     # label vector
     unique_vals = sorted(df.type.unique())
@@ -215,6 +216,7 @@ def analyse_manual_feats(
 
     # 3. Plot UMAP
     if config["umap"]:
+        raise ValueError("Not scaled")
         plot_umap(data_feats_scaled, df)
 
     # ---------------------------------------------------------------------- #
@@ -222,7 +224,7 @@ def analyse_manual_feats(
     # ---------------------------------------------------------------------- #
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats_scaled, data_labels, names, args
+        data_feats, data_labels, names, args
     )
 
     # 4. Logistic regression
@@ -255,10 +257,10 @@ def analyse_manual_feats(
             args,
         )
 
-    # 6. SVM
-    if "svm" in config.keys():
-        parameters = config["svm"]
-        svm(
+    # 6. K-NN
+    if "knn" in config.keys():
+        parameters = config["knn"]
+        knn(
             X,
             Y,
             train_indices_main,
@@ -269,10 +271,10 @@ def analyse_manual_feats(
             args,
         )
 
-    # 8. K-NN
-    if "knn" in config.keys():
-        parameters = config["knn"]
-        knn(
+    # 7. SVM
+    if "svm" in config.keys():
+        parameters = config["svm"]
+        svm(
             X,
             Y,
             train_indices_main,
@@ -324,13 +326,15 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # needs to be from same fold as below
     fold = config["nn_feat"]["fold"]
     model_name = config["nn_feat"]["model_name"]
-    if not args.test:
+    if not args.automatic:
         model_loc = os.path.join(
             project_directory, "models", f"fold_{fold}", model_name
         )
-    elif args.test:
+    elif args.automatic:
         model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
-        model_name = os.listdir(model_dir)[0]
+        model_list = os.listdir(model_dir)
+        assert len(model_list) == 1
+        model_name = model_list[0]
         model_loc = os.path.join(model_dir, model_name)
     model.load_state_dict(torch.load(model_loc))
     model.to(device)
@@ -355,11 +359,6 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     for folder in output_folders:
         if not os.path.exists(folder):
             os.makedirs(folder)
-
-    raise ValueError("At this moment can check if clusters have input features already")
-    raise ValueError(
-        "If they do have features then we shouldn't be running this analysis"
-    )
 
     train_set = datastruc.ClusterDataset(
         input_train_folder,
@@ -449,8 +448,6 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # feature vector
     data_feats = df[features].values
-    raise ValueError("this should be fit to train only")
-    data_feats_scaled = StandardScaler().fit_transform(data_feats)
 
     # label vector
     unique_vals = sorted(df.type.unique())
@@ -471,8 +468,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # ---------------------------------------------------------------------- #
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats_scaled, data_labels, names, args
+        data_feats, data_labels, names, args
     )
+
+    print(np.array(X).shape)
+    print(np.array(X))
+    input_chan = config["nn_feat"][model_type]["ClusterEncoderChannels"][0][0]
+    loc_chan = config["nn_feat"][model_type]["LocEncoderChannels_global"][-1][-1]
+    with open('config/process.yaml', "r") as ymlfile:
+        process_config = yaml.safe_load(ymlfile)
+    cluster_features = process_config["cluster_feat"]
+    print('cluster features', cluster_features, 'length', len(cluster_features))
+    print('loc chan', loc_chan)
+    print('input channels - this should be sum of last two', input_chan)
+    print(f'i think that first {loc_chan} is from nn and then the remaining {len(cluster_features)} is manual feature')
+    raise ValueError("check what to do")
+
     # train/test indices are list of lists
     # with one list for each fold
     train_indices_main = [train_indices_main[fold]]
@@ -510,10 +521,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             fold=fold,
         )
 
-    # 4. SVM
-    if "svm" in config.keys():
-        parameters = config["svm"]
-        best_model = svm(
+    # 4. K-NN
+    if "knn" in config.keys():
+        parameters = config["knn"]
+        best_model = knn(
             X,
             Y,
             train_indices_main,
@@ -525,10 +536,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             fold=fold,
         )
 
-    # 5. K-NN
-    if "knn" in config.keys():
-        parameters = config["knn"]
-        best_model = knn(
+    # 5. SVM
+    if "svm" in config.keys():
+        parameters = config["svm"]
+        best_model = svm(
             X,
             Y,
             train_indices_main,
@@ -678,11 +689,11 @@ def plot_umap(data_feats_scaled, df):
     plt.show()
 
 
-def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
+def prep_for_sklearn(data_feats, data_labels, names, args):
     """Get data ready for sklearn analysis
 
     Args:
-        data_feats_scaled (array): Features scaled between 0 and 1
+        data_feats (array): Features unscaled
         data_labels (array): Label for each data item
         names (array): Names for each data item
         args (dict): Arguments passed to the script
@@ -712,9 +723,9 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
     val_folds = splits["val"]
     test_folds = splits["test"]
 
-    df_scaled = pl.DataFrame(
+    df = pl.DataFrame(
         {
-            "X": data_feats_scaled,
+            "X": data_feats,
             "Y": data_labels,
             "name": names,
         }
@@ -729,9 +740,9 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
-        train_bool = df_scaled["name"].is_in(train_fold).to_list()
-        val_bool = df_scaled["name"].is_in(val_fold).to_list()
-        test_bool = df_scaled["name"].is_in(test_fold).to_list()
+        train_bool = df["name"].is_in(train_fold).to_list()
+        val_bool = df["name"].is_in(val_fold).to_list()
+        test_bool = df["name"].is_in(test_fold).to_list()
 
         train_indices = np.where(train_bool)[0]
         val_indices = np.where(val_bool)[0]
@@ -748,7 +759,7 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         if any(i in test_indices for i in val_indices):
             raise ValueError("Should not share common values")
 
-    num_features = len(df_scaled["X"][0])
+    num_features = len(df["X"][0])
     print("Num features: ", num_features)
     warnings.warn(
         "Be careful, if analysing neural net features"
@@ -756,8 +767,8 @@ def prep_for_sklearn(data_feats_scaled, data_labels, names, args):
         "Did this task use manual features as well"
     )
 
-    X = df_scaled["X"].to_list()
-    Y = df_scaled["Y"].to_list()
+    X = df["X"].to_list()
+    Y = df["Y"].to_list()
 
     return X, Y, train_indices_main, val_indices_main, test_indices_main
 
@@ -792,6 +803,11 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
     for train_fold, test_fold in cv:
         train_fold = np.array(train_fold)
         test_fold = np.array(test_fold)
+
+        # scale data
+        scaler = StandardScaler().fit(X[train_fold])
+        X = scaler.transform(X) 
+
         model = model.fit(X[train_fold], Y[train_fold])
         output = model.predict(X)
         class_report(

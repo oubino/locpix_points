@@ -133,6 +133,24 @@ Quickstart (Linux)
 
     bash scripts/k_fold.sh
 
+7. Analyse manual features
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_manual.sh
+
+8. Analyse neural network features for one fold
+
+Adjust config file to choose fold
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_nn.sh
+
 
 Longer description
 ==================
@@ -561,7 +579,7 @@ The packages required are  installed in the locpix-points environment. These inc
     - -i Path to the project folder
     - -c Path to configuration .yaml file
     - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
-    - -t (Optional) If present we are testing therefore use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
+    - -a (Optional) If present we use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
 
 *Long description*
 

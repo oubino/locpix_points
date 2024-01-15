@@ -44,3 +44,15 @@ bash scripts/featextract.sh
 ```shell
 bash scripts/k_fold.sh
 ```
+
+### Feature analysis not neural-net features
+
+```shell
+bash scripts/featanalyse_manual.sh
+```
+
+### Feature analysis neural-net features
+
+```shell
+bash scripts/featanalyse_nn.sh
+```
