@@ -32,8 +32,8 @@ svm:
   kernel: ["rbf"]
   gamma: ["scale"]  # , 'auto']
 knn:
-  n_neighbors: [3]
-  weights": ["distance"]
+  n_neighbors: [3,5,7,9,11]
+  weights: ["distance"]
 
 
 label_map:

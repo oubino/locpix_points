@@ -1,8 +1,8 @@
 # configuration for feature analysis
 
 # Options for what to analyse
-pca_vs_convex_hull: True
-boxplots: True
+pca_vs_convex_hull: False
+boxplots: False
 umap: False
 
 # Features to analyse
@@ -32,8 +32,8 @@ svm:
   kernel: ["rbf"]
   gamma: ["scale"]  # , 'auto']
 knn:
-  n_neighbors: [3]
-  weights": ["distance"]
+  n_neighbors: [3,5,7,9,11]
+  weights: ["distance"]
 
 
 label_map:
