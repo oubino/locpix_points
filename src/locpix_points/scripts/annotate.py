@@ -41,6 +41,21 @@ def main(argv=None):
         required=True,
     )
 
+    group = parser.add_mutually_exclusive_group()
+
+    group.add_argument(
+        "-n",
+        "--napari",
+        action="store_true",
+        help="if specified then we use napari to annotate each localisation",
+    )
+    group.add_argument(
+        "-s",
+        "--scope",
+        choices=["fov","loc"],
+        help="if fov then label is per fov, if loc then label is per loc",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -61,32 +76,69 @@ def main(argv=None):
         print("Making folder")
         os.makedirs(output_directory)
 
-    if config["dim"] == 2:
-        histo_size = (config["x_bins"], config["y_bins"])
-    elif config["dim"] == 3:
-        histo_size = (config["x_bins"], config["y_bins"], config["z_bins"])
-    else:
-        raise ValueError("Dim should be 2 or 3")
-
     for file in files:
         item = datastruc.item(None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, "preprocessed/no_gt_label", file)
         )
 
-        # coord2histo
-        item.coord_2_histo(
-            histo_size,
-            plot=config["plot"],
-            vis_interpolation=config["vis_interpolation"],
-        )
+        if args.napari:
 
-        # manual segment
-        item.manual_segment_per_loc()
+            if config["napari"]["dim"] == 2:
+                histo_size = (config["napari"]["x_bins"], config["napari"]["y_bins"])
+            elif config["dim"] == 3:
+                histo_size = (config["napari"]["x_bins"], config["napari"]["y_bins"], config["napari"]["z_bins"])
+            else:
+                raise ValueError("Dim should be 2 or 3")
 
-        # save df to parquet
-        item.gt_label_scope = "loc"
-        item.gt_label = None
+            # coord2histo
+            item.coord_2_histo(
+                histo_size,
+                plot=config["napari"]["plot"],
+                vis_interpolation=config["napari"]["vis_interpolation"],
+            )
+
+            # manual segment
+            item.manual_segment_per_loc()
+
+            # save df to parquet
+            item.gt_label_scope = "loc"
+            item.gt_label = None
+            
+        else:
+
+            if args.scope == 'fov':
+                item.gt_label_scope = "fov"
+                raise NotImplementedError("User needs to implement their own annotation")
+                # Need to assign a label to the fov
+                # Below is an example
+                # if file.startswith('positive_case'):
+                #     label = 1
+                # else:
+                #     label = 0
+                #
+                # item.gt_label = label
+
+                
+            elif args.scope == 'loc':
+                item.gt_label_scope = "loc"
+                item.gt_label = None
+                raise NotImplementedError("This is not implemented yet")
+                # Need to assign a label to each localisation
+                # Below are examples
+                # 1) Add label 0 to all localisations
+                # item.df.with_columns(
+                #    pl.lit(0).alias("gt_label")
+                # )
+                # 2) Add label 2* value in column called x
+                # item.df.with_columns(
+                #    (pl.col("x") * 2).alias("gt_label")
+                # )
+                
+            else:
+                raise ValueError("Scope should be fov or loc")
+
+
         item.gt_label_map = config["gt_label_map"]
         item.save_to_parquet(
             output_directory,

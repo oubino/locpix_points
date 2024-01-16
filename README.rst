@@ -3,13 +3,13 @@ Overview
 
 This repository allows for analysis of SMLM data using graph neural networks.
 
-All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
+Data can be .csv or .parquet files
 
 This repository then does the following:
     - Initialise a project directory
+    - Preprocess
+    - Annotate each fov or localisation
     - Feature extraction
-    - Preprocess for Pytorch geometric
-    - Annotate or prepare GT labels
     - Process for Pytorch geometric
     - Train
     - Evaluate
@@ -117,7 +117,15 @@ Quickstart (Linux)
 
     bash scripts/preprocess.sh
 
-5. Extract features
+5. Annotate the data - Optional
+
+*Run*
+
+.. code-block:: shell
+
+    bash scripts/annotate.sh
+
+6. Extract features
 
 *Run*
 
@@ -125,7 +133,7 @@ Quickstart (Linux)
 
     bash scripts/featextract.sh
 
-6. Run k-fold training
+7. Run k-fold training
 
 *Run*
 
@@ -133,7 +141,7 @@ Quickstart (Linux)
 
     bash scripts/k_fold.sh
 
-7. Analyse manual features
+8. Analyse manual features
 
 *Run*
 
@@ -141,7 +149,7 @@ Quickstart (Linux)
 
     bash scripts/featanalyse_manual.sh
 
-8. Analyse neural network features for one fold
+9. Analyse neural network features for one fold
 
 Adjust config file to choose fold
 
@@ -307,6 +315,8 @@ Annotate
     
     - -i Path to the project folder
     - -c Path to configuration .yaml file
+    - -n If specified we annotate each localisation using napari
+    - -s If 'fov' we label per FOV, if 'loc' we label per localisation
 
 *Structure*
 
@@ -320,9 +330,21 @@ Data then stored in
 
 *Long description*
 
-Each fov is visualised in a histogram, which is annotated returning localisation level labels
+If napari:
+    Each fov is visualised in a histogram, which is annotated returning localisation level labels
 
-These are added in a separate column to the dataframe called 'gt_label'
+    These are added in a separate column to the dataframe called 'gt_label'
+
+If fov:
+    We annotate per FOV 
+
+    This is saved in parquet metadata
+
+If loc:
+    We annotate per localisation
+
+    This is saved in the dataframe in a column called 'gt_label'
+
 
 The dataframe is saved as a .parquet file with metadata specifying the mapping from label to integer
 
