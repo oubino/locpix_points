@@ -8,7 +8,7 @@ def test_pipeline():
     main(
         [
             "-i",
-            "tests/test_data",
+            "tests/test_data/parquet",
             "-c",
             "tests/config/preprocess.yaml",
             "-o",

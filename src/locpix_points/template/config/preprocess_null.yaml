@@ -32,17 +32,5 @@ include_files: all
 ## Choice of input features
 features: []
 
-## GT label per loc, fov or null (not specified)
-gt_label_scope: fov
-
-# if gt_label_scope is 'loc' then the following applies
-gt_label_loc:
-  gt_label_map:
-    0 : null
-    1 : null
-  # which column is the gt label in
-  gt_label_col : null
-
-# if gt_label_scope is 'fov' then we assume
-# but will check that gt_label and gt_label_map are both
-# in the metadata
+## GT label null (not specified)
+gt_label_scope: null
