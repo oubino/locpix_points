@@ -8,8 +8,8 @@ Data can be .csv or .parquet files
 This repository then does the following:
     - Initialise a project directory
     - Preprocess
-    - Annotate each fov or localisation
-    - Feature extraction
+    - Annotate each fov or localisation (optional)
+    - Feature extraction for each cluster
     - Process for Pytorch geometric
     - Train
     - Evaluate
@@ -117,7 +117,7 @@ Quickstart (Linux)
 
     bash scripts/preprocess.sh
 
-5. Annotate the data - Optional
+5. Annotate the data (Optional)
 
 *Run*
 
@@ -133,7 +133,7 @@ Quickstart (Linux)
 
     bash scripts/featextract.sh
 
-7. Run k-fold training
+7. Run k-fold training (runs process + train + evaluate)
 
 *Run*
 
@@ -159,68 +159,33 @@ Adjust config file to choose fold
 
     bash scripts/featanalyse_nn.sh
 
+10. Visualise a FOV
+
+*Run*
+
+.. code-block:: shell
+
+    visualise [ARGS] 
+
+*Args*
+
+Look below to see what args should be
 
 Longer description
 ==================
 
-If not running on Linux or want to run a different workflow please keep reading...
+If not running on Linux or want to run an alternative workflow we can run any of the scripts detailed below.
 
-The workflow above is
-
-Workflow 1
-----------
-
-    - Initialise
-    - Preprocess
-    - Featextract (use Environment 2)
-    - K-fold (does process + train + evaluate)
-
-For these scripts we will need to specify the:
-
-1. Data folder
-2. Project directory
-3. Location of the configuration file/folder
-
-Recommended practice (as demosntratred in the quickstart) is to keep all configuration files for a project
-in a folder inside the project directory 
+Each script has a configuration file, recommended practice is to keep all configuration files for the project
+in a folder inside the project directory (but this is not strictly necessary!) 
 
 project_folder/
     config/
         evaluate.yaml
         ...
 
-Alternative workflows could look like:
-
-Workflow 2
-----------
-
-    - Initialise
-    - Preprocess
-    - Featextract (use Environment 2)
-    - Process
-    - Train
-    - Evaluate
-
-Workflow 3
-----------
-
-    - Initialise
-    - Preprocess
-    - Annotate
-    - Featextract (use Environment 2)
-    - Process
-    - Train
-    - Evaluate
-
-Feat analyse can also be run after processing and visualise can be run on the .parquet files or the processed files.
-We recommend visualising the processed files as then you are able to see the graph.
-
-Scripts
-=======
-
-The workflows consist of the scripts we need to run which are detailed below
-
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 and visualise which must be run with Environment 3
+Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
+and visualise which must be run with Environment 3
 
 Initialise
 ----------
@@ -351,6 +316,9 @@ The dataframe is saved as a .parquet file with metadata specifying the mapping f
 
 Featextract
 -----------
+
+*Note*
+Uses environment 2
 
 *Run*
 
@@ -618,6 +586,9 @@ This includes
 Visualise
 ---------
 
+*Note*
+Uses environment 3
+
 *Run*
 
 .. code-block:: python
@@ -634,9 +605,9 @@ Visualise
 
 *Long description*
 
-Can either load in .parquet file and visualise just the points.
+Can load in .pt pytorch geometric file and visualise the nodes and edges [RECOMMENDED]
 
-Or can load in .pt pytorch geometric file and visualise the nodes and edges
+OR load in .parquet file and visualise just the points.
 
 Clean up
 --------
@@ -645,17 +616,6 @@ Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
 
 Model architectures
 ===================
-
-
-Pytorch geometric
-=================
-
-Currently the location is taken in as feature vector i.e. the values of x and y
-Obviously may want to play with this - number of photons etc.
-
-Pre transform: saves pretransform.pt saves the pre transform that was done to the data i.e. a knn graph of this shape
-
-so that it can make sure the data loaded in afterwards has gone through same preprocessing
 
 
 Mixed precision training
@@ -710,20 +670,6 @@ PSF Sigma Y (pix): normalise 0-1
 Sigma X var: normalise 0-1
 Sigma Y var: normalise 0-1
 p-value: leave as is
-
-Need to load these in, need to calculate max and min for each column over the whole training dataset
-
-Then can normalise features to between 0 and 1 for these features
-
-Note that when then apply to new point need to clamp points below 0 to 0 and above 1 to 1
-
-Then also experiment with pytorch geometric normalise features
-
-1. Need to calculate max and min for each dataitem
-2. Need to load in train/val/test files for fold 0
-3. Need to normalise each feature by the max and min values
-4. Then can run on arc
-
 
 Licenses
 ========
