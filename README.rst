@@ -219,6 +219,8 @@ Preprocess
     - -c Path to configuration .yaml file
     - -o Path to the project folder will create
 
+*Description*
+
 Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
 
     - name: Name of the file/fov    
@@ -255,8 +257,6 @@ If 'gt_label_scope' in config file is 'loc' or 'fov':
 Annotate
 --------
 
-*Run*
-
 .. code-block:: python
 
     annotate
@@ -269,17 +269,7 @@ Annotate
     - -n If specified we annotate each localisation using napari
     - -s If 'fov' we label per FOV, if 'loc' we label per localisation
 
-*Structure*
-
-Data loaded in from
-
-    - project_folder/preprocessed/no_gt_label
-
-Data then stored in
-
-    - project_folder/preprocessed/gt_label
-
-*Long description*
+*Description*
 
 If napari:
     Each fov is visualised in a histogram, which is annotated returning localisation level labels
@@ -296,17 +286,20 @@ If loc:
 
     This is saved in the dataframe in a column called 'gt_label'
 
-
 The dataframe is saved as a .parquet file with metadata specifying the mapping from label to integer
 
+Data loaded in from
+
+    - project_folder/preprocessed/no_gt_label
+
+Data then stored in
+
+    - project_folder/preprocessed/gt_label
 
 Featextract
 -----------
 
-*Note*
-Uses environment 2
-
-*Run*
+USING ENVIRONMENT 2
 
 .. code-block:: python
 
@@ -317,7 +310,17 @@ Uses environment 2
     - -i Path to the project folder
     - -c Path to configuration .yaml file
 
-*Structure*
+*Description*
+
+For each FOV DBSCAN is used to cluster the data
+
+Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
+
+PCA for each cluster is calculated (linearity, circularity)
+
+The convex hull for each cluster is calculated (perimeter length, area, length)
+
+The cluster density is calculated (locs/convex hull area)
 
 Data loaded in from
 
@@ -331,18 +334,6 @@ Feature data for clusters saved in
 
     - project_directory/preprocessed/featextract/clusters
 
-*Long description*
-
-For each FOV DBSCAN is used to cluster the data
-
-Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
-
-PCA for each cluster is calculated (linearity, circularity)
-
-The convex hull for each cluster is calculated (perimeter length, area, length)
-
-The cluster density is calculated (locs/convex hull area)
-
 *Warnings*
 
 1. We drop all unclustered localisations
@@ -352,8 +343,6 @@ The cluster density is calculated (locs/convex hull area)
 
 Process
 -------
-
-*Run*
 
 .. code-block:: python
 
@@ -367,8 +356,21 @@ Process
     - -r If you want to copy the data split of another project then include this argument with the location of the project folder
     - -m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
 
+*Description*
 
-*Structure*
+A heterodataitem for each FOV is created.
+
+This has two types of nodes: localisations and clusters.
+
+The features for the localisations and clusters are loaded into these nodes.
+
+Then edges are added between
+
+    - Localisations to localisations within the same cluster
+    - Localisations to the cluster they are in
+    - Clusters to nearest clusters
+
+This is then ready for training
 
 Data loaded in from
 
@@ -390,26 +392,8 @@ or
     - project_directory/{args.output_folder}/val/
     - project_directory/{args.output_folder}/test/
 
-*Long description*
-
-A heterodataitem for each FOV is created.
-
-This has two types of nodes: localisations and clusters.
-
-The features for the localisations and clusters are loaded into these nodes.
-
-Then edges are added between
-
-    - Localisations to localisations within the same cluster
-    - Localisations to the cluster they are in
-    - Clusters to nearest clusters
-
-This is then ready for training
-
 Train
 -----
-
-*Run*
 
 .. code-block:: python
 
@@ -423,7 +407,9 @@ Train
     - -m (Optional) Where to store the models, if not specified defaults to project_directory/models
 
 
-*Structure*
+*Description*
+
+The data is loaded in, the specified model is trained and saved.
 
 Data loaded in from
 
@@ -441,15 +427,8 @@ or
 
     - project_directory/{args.model_folder}
 
-*Long description*
-
-The data is loaded in, the specified model is trained and saved.
-
-
 Evaluate
 --------
-
-*Run*
 
 .. code-block:: python
 
@@ -463,8 +442,11 @@ Evaluate
     - -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
     - -e (Optional) If given then explain algorithms are run on the datas
 
+*Description*
 
-*Structure*
+Data is loaded in from the test folder and the model from the model_path.
+This model is then evaluated on the dataset and metrics are provided.
+If the explain argument is given then explain algorithms are also run on the dataset
 
 Data loaded in from
 
@@ -478,17 +460,8 @@ Model is loaded from
 
     - {args.model_loc}
 
-
-*Long description*
-
-Data is loaded in from the test folder and the model from the model_path.
-This model is then evaluated on the dataset and metrics are provided.
-If the explain argument is given then explain algorithms are also run on the dataset
-
 k-fold
 ------
-
-*Run*
 
 .. code-block:: python
 
@@ -501,7 +474,13 @@ k-fold
     - -r (Optional) If specified this integer defines the number of random splits to perform
 
 
-*Structure*
+*Description*
+
+If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+
+For each fold, the data is processed and trained using the train and validation folds.
+
+After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
 
 Data loaded in from
 
@@ -523,28 +502,8 @@ The final models are saved in
 
     - project_folder/models/fold_{index}/
 
-*Long description*
-
-If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
-
-For each fold, the data is processed and trained using the train and validation folds.
-
-After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
-
 Featanalyse
 -----------
-
-*Requirements*
-
-The packages required are  installed in the locpix-points environment. These include
-    - polars
-    - seaborn
-    - matplotlib
-    - umap
-    - sklearn
-    - numpy
-
-*Run*
 
 .. code-block:: python
 
@@ -557,7 +516,7 @@ The packages required are  installed in the locpix-points environment. These inc
     - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
     - -a (Optional) If present we use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
 
-*Long description*
+*Description*
 
 Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
 This includes
@@ -572,10 +531,7 @@ This includes
 Visualise
 ---------
 
-*Note*
-Uses environment 3
-
-*Run*
+USING ENVIRONMENT 3
 
 .. code-block:: python
 
@@ -589,7 +545,7 @@ Uses environment 3
     - -z If .parquet and 3D then name of the z column
     - -c If .parquet name of the channel column
 
-*Long description*
+*Description*
 
 Can load in .pt pytorch geometric file and visualise the nodes and edges [RECOMMENDED]
 
