@@ -208,8 +208,6 @@ Project directory contains the configuration files, scripts and metadata require
 Preprocess
 ----------
 
-*Run*
-
 .. code-block:: python
 
     preprocess
@@ -220,18 +218,6 @@ Preprocess
     - -i Path to the input data folder
     - -c Path to configuration .yaml file
     - -o Path to the project folder will create
-
-*Structure*
-
-If 'gt_label_scope' in config file is null:
-
-    - Data stored in project_folder/preprocessed/no_gt_label
-
-If 'gt_label_scope' in config file is 'loc' or 'fov':
-
-    - Data store in project_folder/preprocessed/gt_label
-
-*Long description*
 
 Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
 
@@ -251,6 +237,14 @@ The dataframe has the following columns:
     - z
     - channel
     - frame
+
+If 'gt_label_scope' in config file is null:
+
+    - Data stored in project_folder/preprocessed/no_gt_label
+
+If 'gt_label_scope' in config file is 'loc' or 'fov':
+
+    - Data store in project_folder/preprocessed/gt_label
 
 *Current limitations*
 
