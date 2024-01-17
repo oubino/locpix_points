@@ -39,6 +39,8 @@ dependencies = [
     "pgmpy",
     "pre-commit",
     "importlib_resources",
+    "scikit-learn",
+    # "umap",
     # need to install https://github.com/mims-harvard/GraphXAI
 
     # "torchvision",  check actually need this

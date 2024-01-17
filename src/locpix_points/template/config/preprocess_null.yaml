@@ -1,0 +1,36 @@
+# The following are the names of the
+# x column, y column, z column if present, channel, frame,
+# in the parquet files being processed
+x_col: 'x'
+y_col: 'y'
+z_col: null
+channel_col: 'channel'
+frame_col: 'frame'
+
+# The number of dimensions to consider
+# If 2 only deals with x and y
+# If 3 will read in and deal with z as well (currently not fully supported)
+dim: 2
+
+# choice of which channels user wants to consider
+# if null considers all
+channel_choice: [0]
+
+# specify string for each channel
+channel_label:
+  0: unk
+
+# whether to not drop the column containing
+# pixel
+drop_pixel_col: False
+
+# files to include: all for everyone
+include_files: all
+  #- file_1
+  #- file_2
+
+## Choice of input features
+features: []
+
+## GT label null (not specified)
+gt_label_scope: null

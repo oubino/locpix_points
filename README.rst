@@ -3,13 +3,13 @@ Overview
 
 This repository allows for analysis of SMLM data using graph neural networks.
 
-All code in TMA repository prepares data from ONI API (download, link with outcomes, save as .parquet wiht outcomes in metadata).
+Data can be .csv or .parquet files
 
 This repository then does the following:
     - Initialise a project directory
-    - Feature extraction
-    - Preprocess for Pytorch geometric
-    - Annotate or prepare GT labels
+    - Preprocess
+    - Annotate each fov or localisation (optional)
+    - Feature extraction for each cluster
     - Process for Pytorch geometric
     - Train
     - Evaluate
@@ -27,17 +27,12 @@ For wsl for windows - follow
 
 Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
 
-Also had to install Rapids on WSL
-
-.. code-block:: python
-
-    micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
+To do: release this repository as a package on PyPI
 
 Environment 1 (locpix-points)
 -----------------------------
 
 Create new environment
-
 
 .. code-block:: python
 
@@ -47,6 +42,8 @@ Then install this repository
 
 .. code-block:: python
 
+    git clone https://github.com/oubino/locpix_points.git
+    cd locpix_points
     pip install -e .
 
 Before installing the remaining requirements, making sure you have activated the environment first
@@ -73,12 +70,26 @@ Then navigate to the directory and install using
 Environment 2 (feat_extract)
 ----------------------------
 
+Install external packages
+
 .. code-block:: python 
 
     micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
+
+Then install this repository
+
+.. code-block:: python
+
+    git clone https://github.com/oubino/locpix_points.git
+    cd locpix_points
     pip install -e .
+
+Then install pytorch geometric
+
+.. code-block:: python
+
     pip install torch-geometric
 
 
@@ -86,6 +97,8 @@ Note need to install locpix points as well
 
 Environment 3 (visualise)
 -------------------------
+
+Install external packages
 
 .. code-block:: python
 
@@ -99,8 +112,6 @@ Quickstart (Linux)
 
 1. Initialise a project directory 
 
-*Run*
-
 .. code-block:: python
 
     initialise
@@ -111,121 +122,91 @@ Quickstart (Linux)
 
 4. Preprocess the data
 
-*Run*
-
 .. code-block:: shell
 
     bash scripts/preprocess.sh
 
-5. Extract features
+5. Annotate the data (Optional)
 
-*Run*
+.. code-block:: shell
+
+    bash scripts/annotate.sh
+
+6. Extract features
 
 .. code-block:: shell
 
     bash scripts/featextract.sh
 
-6. Run k-fold training
-
-*Run*
+7. Run k-fold training (runs process + train + evaluate)
 
 .. code-block:: shell
 
     bash scripts/k_fold.sh
 
+8. Analyse manual features
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_manual.sh
+
+9. Analyse neural network features for one fold
+
+Adjust config file to choose fold
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_nn.sh
+
+10.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+
+.. code-block:: shell
+
+    visualise [ARGS] 
 
 Longer description
 ==================
 
-If not running on Linux or want to run a different workflow please keep reading...
+If not running on Linux or want to run an alternative workflow we can run any of the scripts detailed below.
 
-The workflow above is
+Each script has a configuration file, recommended practice is to keep all configuration files for the project
+in a folder inside the project directory (but this is not strictly necessary!) 
 
-Workflow 1
-----------
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    └── ...
 
-    - Initialise
-    - Preprocess
-    - Featextract (use Environment 2)
-    - K-fold (does process + train + evaluate)
-
-For these scripts we will need to specify the:
-
-1. Data folder
-2. Project directory
-3. Location of the configuration file/folder
-
-Recommended practice (as demosntratred in the quickstart) is to keep all configuration files for a project
-in a folder inside the project directory 
-
-project_folder/
-    config/
-        evaluate.yaml
-        ...
-
-Alternative workflows could look like:
-
-Workflow 2
-----------
-
-    - Initialise
-    - Preprocess
-    - Featextract (use Environment 2)
-    - Process
-    - Train
-    - Evaluate
-
-Workflow 3
-----------
-
-    - Initialise
-    - Preprocess
-    - Annotate
-    - Featextract (use Environment 2)
-    - Process
-    - Train
-    - Evaluate
-
-Feat analyse can also be run after processing and visualise can be run on the .parquet files or the processed files.
-We recommend visualising the processed files as then you are able to see the graph.
-
-Scripts
-=======
-
-The workflows consist of the scripts we need to run which are detailed below
-
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 and visualise which must be run with Environment 3
+Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
+and visualise which must be run with Environment 3
 
 Initialise
 ----------
-
-*Run*
 
 .. code-block:: python
 
     initialise
 
-*Description*
-
 Initialise a project directory, linked to the dataset you want to analyse.
 Project directory contains the configuration files, scripts and metadata required.
 
-*Structure*
-
-Project directory/
-    config/
-        evaluate.yaml
-        ...
-    scripts/
-        featextract.py
-        ...
-    metadata.json
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    ├── scripts
+    │   ├── featextract.py
+    │   └── ...
+    └── metadata.json
 
 
 Preprocess
 ----------
-
-*Run*
 
 .. code-block:: python
 
@@ -238,17 +219,7 @@ Preprocess
     - -c Path to configuration .yaml file
     - -o Path to the project folder will create
 
-*Structure*
-
-If 'gt_label_scope' in config file is null:
-
-    - Data stored in project_folder/preprocessed/no_gt_label
-
-If 'gt_label_scope' in config file is 'loc' or 'fov':
-
-    - Data store in project_folder/preprocessed/gt_label
-
-*Long description*
+*Description*
 
 Files are read from input data folder as .parquet files, converted to datastructures and saved as .parquet files with data in the dataframe and the following metadata
 
@@ -269,6 +240,14 @@ The dataframe has the following columns:
     - channel
     - frame
 
+If 'gt_label_scope' in config file is null:
+
+    - Data stored in project_folder/preprocessed/no_gt_label
+
+If 'gt_label_scope' in config file is 'loc' or 'fov':
+
+    - Data store in project_folder/preprocessed/gt_label
+
 *Current limitations*
 
     - Currently there is no option to manually choose which channels to consider, so all channels are considered.
@@ -277,8 +256,6 @@ The dataframe has the following columns:
 
 Annotate
 --------
-
-*Run*
 
 .. code-block:: python
 
@@ -289,8 +266,27 @@ Annotate
     
     - -i Path to the project folder
     - -c Path to configuration .yaml file
+    - -n If specified we annotate each localisation using napari
+    - -s If 'fov' we label per FOV, if 'loc' we label per localisation
 
-*Structure*
+*Description*
+
+If napari:
+    Each fov is visualised in a histogram, which is annotated returning localisation level labels
+
+    These are added in a separate column to the dataframe called 'gt_label'
+
+If fov:
+    We annotate per FOV 
+
+    This is saved in parquet metadata
+
+If loc:
+    We annotate per localisation
+
+    This is saved in the dataframe in a column called 'gt_label'
+
+The dataframe is saved as a .parquet file with metadata specifying the mapping from label to integer
 
 Data loaded in from
 
@@ -300,19 +296,10 @@ Data then stored in
 
     - project_folder/preprocessed/gt_label
 
-*Long description*
-
-Each fov is visualised in a histogram, which is annotated returning localisation level labels
-
-These are added in a separate column to the dataframe called 'gt_label'
-
-The dataframe is saved as a .parquet file with metadata specifying the mapping from label to integer
-
-
 Featextract
 -----------
 
-*Run*
+USING ENVIRONMENT 2
 
 .. code-block:: python
 
@@ -323,7 +310,17 @@ Featextract
     - -i Path to the project folder
     - -c Path to configuration .yaml file
 
-*Structure*
+*Description*
+
+For each FOV DBSCAN is used to cluster the data
+
+Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
+
+PCA for each cluster is calculated (linearity, circularity)
+
+The convex hull for each cluster is calculated (perimeter length, area, length)
+
+The cluster density is calculated (locs/convex hull area)
 
 Data loaded in from
 
@@ -337,18 +334,6 @@ Feature data for clusters saved in
 
     - project_directory/preprocessed/featextract/clusters
 
-*Long description*
-
-For each FOV DBSCAN is used to cluster the data
-
-Basic per-cluster features are calculated (cluster COM, localisations per cluster, radius of gyration)
-
-PCA for each cluster is calculated (linearity, circularity)
-
-The convex hull for each cluster is calculated (perimeter length, area, length)
-
-The cluster density is calculated (locs/convex hull area)
-
 *Warnings*
 
 1. We drop all unclustered localisations
@@ -358,8 +343,6 @@ The cluster density is calculated (locs/convex hull area)
 
 Process
 -------
-
-*Run*
 
 .. code-block:: python
 
@@ -373,8 +356,21 @@ Process
     - -r If you want to copy the data split of another project then include this argument with the location of the project folder
     - -m List of lists, list[0]=train files, list[1] = val files, list[2] = test files
 
+*Description*
 
-*Structure*
+A heterodataitem for each FOV is created.
+
+This has two types of nodes: localisations and clusters.
+
+The features for the localisations and clusters are loaded into these nodes.
+
+Then edges are added between
+
+    - Localisations to localisations within the same cluster
+    - Localisations to the cluster they are in
+    - Clusters to nearest clusters
+
+This is then ready for training
 
 Data loaded in from
 
@@ -396,26 +392,8 @@ or
     - project_directory/{args.output_folder}/val/
     - project_directory/{args.output_folder}/test/
 
-*Long description*
-
-A heterodataitem for each FOV is created.
-
-This has two types of nodes: localisations and clusters.
-
-The features for the localisations and clusters are loaded into these nodes.
-
-Then edges are added between
-
-    - Localisations to localisations within the same cluster
-    - Localisations to the cluster they are in
-    - Clusters to nearest clusters
-
-This is then ready for training
-
 Train
 -----
-
-*Run*
 
 .. code-block:: python
 
@@ -429,7 +407,9 @@ Train
     - -m (Optional) Where to store the models, if not specified defaults to project_directory/models
 
 
-*Structure*
+*Description*
+
+The data is loaded in, the specified model is trained and saved.
 
 Data loaded in from
 
@@ -447,15 +427,8 @@ or
 
     - project_directory/{args.model_folder}
 
-*Long description*
-
-The data is loaded in, the specified model is trained and saved.
-
-
 Evaluate
 --------
-
-*Run*
 
 .. code-block:: python
 
@@ -469,8 +442,11 @@ Evaluate
     - -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
     - -e (Optional) If given then explain algorithms are run on the datas
 
+*Description*
 
-*Structure*
+Data is loaded in from the test folder and the model from the model_path.
+This model is then evaluated on the dataset and metrics are provided.
+If the explain argument is given then explain algorithms are also run on the dataset
 
 Data loaded in from
 
@@ -484,17 +460,8 @@ Model is loaded from
 
     - {args.model_loc}
 
-
-*Long description*
-
-Data is loaded in from the test folder and the model from the model_path.
-This model is then evaluated on the dataset and metrics are provided.
-If the explain argument is given then explain algorithms are also run on the dataset
-
 k-fold
 ------
-
-*Run*
 
 .. code-block:: python
 
@@ -507,7 +474,13 @@ k-fold
     - -r (Optional) If specified this integer defines the number of random splits to perform
 
 
-*Structure*
+*Description*
+
+If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+
+For each fold, the data is processed and trained using the train and validation folds.
+
+After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
 
 Data loaded in from
 
@@ -529,28 +502,8 @@ The final models are saved in
 
     - project_folder/models/fold_{index}/
 
-*Long description*
-
-If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
-
-For each fold, the data is processed and trained using the train and validation folds.
-
-After each fold, the files for each FOV are removed to avoid excessive build up of files, retaining the filter_map.csv, pre_filter.pt and pre_transform.pt
-
 Featanalyse
 -----------
-
-*Requirements*
-
-The packages required are  installed in the locpix-points environment. These include
-    - polars
-    - seaborn
-    - matplotlib
-    - umap
-    - sklearn
-    - numpy
-
-*Run*
 
 .. code-block:: python
 
@@ -561,9 +514,9 @@ The packages required are  installed in the locpix-points environment. These inc
     - -i Path to the project folder
     - -c Path to configuration .yaml file
     - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
-    - -t (Optional) If present we are testing therefore use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
+    - -a (Optional) If present we use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
 
-*Long description*
+*Description*
 
 Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
 This includes
@@ -578,7 +531,7 @@ This includes
 Visualise
 ---------
 
-*Run*
+USING ENVIRONMENT 3
 
 .. code-block:: python
 
@@ -592,11 +545,11 @@ Visualise
     - -z If .parquet and 3D then name of the z column
     - -c If .parquet name of the channel column
 
-*Long description*
+*Description*
 
-Can either load in .parquet file and visualise just the points.
+Can load in .pt pytorch geometric file and visualise the nodes and edges [RECOMMENDED]
 
-Or can load in .pt pytorch geometric file and visualise the nodes and edges
+OR load in .parquet file and visualise just the points.
 
 Clean up
 --------
@@ -605,17 +558,6 @@ Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
 
 Model architectures
 ===================
-
-
-Pytorch geometric
-=================
-
-Currently the location is taken in as feature vector i.e. the values of x and y
-Obviously may want to play with this - number of photons etc.
-
-Pre transform: saves pretransform.pt saves the pre transform that was done to the data i.e. a knn graph of this shape
-
-so that it can make sure the data loaded in afterwards has gone through same preprocessing
 
 
 Mixed precision training
@@ -670,20 +612,6 @@ PSF Sigma Y (pix): normalise 0-1
 Sigma X var: normalise 0-1
 Sigma Y var: normalise 0-1
 p-value: leave as is
-
-Need to load these in, need to calculate max and min for each column over the whole training dataset
-
-Then can normalise features to between 0 and 1 for these features
-
-Note that when then apply to new point need to clamp points below 0 to 0 and above 1 to 1
-
-Then also experiment with pytorch geometric normalise features
-
-1. Need to calculate max and min for each dataitem
-2. Need to load in train/val/test files for fold 0
-3. Need to normalise each feature by the max and min values
-4. Then can run on arc
-
 
 Licenses
 ========
