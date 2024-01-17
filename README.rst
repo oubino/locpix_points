@@ -99,8 +99,6 @@ Quickstart (Linux)
 
 1. Initialise a project directory 
 
-*Run*
-
 .. code-block:: python
 
     initialise
@@ -111,15 +109,11 @@ Quickstart (Linux)
 
 4. Preprocess the data
 
-*Run*
-
 .. code-block:: shell
 
     bash scripts/preprocess.sh
 
 5. Annotate the data (Optional)
-
-*Run*
 
 .. code-block:: shell
 
@@ -127,23 +121,17 @@ Quickstart (Linux)
 
 6. Extract features
 
-*Run*
-
 .. code-block:: shell
 
     bash scripts/featextract.sh
 
 7. Run k-fold training (runs process + train + evaluate)
 
-*Run*
-
 .. code-block:: shell
 
     bash scripts/k_fold.sh
 
 8. Analyse manual features
-
-*Run*
 
 .. code-block:: shell
 
@@ -153,23 +141,15 @@ Quickstart (Linux)
 
 Adjust config file to choose fold
 
-*Run*
-
 .. code-block:: shell
 
     bash scripts/featanalyse_nn.sh
 
-10. Visualise a FOV
-
-*Run*
+10.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
 .. code-block:: shell
 
     visualise [ARGS] 
-
-*Args*
-
-Look below to see what args should be
 
 Longer description
 ==================
@@ -179,10 +159,13 @@ If not running on Linux or want to run an alternative workflow we can run any of
 Each script has a configuration file, recommended practice is to keep all configuration files for the project
 in a folder inside the project directory (but this is not strictly necessary!) 
 
-project_folder/
-    config/
-        evaluate.yaml
-        ...
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    └── ...
 
 Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
 and visualise which must be run with Environment 3
@@ -190,27 +173,29 @@ and visualise which must be run with Environment 3
 Initialise
 ----------
 
-*Run*
-
 .. code-block:: python
 
     initialise
 
-*Description*
+Description
+^^^^^^^^^^^
 
 Initialise a project directory, linked to the dataset you want to analyse.
 Project directory contains the configuration files, scripts and metadata required.
 
-*Structure*
+Structure
+^^^^^^^^^
 
-Project directory/
-    config/
-        evaluate.yaml
-        ...
-    scripts/
-        featextract.py
-        ...
-    metadata.json
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    ├── scripts
+    │   ├── featextract.py
+    │   └── ...
+    └── metadata.json
 
 
 Preprocess
