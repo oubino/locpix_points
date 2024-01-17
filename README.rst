@@ -27,17 +27,12 @@ For wsl for windows - follow
 
 Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
 
-Also had to install Rapids on WSL
-
-.. code-block:: python
-
-    micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf=23.10 cuml=23.10 python=3.10 cuda-version=12.0
+To do: release this repository as a package on PyPI
 
 Environment 1 (locpix-points)
 -----------------------------
 
 Create new environment
-
 
 .. code-block:: python
 
@@ -47,6 +42,8 @@ Then install this repository
 
 .. code-block:: python
 
+    git clone https://github.com/oubino/locpix_points.git
+    cd locpix_points
     pip install -e .
 
 Before installing the remaining requirements, making sure you have activated the environment first
@@ -73,12 +70,26 @@ Then navigate to the directory and install using
 Environment 2 (feat_extract)
 ----------------------------
 
+Install external packages
+
 .. code-block:: python 
 
     micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
+
+Then install this repository
+
+.. code-block:: python
+
+    git clone https://github.com/oubino/locpix_points.git
+    cd locpix_points
     pip install -e .
+
+Then install pytorch geometric
+
+.. code-block:: python
+
     pip install torch-geometric
 
 
@@ -86,6 +97,8 @@ Note need to install locpix points as well
 
 Environment 3 (visualise)
 -------------------------
+
+Install external packages
 
 .. code-block:: python
 
@@ -177,14 +190,8 @@ Initialise
 
     initialise
 
-Description
-^^^^^^^^^^^
-
 Initialise a project directory, linked to the dataset you want to analyse.
 Project directory contains the configuration files, scripts and metadata required.
-
-Structure
-^^^^^^^^^
 
 ::
     
