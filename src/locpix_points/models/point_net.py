@@ -76,7 +76,6 @@ class PointNetEmbedding(torch.nn.Module):
         radius (list) : Radius of neighbourhood to consider for each layer
         channels (list) : Channel sizes for each layer
         dropout (float) : Dropout for the final layer
-        norm (str) : Normalisation function, as its output be careful
     """
 
     def __init__(self, config):
@@ -88,7 +87,6 @@ class PointNetEmbedding(torch.nn.Module):
         global_sa_channels = config["global_sa_channels"]
         final_channels = config["final_channels"]
         dropout = config["dropout"]
-        norm = config["norm"]
 
         # Input channels account for both `pos` and node features.
         print("global vs local nn")
@@ -98,7 +96,7 @@ class PointNetEmbedding(torch.nn.Module):
         self.sa3_module = GlobalSAModule(MLP(global_sa_channels, dropout=dropout))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(final_channels, dropout=dropout, norm=norm)
+        self.mlp = MLP(final_channels, dropout=dropout)
 
     def forward(self, x, pos, clusterID, edge_index):
         x = self.sa1_module(x, pos, edge_index)
@@ -142,7 +140,6 @@ class PointNetSegmentation(torch.nn.Module):
             output_channels (list) : Channel sizes for each layer of final MLP
             k (list) : k nearest neighbours to consider for each fp module
             dropout (float) : Dropout for the final layer
-            norm (str) : Normalisation function, as its output be careful
     """
 
     def __init__(self, config):
@@ -155,7 +152,6 @@ class PointNetSegmentation(torch.nn.Module):
         output_channels = config["output_channels"]
         k = config["k"]
         dropout = config["dropout"]
-        norm = config["norm"]
 
         # Input channels account for both `pos` and node features.
         self.sa1_module = SAModule(ratio[0], radius[0], MLP(sa_channels[0]))
@@ -167,7 +163,7 @@ class PointNetSegmentation(torch.nn.Module):
         self.fp1_module = FPModule(k[2], MLP(fp_channels[2]))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(output_channels, dropout=dropout, norm=norm)
+        self.mlp = MLP(output_channels, dropout=dropout)
 
         import warnings
 
