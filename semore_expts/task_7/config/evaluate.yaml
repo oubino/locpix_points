@@ -5,13 +5,16 @@ load_data_from_gpu: False
 label_level: graph # graph
 
 # model parameters
-model: locnetonly_pointnet
+model: locnetclassifyfov
 
 # parameters for the network
-locnetonly_pointnet:
-  LocEncoderChannels_local: [[2, 8], [18, 32], [34, 64]]
-  LocEncoderChannels_global: [[8, 16], [32, 32], [64, 2]]
+locnetclassifyfov:
+  local_channels: [[2,64],[66,128]]
+  global_channels: [[64,64],[128,128]]
+  global_sa_channels: [130, 256]
+  final_channels: [256, 2]
   dropout: 0.0
+  norm: batch_norm
 
 num_classes: 2
 

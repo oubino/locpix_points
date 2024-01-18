@@ -3,13 +3,16 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locnetonly_pointnet
+model: locnetclassifyfov
 
 # parameters for the network
-locnetonly_pointnet:
-  LocEncoderChannels_local: [[2, 8], [10, 16], [10, 16]]
-  LocEncoderChannels_global: [[8, 8], [16, 8], [16, 2]]
+locnetclassifyfov:
+  local_channels: [[2,64],[66,128]]
+  global_channels: [[64,64],[128,128]]
+  global_sa_channels: [130, 256]
+  final_channels: [256, 2]
   dropout: 0.5
+  norm: batch_norm
 
 # optimiser parameters
 optimiser: adam
