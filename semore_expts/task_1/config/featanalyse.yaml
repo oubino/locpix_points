@@ -20,20 +20,20 @@ features:
   #- density_convex_hull
 
 # sklearn parameters
-log_reg:
-  penalty: ["l2"]
-  C: [0.01,0.1,1]
+#log_reg:
+#  penalty: ["l2"]
+#  C: [0.001, 0.01, 0.1]
 dec_tree:
-  max_depth: [30,40,50]
-  max_features: [5,6,7,8]
-svm:
-  C: [1]
-  #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
-  kernel: ["rbf"]
-  gamma: ["scale"]  # , 'auto']
-knn:
-  n_neighbors: [3,5,7,9,11]
-  weights: ["distance"]
+  max_depth: [10,20,30]
+  max_features: [3,5,8]
+#svm:
+#  C: [1]
+#  #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
+#  kernel: ["rbf"]
+#  gamma: ["scale"]  # , 'auto']
+#knn:
+#  n_neighbors: [10, 20, 30]
+#  weights: ["distance"]
 
 
 label_map:
