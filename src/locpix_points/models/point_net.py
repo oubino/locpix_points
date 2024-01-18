@@ -33,40 +33,17 @@ class SAModule(torch.nn.Module):
     master/examples/pointnet2_classification.py from PointNet/PointNet++
 
     Args:
-        ratio (float) : ratio of points to sample from point cloud
-        r (float) : radius which we will consider nearest neighbours for
         conv (neural net) : PointNetConv from Pytorch Geometric - this
             is the PointNet architecture defining function applied to each
             point"""
 
-    def __init__(self, ratio, r, nn):
+    def __init__(self, local_nn, global_nn):
         super().__init__()
-        self.ratio = ratio
-        self.r = r
-        self.conv = PointNetConv(nn, add_self_loops=False)
+        self.conv = PointNetConv(local_nn, global_nn, add_self_loops=False)
 
-    def forward(self, x, pos, batch):
-        # ------ fps ---------
-        # this generates indices to sample from data
-        # first index represents random value from pos
-        # all subsequent indices represent values furthest from pos
-        idx = fps(pos, batch, ratio=self.ratio)
-        # ------ radius -------
-        # finds for each element in pos[idx] all points in pos
-        # within distance self.r
-        # row is the pos[idx] indices
-        # e.g. [0,0,1,1,2,2] - first, second, third points
-        # col is the index of the nearest points to these
-        # e.g. [1,0,2,1,3,0]
-        row, col = radius(
-            pos, pos[idx], self.r, batch, batch[idx], max_num_neighbors=64
-        )
-        edge_index = torch.stack([col, row], dim=0)
-
-        x_dst = None if x is None else x[idx]
-        x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
-        pos, batch = pos[idx], batch[idx]
-        return x, pos, batch
+    def forward(self, x, pos, edge_index):
+        x = self.conv(x, pos, edge_index)
+        return x
 
 
 class GlobalSAModule(torch.nn.Module):
@@ -80,14 +57,58 @@ class GlobalSAModule(torch.nn.Module):
         super().__init__()
         self.nn = nn
 
-    def forward(self, x, pos, batch):
+    def forward(self, x, pos, clusterID):
         x = self.nn(torch.cat([x, pos], dim=1))
-        x = global_max_pool(x, batch)
+        # aggregate the features for each cluster
+        x = global_max_pool(x, clusterID)
+        # this is only relevant to segmentation
         pos = pos.new_zeros((x.size(0), pos.shape[-1]))
-        batch = torch.arange(x.size(0), device=batch.device)
-        return x, pos, batch
+        clusterID = torch.arange(x.size(0), device=clusterID.device)
+        return x, pos, clusterID
 
 
+class PointNetEmbedding(torch.nn.Module):
+    """PointNet embedding model as noted modified from above
+
+    Args:
+        config (dictionary) : Configure with these parameters with following keys
+        ratio (list) : Ratio of points to sample for each layer
+        radius (list) : Radius of neighbourhood to consider for each layer
+        channels (list) : Channel sizes for each layer
+        dropout (float) : Dropout for the final layer
+        norm (str) : Normalisation function, as its output be careful
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.name = "PointNetEmbedding"
+
+        local_channels = config["local_channels"]
+        global_channels = config["global_channels"]
+        global_sa_channels = config["global_sa_channels"]
+        final_channels = config["final_channels"]
+        dropout = config["dropout"]
+        norm = config["norm"]
+
+        # Input channels account for both `pos` and node features.
+        print("global vs local nn")
+        # Note that plain last layers causes issues!!
+        self.sa1_module = SAModule(MLP(local_channels[0], dropout=dropout), MLP(global_channels[0], dropout=dropout))
+        self.sa2_module = SAModule(MLP(local_channels[1], dropout=dropout), MLP(global_channels[1], dropout=dropout))
+        self.sa3_module = GlobalSAModule(MLP(global_sa_channels, dropout=dropout))
+
+        # don't worry, has a plain last layer where no non linearity, norm or dropout
+        self.mlp = MLP(final_channels, dropout=dropout, norm=norm)
+
+    def forward(self, x, pos, clusterID, edge_index):
+        x = self.sa1_module(x, pos, edge_index)
+        x = self.sa2_module(x, pos, edge_index)
+        sa3_out = self.sa3_module(x, pos, clusterID)
+        x, pos, clusterID = sa3_out
+
+        return self.mlp(x)
+
+    
 class FPModule(torch.nn.Module):
     """FP module adapted from https://github.com/pyg-team/pytorch_geometric/blob/master/
     examples/pointnet2_segmentation.py from PointNet/PointNet++
@@ -107,46 +128,6 @@ class FPModule(torch.nn.Module):
             x = torch.cat([x, x_skip], dim=1)
         x = self.nn(x)
         return x, pos_skip, batch_skip
-
-
-class PointNetClassification(torch.nn.Module):
-    """PointNet classification model as noted modified from above
-
-    Args:
-        config (dictionary) : Configure with these parameters with following keys
-            ratio (list) : Ratio of points to sample for each layer
-            radius (list) : Radius of neighbourhood to consider for each layer
-            channels (list) : Channel sizes for each layer
-            dropout (float) : Dropout for the final layer
-            norm (str) : Normalisation function, as its output be careful
-    """
-
-    def __init__(self, config):
-        super().__init__()
-        self.name = "PointNetClassification"
-
-        ratio = config["ratio"]
-        radius = config["radius"]
-        channels = config["channels"]
-        dropout = config["dropout"]
-        norm = config["norm"]
-
-        # Input channels account for both `pos` and node features.
-        self.sa1_module = SAModule(ratio[0], radius[0], MLP(channels[0]))
-        self.sa2_module = SAModule(ratio[1], radius[1], MLP(channels[1]))
-        self.sa3_module = GlobalSAModule(MLP(channels[2]))
-
-        # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(channels[3], dropout=dropout, norm=norm)
-
-    def forward(self, x, pos, batch):
-        sa0_out = (x, pos, batch)
-        sa1_out = self.sa1_module(*sa0_out)
-        sa2_out = self.sa2_module(*sa1_out)
-        sa3_out = self.sa3_module(*sa2_out)
-        x, pos, batch = sa3_out
-
-        return self.mlp(x).log_softmax(dim=-1)
 
 
 class PointNetSegmentation(torch.nn.Module):
