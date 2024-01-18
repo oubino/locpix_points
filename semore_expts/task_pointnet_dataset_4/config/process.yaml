@@ -1,0 +1,34 @@
+# train/test/val splits only specify it not using k-fold
+# train_ratio: 0.7
+# val_ratio: 0.15
+# test_ratio: 0.15
+
+# what to load into position
+# Options: xy, xyz
+pos: xy
+
+# what to load into features
+# Options: uniform (ones), xy, ...
+loc_feat: null
+cluster_feat: null
+
+# label level
+# graph or node
+label_level: graph
+
+# model type
+model: ClusterLoc # ClusterLoc, Loc or Cluster
+
+# number of nearest neighbours to connect clusters to in graph
+kneighboursclusters: 3
+
+# number of nearest neighbours to connect locs to in graph
+# if null then connects all locs within each cluster
+kneighbourslocs: 64
+
+# whether to use gpu (currently irrelevant)
+save_on_gpu: False
+
+# size of fov
+fov_x: 40000.0
+fov_y: 40000.0
