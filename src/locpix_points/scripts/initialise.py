@@ -66,6 +66,7 @@ def main():
         if (
             file.name == "preprocess_null.yaml"
             or file.name == "preprocess_present.yaml"
+            or file.name == "annotate.yaml"
         ):
             continue
         shutil.copy(file, dest)
@@ -193,11 +194,16 @@ def main():
         dest = os.path.join(project_directory, "config/preprocess.yaml")
         shutil.copy(src, dest)
 
-        # copy annotate bash script
+        # copy annotate bash script and yaml
         src = files("locpix_points.template.scripts").joinpath(
             "annotate.sh"
         )
         dest = os.path.join(project_directory, "scripts/annotate.sh")
+        shutil.copy(src, dest)
+        src = files("locpix_points.template.config").joinpath(
+            "annotate.yaml"
+        )
+        dest = os.path.join(project_directory, "config/annotate.yaml")
         shutil.copy(src, dest)
         
         prompt = "-----------------------------------\n"\
