@@ -89,7 +89,6 @@ class PointNetEmbedding(torch.nn.Module):
         dropout = config["dropout"]
 
         # Input channels account for both `pos` and node features.
-        print("global vs local nn")
         # Note that plain last layers causes issues!!
         self.sa1_module = SAModule(MLP(local_channels[0], dropout=dropout), MLP(global_channels[0], dropout=dropout))
         self.sa2_module = SAModule(MLP(local_channels[1], dropout=dropout), MLP(global_channels[1], dropout=dropout))
