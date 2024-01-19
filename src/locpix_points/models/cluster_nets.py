@@ -14,7 +14,7 @@ import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
 from torch_geometric.nn.pool import global_max_pool, global_mean_pool
-from .point_transformer import TransformerBlock
+from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
 
 
@@ -303,11 +303,16 @@ class LocNet(torch.nn.Module):
     Attributes:
     """
 
-    def __init__(self, config):
+    def __init__(self, config, transformer=False):
         super().__init__()
-        self.name = "locpointnet"
 
-        self.pointnet = PointNetEmbedding(config)
+        self.transformer = transformer
+        if not transformer:
+            self.name = "locpointnet"
+            self.pointnet = PointNetEmbedding(config)
+        else:
+            self.name = "locpointtransformer"
+            self.pointtransformer = PointTransformerEmbedding(config)
 
     def forward(self, x_dict, pos_dict, edge_index_dict):
         """Method called when data runs through network
@@ -337,10 +342,14 @@ class LocNet(torch.nn.Module):
         clusterID = var[:,-1].to(torch.int64) 
 
         # embed each localisation and aggregate into each cluster
-        x_cluster = self.pointnet(
-            x_locs, pos_locs, clusterID=clusterID, edge_index=edge_index_dict["locs","clusteredwith","locs"]
-        )
-
+        if not self.transformer:
+            x_cluster = self.pointnet(
+                x_locs, pos_locs, clusterID=clusterID, edge_index=edge_index_dict["locs","clusteredwith","locs"]
+            )
+        else:
+            x_cluster = self.pointtransformer(
+                x_locs, pos_locs, clusterID=clusterID
+            )
         return x_cluster
 
         # aggregate over fov, return classification
@@ -359,11 +368,11 @@ class LocNetClassifyFOV(torch.nn.Module):
         device (torch.device): Whether to run on cpu or gpu
         transformer (bool): If true use PointTransformer to encode localisations"""
 
-    def __init__(self, config, device="cpu"):
+    def __init__(self, config, device="cpu", transformer=False):
 
         super().__init__()
         self.name = "locnetclassifyfov"
-        self.loc_net = LocNet(config)
+        self.loc_net = LocNet(config, transformer=transformer)
         self.device=device
         
     def forward(self, data):
@@ -408,9 +417,9 @@ class LocClusterNet(torch.nn.Module):
         self.device = device
         # wrong input channel size 2 might change if locs have features
         if not transformer:
-            self.loc_net = LocNet(config)
+            self.loc_net = LocNet(config, transforme=False)
         else:
-            raise NotImplementedError("Transformer not implemented")
+            self.loc_net = LocNet(config, transformer=True)
         
         self.cluster_net = ClusterNet(
             ClusterEncoder(

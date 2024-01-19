@@ -52,20 +52,18 @@ def model_choice(name, *args, **kwargs):
         device = kwargs["device"]
         return LocClusterNet(*args, device=device)
     elif name == "locclusternettransformer":
-        raise NotImplementedError('need to impelement')
         device = kwargs["device"]
         return LocClusterNet(*args, device=device, transformer=True)
     elif name == "clusternet":
         return ClusterNetHetero(*args)
     elif name == "clustermlp":
         return ClusterMLP(*args)
-    elif name == "locnetonly_transformer":
-        raise NotImplementedError('need to implement')
+    elif name == "locnetonly_pointnet":
         device = kwargs["device"]
         return LocNetClassifyFOV(*args, device=device)
-    elif name == "locnetclassifyfov":
+    elif name == "locnetonly_pointtransformer":
         device = kwargs["device"]
-        return LocNetClassifyFOV(*args, device=device)
+        return LocNetClassifyFOV(*args, device=device, transformer=True)
     #elif name == "locpointnet":
     #    device = kwargs["device"]
     #    return LocPointNet(*args, device=device)

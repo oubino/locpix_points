@@ -121,7 +121,7 @@ class TransitionDown(torch.nn.Module):
         return out, sub_pos, sub_batch
 
 
-class Classifier(torch.nn.Module):
+class PointTransformerEmbedding(torch.nn.Module):
     def __init__(self, config, dim=2):
         super().__init__()
 
@@ -165,11 +165,12 @@ class Classifier(torch.nn.Module):
 
             self.transformers_down.append(
                 TransformerBlock(
-                    in_channels=dim_model[i + 1], out_channels=dim_model[i + 1]
-                ),
-                dim=dim,
-                pos_nn_layers=pos_nn_layers,
-                attn_nn_layers=attn_nn_layers,
+                    in_channels=dim_model[i + 1], 
+                    out_channels=dim_model[i + 1],
+                    dim=dim,
+                    pos_nn_layers=pos_nn_layers,
+                    attn_nn_layers=attn_nn_layers,
+                )
             )
 
         # class score computation
@@ -177,7 +178,11 @@ class Classifier(torch.nn.Module):
             [dim_model[-1], output_mlp_layers, out_channels], norm=None
         )
 
-    def forward(self, x, pos, batch=None):
+    def forward(self, x, pos, clusterID=None):
+
+        # refactor
+        batch = clusterID
+
         # add dummy features in case there is none
         if x is None:
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
@@ -200,8 +205,10 @@ class Classifier(torch.nn.Module):
         # Class score
         out = self.mlp_output(x)
 
+        return out
+    
         # Log probability
-        return F.log_softmax(out, dim=-1)
+        #return F.log_softmax(out, dim=-1)
 
 
 class Segmenter(torch.nn.Module):
