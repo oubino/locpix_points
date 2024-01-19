@@ -49,7 +49,7 @@ def main(argv=None):
 
     parser.add_argument(
         "-f",
-        "preprocessed_folder",
+        "--preprocessed_folder",
         action="store",
         type=str,
         help="the location of the preprocessed folder relative to the project directory"
