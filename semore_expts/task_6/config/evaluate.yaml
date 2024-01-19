@@ -5,12 +5,18 @@ load_data_from_gpu: False
 label_level: graph # graph
 
 # model parameters
-model: locnetonly_transformer
+model: locnetonly_pointtransformer
 
 # parameters for the network
-locnetonly_transformer:
-  LocEncoderTransformer: [[1, 32, 2, 64, 64], [32, 64, 2, 128, 128], [64, 2, 2, 256, 256]]
-  dropout: 0.0
+locnetonly_pointtransformer:
+  k: 16
+  in_channels: 0
+  out_channels: 8
+  dim_model: [16, 32, 64]
+  output_mlp_layers: 128
+  ratio: 0.2
+  pos_nn_layers: 54
+  attn_nn_layers: 54
 
 num_classes: 2
 

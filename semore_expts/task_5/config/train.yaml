@@ -7,9 +7,17 @@ model: locclusternettransformer
 
 # parameters for the network
 locclusternettransformer:
-  # LocEncoderTransformer: [input_channels, output_channels, dimensions, posn_nn_channels, attention_nn_channels]
-  LocEncoderTransformer: [[1, 8, 2, 32, 32], [8, 16, 2, 32, 32], [16, 8, 2, 32, 32]]
-  ClusterEncoderChannels: [[8, 8],[8, 8], [8, 8]]
+  # locnet
+  k: 16
+  in_channels: 0
+  out_channels: 8
+  dim_model: [16, 32, 64]
+  output_mlp_layers: 128
+  ratio: 0.2
+  pos_nn_layers: 54
+  attn_nn_layers: 54
+  # clusterencoder
+  ClusterEncoderChannels: [[16, 16],[16, 24], [24, 32]]
   OutputChannels: 2
   dropout: 0.5
   
