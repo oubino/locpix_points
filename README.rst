@@ -556,6 +556,48 @@ Clean up
 
 Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
 
+Final test
+----------
+
+.. code-block:: python
+
+    final_test
+
+Initialise a project directory, linked to the dataset you want to analyse.
+Project directory contains the configuration files, scripts and metadata required.
+
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    ├── scripts
+    │   ├── featextract.py
+    │   └── ...
+    └── metadata.json
+
+This is different to initialise as we now ASSUME that your input data is located as
+
+::
+    
+    Input data folder
+    ├── train
+    │   ├── file_0.parquet
+    │   └── ...
+    └── test
+        ├── file_0.parquet
+        └── ...
+    
+*Warning*
+
+Currently data has to have gt_labels already loaded in
+
+AND
+
+There is no feature analysis
+
+
 Model architectures
 ===================
 

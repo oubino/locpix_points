@@ -83,9 +83,14 @@ sandpit/data
 
 # ignore semore output
 semore_expts/task_*/*
+semore_expts/final_test/*
 !semore_expts/task_*/config/
 !semore_expts/task_*/scripts/
 !semore_expts/task_*/README.md
+!semore_expts/final_test/config/
+!semore_expts/final_test/scripts/
+!semore_expts/final_test/README.md
+
 
 # ignore old semore output
 semore_expts_old/task_*/*

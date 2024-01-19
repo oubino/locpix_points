@@ -47,9 +47,22 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-f",
+        "preprocessed_folder",
+        action="store",
+        type=str,
+        help="the location of the preprocessed folder relative to the project directory"
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
+
+    if args.preprocessed_folder is None:
+        preprocessed_folder = os.path.join(project_directory, "preprocessed")
+    else:
+        preprocessed_folder = os.path.join(project_directory, args.preprocessed_folder)
 
     # load config
     with open(args.config, "r") as ymlfile:
@@ -72,16 +85,16 @@ def main(argv=None):
 
     # list items
     try:
-        files = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
+        files = os.listdir(os.path.join(preprocessed_folder, "gt_label"))
     except FileNotFoundError:
         raise ValueError("There should be some files to open")
 
     # if output directory not present create it
     output_loc_directory = os.path.join(
-        project_directory, "preprocessed/featextract/locs"
+        preprocessed_folder, "featextract/locs"
     )
     output_cluster_directory = os.path.join(
-        project_directory, "preprocessed/featextract/clusters"
+        preprocessed_folder, "featextract/clusters"
     )
     folders = [output_loc_directory, output_cluster_directory]
     for folder in folders:
@@ -104,7 +117,7 @@ def main(argv=None):
         print("file", file)
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
-            os.path.join(project_directory, f"preprocessed/gt_label/{file}")
+            os.path.join(preprocessed_folder, f"gt_label/{file}")
         )
 
         # clustering (clusterID)

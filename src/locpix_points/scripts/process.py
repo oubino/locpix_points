@@ -191,6 +191,17 @@ def main(argv=None):
               has to be slightly different to manual split",
     )
 
+    group.add_argument(
+        "-f",
+        "--final_test",
+        type=str,
+        nargs="+",
+        action="append",
+        default=None,
+        help="list of paths, list[0] = path to train folder, list[1] = path to test folder"\
+             "each path is relative to the project folder",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -225,7 +236,7 @@ def main(argv=None):
     # split into train/val/test using pre filter
 
     # split randomly
-    if args.split is None and args.manual_split is None and args.k_split is None:
+    if args.split is None and args.manual_split is None and args.k_split is None and args.final_test is None: 
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
@@ -237,7 +248,7 @@ def main(argv=None):
         val_list = file_list[train_length : train_length + val_length]
         test_list = file_list[train_length + val_length : len(file_list)]
 
-    elif args.split is not None and args.manual_split is None and args.k_split is None:
+    elif args.split is not None:
         warnings.warn(
             "Known omission is if pre-transform is done to dataset"
             "this is not currently also done to this dataset as well"
@@ -251,15 +262,32 @@ def main(argv=None):
         val_list = load_pre_filter(val_list_path)
         test_list = load_pre_filter(test_list_path)
 
-    elif args.split is None and args.k_split is None and args.manual_split is not None:
+    elif args.manual_split is not None:
         train_list = args.manual_split[0]
         val_list = args.manual_split[1]
         test_list = args.manual_split[2]
 
-    elif args.split is None and args.k_split is not None and args.manual_split is None:
+    elif args.k_split is not None:
         train_list = ast.literal_eval(args.k_split[0][0])
         val_list = ast.literal_eval(args.k_split[1][0])
         test_list = ast.literal_eval(args.k_split[2][0])
+
+    elif args.final_test is not None:
+        train_list = os.listdir(os.path.join(project_directory, args.final_test[0]))
+        train_list = [file.removesuffix(".parquet") for file in train_list]
+        test_list = os.listdir(os.path.join(project_directory, args.final_test[1]))
+        test_list = [file.removesuffix(".parquet") for file in test_list]
+
+        random.shuffle(train_list)
+
+        # check ratio
+        assert config["train_ratio"] + config["val_ratio"] == 1.0
+
+        # split into train/val
+        train_length = int(len(train_list) * config["train_ratio"])
+        val_length = len(train_list) - train_length
+        train_list = train_list[0:train_length]
+        val_list = train_list[train_length : len(train_list)]
 
     # bind arguments to functions
     train_pre_filter = partial(pre_filter, inclusion_list=train_list)
@@ -278,16 +306,26 @@ def main(argv=None):
     if not os.path.exists(val_folder):
         os.makedirs(val_folder)
 
-    # calculate min/max features
+    # get correct input folders
+    if args.final_test is None:
+        input_folder_train = os.path.join(project_directory, "preprocessed")
+        input_folder_val = input_folder_train
+        input_folder_test = input_folder_train
+    else:
+        input_folder_train = os.path.join(project_directory, args.final_test[0])
+        input_folder_val = input_folder_train
+        input_folder_test =  os.path.join(project_directory, args.final_test[1])
+
+    # calculate min/max features on training data
     if config["model"] == "ClusterLoc":
         file_directory = os.path.join(
-            project_directory, "preprocessed/featextract/locs"
+            input_folder_train, "featextract/locs"
         )
         min_feat_locs, max_feat_locs = minmax(
             config, "loc_feat", file_directory, train_list
         )
         file_directory = os.path.join(
-            project_directory, "preprocessed/featextract/clusters"
+            input_folder_train, "featextract/clusters"
         )
         min_feat_clusters, max_feat_clusters = minmax(
             config, "cluster_feat", file_directory, train_list
@@ -296,8 +334,8 @@ def main(argv=None):
         print("Train set...")
         # create train dataset
         _ = datastruc.ClusterLocDataset(
-            os.path.join(project_directory, "preprocessed/featextract/locs"),
-            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            os.path.join(input_folder_train, "featextract/locs"),
+            os.path.join(input_folder_train, "featextract/clusters"),
             train_folder,
             config["label_level"],
             train_pre_filter,
@@ -319,8 +357,8 @@ def main(argv=None):
         print("Val set...")
         # create val dataset
         _ = datastruc.ClusterLocDataset(
-            os.path.join(project_directory, "preprocessed/featextract/locs"),
-            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            os.path.join(input_folder_val, "featextract/locs"),
+            os.path.join(input_folder_val, "featextract/clusters"),
             val_folder,
             config["label_level"],
             val_pre_filter,
@@ -342,8 +380,8 @@ def main(argv=None):
         print("Test set...")
         # create test dataset
         _ = datastruc.ClusterLocDataset(
-            os.path.join(project_directory, "preprocessed/featextract/locs"),
-            os.path.join(project_directory, "preprocessed/featextract/clusters"),
+            os.path.join(input_folder_test, "featextract/locs"),
+            os.path.join(input_folder_test, "featextract/clusters"),
             test_folder,
             config["label_level"],
             test_pre_filter,

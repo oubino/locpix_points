@@ -55,6 +55,15 @@ def main(argv=None):
         help="the location of the project directory",
         required=True,
     )
+    parser.add_argument(
+        "-f",
+        "--preprocessed_folder",
+        action="store",
+        type=str,
+        help="the location of the preprocessed folder relative to the project directory e.g."\
+             " preprocessed/train",
+    )
+
 
     args = parser.parse_args(argv)
 
@@ -62,7 +71,10 @@ def main(argv=None):
     input_folder = args.input
 
     # create preprocessed directory
-    output_folder = os.path.join(project_directory, "preprocessed")
+    if args.preprocessed_folder is None:
+        output_folder = os.path.join(project_directory, "preprocessed")
+    else:
+        output_folder = os.path.join(project_directory, args.preprocessed_folder)
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
@@ -129,12 +141,12 @@ def main(argv=None):
         if index == 0:
             if config["gt_label_scope"] is not None:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/gt_label"
+                    output_folder, "gt_label"
                 )
                 os.makedirs(output_directory)
             else:
                 output_directory = os.path.join(
-                    project_directory, "preprocessed/no_gt_label"
+                    output_folder, "no_gt_label"
                 )
                 os.makedirs(output_directory)
 
