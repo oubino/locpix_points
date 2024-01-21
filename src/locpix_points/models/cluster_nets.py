@@ -417,7 +417,7 @@ class LocClusterNet(torch.nn.Module):
         self.device = device
         # wrong input channel size 2 might change if locs have features
         if not transformer:
-            self.loc_net = LocNet(config, transforme=False)
+            self.loc_net = LocNet(config, transformer=False)
         else:
             self.loc_net = LocNet(config, transformer=True)
         
