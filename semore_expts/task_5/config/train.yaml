@@ -17,7 +17,7 @@ locclusternettransformer:
   pos_nn_layers: 54
   attn_nn_layers: 54
   # clusterencoder
-  ClusterEncoderChannels: [[16, 16],[16, 24], [24, 32]]
+  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
   OutputChannels: 2
   dropout: 0.5
   
@@ -28,7 +28,7 @@ lr: 0.001
 weight_decay: 0.0001
 
 # training parameters
-epochs: 100
+epochs: 10
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
