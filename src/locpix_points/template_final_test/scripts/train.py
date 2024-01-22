@@ -11,6 +11,8 @@ def main():
             ".",
             "-c",
             "./config/train.yaml",
+            "-n",
+            "final_test",
         ]
     )
 

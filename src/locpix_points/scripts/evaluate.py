@@ -88,6 +88,14 @@ def main(argv=None):
 
     parser.add_argument("-e", "--explain", action="store_true")
 
+    parser.add_argument(
+        "-n",
+        "--run_name",
+        action="store",
+        type=str,
+        help="name of the run in wandb",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -203,21 +211,40 @@ def main(argv=None):
 
     # initialise wandb
     if not args.wandbstarted:
-        # start a new wandb run to track this script
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project=dataset_name,
-            # set the entity to the user
-            entity=user,
-            # group by dataset
-            group=project_name,
-            # track hyperparameters and run metadata
-            config={
-                "model": args.model_loc,
-                "architecture": model.name,
-                "dataset": dataset_name,
-            },
-        )
+        if args.run_name is None:
+            # start a new wandb run to track this script
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "model": args.model_loc,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                },
+            )
+        else:
+            # start a new wandb run to track this script
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "model": args.model_loc,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                },
+                name=args.run_name,
+            )
+        
     else:
         wandb.config["model"] = args.model_loc
 

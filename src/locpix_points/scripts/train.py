@@ -87,6 +87,14 @@ def main(argv=None):
         help="if specified then wandb has already been initialised",
     )
 
+    parser.add_argument(
+        "-n",
+        "--run_name",
+        action="store",
+        type=str,
+        help="name of the run in wandb",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -290,21 +298,39 @@ def main(argv=None):
     # initialise wandb
     if not args.wandbstarted:
         # start a new wandb run to track this script
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project=dataset_name,
-            # set the entity to the user
-            entity=user,
-            # group by dataset
-            group=project_name,
-            # track hyperparameters and run metadata
-            config={
-                "learning_rate": lr,
-                "architecture": model.name,
-                "dataset": dataset_name,
-                "epochs": epochs,
-            },
-        )
+        if args.run_name is None:
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "learning_rate": lr,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                    "epochs": epochs,
+                },
+            )
+        else:
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "learning_rate": lr,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                    "epochs": epochs,
+                },
+                name=args.run_name,
+            )
     else:
         wandb.config["learning_rate"] = lr
         wandb.config["architecture"] = model.name

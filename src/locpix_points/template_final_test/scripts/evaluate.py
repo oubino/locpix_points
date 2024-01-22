@@ -15,6 +15,8 @@ def main():
             "./config/evaluate.yaml",
             "-m",
             f"{model_loc}",
+            "-n",
+            "final_test",
         ]
     )
 
