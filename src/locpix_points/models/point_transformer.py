@@ -165,7 +165,7 @@ class PointTransformerEmbedding(torch.nn.Module):
 
             self.transformers_down.append(
                 TransformerBlock(
-                    in_channels=dim_model[i + 1], 
+                    in_channels=dim_model[i + 1],
                     out_channels=dim_model[i + 1],
                     dim=dim,
                     pos_nn_layers=pos_nn_layers,
@@ -175,11 +175,12 @@ class PointTransformerEmbedding(torch.nn.Module):
 
         # class score computation
         self.mlp_output = MLP(
-            [dim_model[-1], output_mlp_layers, out_channels], norm=None
+            [dim_model[-1], output_mlp_layers, out_channels],
+            norm=None,?
+            plain_last=True,
         )
 
     def forward(self, x, pos, clusterID=None):
-
         # refactor
         batch = clusterID
 
@@ -206,9 +207,9 @@ class PointTransformerEmbedding(torch.nn.Module):
         out = self.mlp_output(x)
 
         return out
-    
+
         # Log probability
-        #return F.log_softmax(out, dim=-1)
+        # return F.log_softmax(out, dim=-1)
 
 
 class Segmenter(torch.nn.Module):

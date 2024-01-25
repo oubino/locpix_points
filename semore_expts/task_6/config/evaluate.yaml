@@ -11,12 +11,12 @@ model: locnetonly_pointtransformer
 locnetonly_pointtransformer:
   k: 16
   in_channels: 0
-  out_channels: 8
+  out_channels: 2
   dim_model: [16, 32, 64]
-  output_mlp_layers: 128
-  ratio: 0.2
-  pos_nn_layers: 54
-  attn_nn_layers: 54
+  output_mlp_layers: 64
+  ratio: 1.0
+  pos_nn_layers: 32
+  attn_nn_layers: 32
 
 num_classes: 2
 
