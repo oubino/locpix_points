@@ -318,7 +318,10 @@ class LocNet(torch.nn.Module):
         """Method called when data runs through network
 
         Args:
-            data (torch_geometric.data): Data item that runs through the network
+            x_dict (dict): Features of the locs/clusters
+            pos_dict (dict): Positions of the locs/clusters
+            edge_index_dict (dict): Edge connections between
+                locs/clusters
 
         Returns:
             output.log_softmax(dim=-1): Log probabilities for the classes"""

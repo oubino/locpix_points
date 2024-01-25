@@ -18,7 +18,10 @@ def main(argv=None):
         argv : Custom arguments to run script with
 
     Raises:
-        ValueError: If no files present to open or dimensions not 2 or 3"""
+        ValueError: If no files present to open or dimensions not 2 or 3
+        NotImplementedError: If function not implemented yet
+    """
+
     # parse arugments
     parser = argparse.ArgumentParser(description="Annotate the data")
 

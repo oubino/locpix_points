@@ -158,6 +158,9 @@ def analyse_manual_feats(
         label_map (dict): Map from the label name to number
         config (dict): Configuration for this script
         args (dict): Arguments passed to this script
+
+    Raises:
+        NotImplementedError: UMAP is currently not implemented
     """
 
     # aggregate cluster features into collated df
@@ -244,7 +247,7 @@ def analyse_manual_feats(
 
     # 3. Plot UMAP
     if config["umap"]:
-        raise ValueError("Not scaled")
+        raise NotImplementedError("Not scaled")
         plot_umap(data_feats_scaled, df)
 
     # ---------------------------------------------------------------------- #
@@ -634,7 +637,12 @@ def class_report_fn(df, indices):
 
     Args:
         df (DataFrame): Contains the results
-        indices (list): Indices of data to be analysed"""
+        indices (list): Indices of data to be analysed
+
+    Returns:
+        conf_maxtrix (array): Confusion matrix
+        f1 (float): F1 score
+        acc (float): Accuracy score"""
 
     # filter dataframe by only test items
     df = df[indices]
@@ -680,6 +688,14 @@ def class_report(predicted, Y, names, train_indices, test_indices, args, fold):
             of the test set
         args (parser args): Arguments passed to the script
         fold (int): Integer representing the fold we are evaluating on
+
+    Returns:
+        train_conf_maxtrix (array): Confusion matrix for training set
+        test_conf_maxtrix (array): Confusion matrix for test set
+        f1_train (float): F1 score for the training set
+        acc_train (float): Accuracy score for the training set
+        f1_test (float): F1 score for the test set
+        acc_test (float): Accuracy score for the test set
     """
 
     # prediction by the best model
@@ -906,7 +922,11 @@ def fold_results(
         names (list): FOV for each cluster
         args (parser args): Args passed to script
         fold (int): denotes the fold we are evaluating or is None
+        save_dir (string): directory to save results to
         label_map (dict): from real name to integer
+
+    Raises:
+        ValueError: If I (Oli) have made a mistake
     """
 
     print("---- Fit to the specified fold or each fold ----")
@@ -1020,6 +1040,13 @@ def log_reg(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
     cv = iter(zip(train_indices_main, val_indices_main))
 
@@ -1102,7 +1129,15 @@ def dec_tree(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
+
     cv = iter(zip(train_indices_main, val_indices_main))
 
     model = DecisionTreeClassifier()
@@ -1184,6 +1219,13 @@ def svm(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
 
     cv = iter(zip(train_indices_main, val_indices_main))
@@ -1260,6 +1302,13 @@ def knn(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
 
     cv = iter(zip(train_indices_main, val_indices_main))
