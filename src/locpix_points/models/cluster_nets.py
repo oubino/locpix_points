@@ -269,9 +269,7 @@ class ClusterMLP(torch.nn.Module):
         self.MLP_in = MLP(
             config["channels"][:-1], plain_last=False, dropout=config["dropout"]
         )
-        self.MLP_out = MLP(
-            config["channels"][-2:], plain_last=True, dropout=config["dropout"]
-        )
+        self.linear = Linear(config["channels"][-2], config["channels"][-1])
 
     def forward(self, data):
         """Method called when data runs through network
@@ -292,7 +290,7 @@ class ClusterMLP(torch.nn.Module):
             raise KeyError("Clusters need to have features present")
         x = self.MLP_in(x, batch=data["clusters"].batch)
         x = global_mean_pool(x, batch=data["clusters"].batch)
-        x = self.MLP_out(x, batch=data["clusters"].batch)
+        x = self.linear(x)
 
         return x.log_softmax(dim=-1)
 
