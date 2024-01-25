@@ -7,12 +7,11 @@ model: locnetonly_pointnet
 
 # parameters for the network
 locnetonly_pointnet:
-  local_channels: [[2,64],[66,128]]
-  global_channels: [[64,64],[128,128]]
-  global_sa_channels: [130, 256]
-  final_channels: [256, 2]
-  dropout: 0.5
-  norm: batch_norm
+  local_channels: [[2,16,32],[66,80,96]]
+  global_channels: [[32,32,64],[96,96,128]]
+  global_sa_channels: [130, 192, 256]
+  final_channels: [256, 128, 2]
+  dropout: 0.0
 
 # optimiser parameters
 optimiser: adam

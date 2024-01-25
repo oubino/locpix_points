@@ -9,7 +9,7 @@ model: clusternet
 
 # parameters for the network
 clusternet:
-  ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
+  ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2
   dropout: 0.0
 

@@ -7,8 +7,8 @@ model: clustermlp
 
 # parameters for the network
 clustermlp:
-  channels: [8, 32, 128, 32, 2]
-  dropout: 0.5
+  channels: [8, 16, 24, 32, 2]
+  dropout: 0.0
 
 # optimiser parameters
 optimiser: adam
