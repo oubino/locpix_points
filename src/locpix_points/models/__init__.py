@@ -38,14 +38,14 @@ def model_choice(name, *args, **kwargs):
 
     # if name == "simplegcn1":
     #    return SimpleGCN1(*args)
-    #if name == "pointnetembedding":
+    # if name == "pointnetembedding":
     #    return PointNetEmbedding(*args)
-    #elif name == "pointnetseg":
+    # elif name == "pointnetseg":
     #    return PointNetSegmentation(*args)
-    #elif name == "pointtransformerseg":
+    # elif name == "pointtransformerseg":
     #    dim = kwargs["dim"]
     #    return Segmenter(*args, dim=dim)
-    #elif name == "pointtransformerclass":
+    # elif name == "pointtransformerclass":
     #    dim = kwargs["dim"]
     #    return Classifier(*args, dim=dim)
     if name == "locclusternet":
@@ -64,7 +64,7 @@ def model_choice(name, *args, **kwargs):
     elif name == "locnetonly_pointtransformer":
         device = kwargs["device"]
         return LocNetClassifyFOV(*args, device=device, transformer=True)
-    #elif name == "locpointnet":
+    # elif name == "locpointnet":
     #    device = kwargs["device"]
     #    return LocPointNet(*args, device=device)
     else:

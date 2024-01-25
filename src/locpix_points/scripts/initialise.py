@@ -10,6 +10,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 
+
 def get_valid_response(prompt, allowed):
     while True:
         response = input(prompt)
@@ -19,6 +20,7 @@ def get_valid_response(prompt, allowed):
             continue
 
     return response
+
 
 def main():
     # Get user name (needs to match weights and bias entity)
@@ -88,10 +90,12 @@ def main():
         shutil.copy(file, dest)
 
     # Copy preprocessed files from another task
-    prompt = "--------------------------------------------------------------\n"\
-             "Would you like to copy preprocessed files from another folder?\n"\
-             "(yes/no): "
-    copy_preprocessed = get_valid_response(prompt, ["yes", "no"]) 
+    prompt = (
+        "--------------------------------------------------------------\n"
+        "Would you like to copy preprocessed files from another folder?\n"
+        "(yes/no): "
+    )
+    copy_preprocessed = get_valid_response(prompt, ["yes", "no"])
 
     if copy_preprocessed == "yes":
         folder_loc = input("Location of the project folder: ")
@@ -116,9 +120,11 @@ def main():
             metadata["gt_label_map"] = other_metadata["gt_label_map"]
 
         # Copy k fold from another task
-        prompt = "------------------------------------------------------\n"\
-                 "Would you like to copy k-fold splits from this folder?\n"\
-                 "(yes/no): "
+        prompt = (
+            "------------------------------------------------------\n"
+            "Would you like to copy k-fold splits from this folder?\n"
+            "(yes/no): "
+        )
         copy_k_fold = get_valid_response(prompt, ["yes", "no"])
 
         if copy_k_fold == "yes":
@@ -146,15 +152,14 @@ def main():
         dest = os.path.join(project_directory, "scripts/k_fold.py")
         shutil.copy(k_fold_src, dest)
 
-        prompt = "---------------------------\n"\
-                  "Are your files .csv files?\n"\
-                 "(yes/no): "
+        prompt = (
+            "---------------------------\n" "Are your files .csv files?\n" "(yes/no): "
+        )
         csvs = get_valid_response(prompt, ["yes", "no"])
 
         if csvs == "yes":
-            
             # make data folder
-            data_folder = os.path.join(project_directory, 'input_data')
+            data_folder = os.path.join(project_directory, "input_data")
             os.makedirs(data_folder)
 
             # load in csvs from data_path
@@ -164,55 +169,53 @@ def main():
                 csv_path = os.path.join(data_path, file)
                 df = pl.read_csv(csv_path)
                 # save as parquet files
-                df.write_parquet(os.path.join(data_folder, f"{file.replace('.csv','.parquet')}"))
+                df.write_parquet(
+                    os.path.join(data_folder, f"{file.replace('.csv','.parquet')}")
+                )
 
             # update metadata with new data path
             metadata["data_path"] = "./input_data"
 
     # gt label for files
-    prompt =  "-----------------------------------------------------------------\n"\
-              "Data should have per FOV label located in the parquet metadata OR\n"\
-              "Data should have per localisation label located in a column in the dataframe\n"\
-              "Does your data already have this label?\n"\
-              "(yes/no): "
-    gt_label_present = get_valid_response(prompt, ["yes","no"])
+    prompt = (
+        "-----------------------------------------------------------------\n"
+        "Data should have per FOV label located in the parquet metadata OR\n"
+        "Data should have per localisation label located in a column in the dataframe\n"
+        "Does your data already have this label?\n"
+        "(yes/no): "
+    )
+    gt_label_present = get_valid_response(prompt, ["yes", "no"])
 
     if gt_label_present == "yes":
         print("-----------------------------------\n")
         print("Preprocess .yaml needs to be adjusted!")
         # don't need to copy annotate but copy correct preprocess
-        src = files("locpix_points.template.config").joinpath(
-            "preprocess_present.yaml"
-        )
+        src = files("locpix_points.template.config").joinpath("preprocess_present.yaml")
         dest = os.path.join(project_directory, "config/preprocess.yaml")
         shutil.copy(src, dest)
-    else:        
+    else:
         # copy preprocess file
-        src = files("locpix_points.template.config").joinpath(
-            "preprocess_null.yaml"
-        )
+        src = files("locpix_points.template.config").joinpath("preprocess_null.yaml")
         dest = os.path.join(project_directory, "config/preprocess.yaml")
         shutil.copy(src, dest)
 
         # copy annotate bash script and yaml
-        src = files("locpix_points.template.scripts").joinpath(
-            "annotate.sh"
-        )
+        src = files("locpix_points.template.scripts").joinpath("annotate.sh")
         dest = os.path.join(project_directory, "scripts/annotate.sh")
         shutil.copy(src, dest)
-        src = files("locpix_points.template.config").joinpath(
-            "annotate.yaml"
-        )
+        src = files("locpix_points.template.config").joinpath("annotate.yaml")
         dest = os.path.join(project_directory, "config/annotate.yaml")
         shutil.copy(src, dest)
-        
-        prompt = "-----------------------------------\n"\
-                 "You will need to annotate the data.\n"\
-                 "annotate.yaml needs to be adjusted.\n"\
-                 "If you want to annotate each localisation enter: loc\n"\
-                 "OR If you want to annotate each FOV enter: fov\n"\
-                 "(fov/loc): "
-        annotate = get_valid_response(prompt, ["fov","loc"])
+
+        prompt = (
+            "-----------------------------------\n"
+            "You will need to annotate the data.\n"
+            "annotate.yaml needs to be adjusted.\n"
+            "If you want to annotate each localisation enter: loc\n"
+            "OR If you want to annotate each FOV enter: fov\n"
+            "(fov/loc): "
+        )
+        annotate = get_valid_response(prompt, ["fov", "loc"])
 
         if annotate == "fov":
             # copy annotate file
@@ -222,10 +225,12 @@ def main():
             dest = os.path.join(project_directory, "scripts/annotate.py")
             shutil.copy(annotate_src, dest)
         elif annotate == "loc":
-            prompt = "-----------------------------------\n"\
-                     "Do you want to annotate using napari?\n"\
-                     "(yes/no): "
-            napari = get_valid_response(prompt, ["yes","no"])
+            prompt = (
+                "-----------------------------------\n"
+                "Do you want to annotate using napari?\n"
+                "(yes/no): "
+            )
+            napari = get_valid_response(prompt, ["yes", "no"])
 
             if napari == "yes":
                 # copy annotate file
@@ -234,7 +239,7 @@ def main():
                 )
                 dest = os.path.join(project_directory, "scripts/annotate.py")
                 shutil.copy(annotate_src, dest)
-            else: 
+            else:
                 # copy annotate file
                 annotate_src = files("locpix_points.template.scripts").joinpath(
                     "annotate_loc.py"

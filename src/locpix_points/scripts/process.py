@@ -198,8 +198,8 @@ def main(argv=None):
         nargs="+",
         action="append",
         default=None,
-        help="list of paths, list[0] = path to train folder, list[1] = path to test folder"\
-             "each path is relative to the project folder",
+        help="list of paths, list[0] = path to train folder, list[1] = path to test folder"
+        "each path is relative to the project folder",
     )
 
     args = parser.parse_args(argv)
@@ -236,7 +236,12 @@ def main(argv=None):
     # split into train/val/test using pre filter
 
     # split randomly
-    if args.split is None and args.manual_split is None and args.k_split is None and args.final_test is None: 
+    if (
+        args.split is None
+        and args.manual_split is None
+        and args.k_split is None
+        and args.final_test is None
+    ):
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
         file_list = [file.removesuffix(".parquet") for file in file_list]
         random.shuffle(file_list)
@@ -275,9 +280,13 @@ def main(argv=None):
     elif args.final_test is not None:
         # this will generate the same train/val split each time
 
-        train_val_list = os.listdir(os.path.join(project_directory, args.final_test[0][0], 'gt_label'))
+        train_val_list = os.listdir(
+            os.path.join(project_directory, args.final_test[0][0], "gt_label")
+        )
         train_val_list = [file.removesuffix(".parquet") for file in train_val_list]
-        test_list = os.listdir(os.path.join(project_directory, args.final_test[1][0], 'gt_label'))
+        test_list = os.listdir(
+            os.path.join(project_directory, args.final_test[1][0], "gt_label")
+        )
         test_list = [file.removesuffix(".parquet") for file in test_list]
 
         # check ratio
@@ -313,19 +322,15 @@ def main(argv=None):
     else:
         input_folder_train = os.path.join(project_directory, args.final_test[0][0])
         input_folder_val = input_folder_train
-        input_folder_test =  os.path.join(project_directory, args.final_test[1][0])
+        input_folder_test = os.path.join(project_directory, args.final_test[1][0])
 
     # calculate min/max features on training data
     if config["model"] == "ClusterLoc":
-        file_directory = os.path.join(
-            input_folder_train, "featextract/locs"
-        )
+        file_directory = os.path.join(input_folder_train, "featextract/locs")
         min_feat_locs, max_feat_locs = minmax(
             config, "loc_feat", file_directory, train_list
         )
-        file_directory = os.path.join(
-            input_folder_train, "featextract/clusters"
-        )
+        file_directory = os.path.join(input_folder_train, "featextract/clusters")
         min_feat_clusters, max_feat_clusters = minmax(
             config, "cluster_feat", file_directory, train_list
         )

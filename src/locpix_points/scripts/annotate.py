@@ -52,7 +52,7 @@ def main(argv=None):
     group.add_argument(
         "-s",
         "--scope",
-        choices=["fov","loc"],
+        choices=["fov", "loc"],
         help="if fov then label is per fov, if loc then label is per loc",
     )
 
@@ -83,11 +83,14 @@ def main(argv=None):
         )
 
         if args.napari:
-
             if config["napari"]["dim"] == 2:
                 histo_size = (config["napari"]["x_bins"], config["napari"]["y_bins"])
             elif config["dim"] == 3:
-                histo_size = (config["napari"]["x_bins"], config["napari"]["y_bins"], config["napari"]["z_bins"])
+                histo_size = (
+                    config["napari"]["x_bins"],
+                    config["napari"]["y_bins"],
+                    config["napari"]["z_bins"],
+                )
             else:
                 raise ValueError("Dim should be 2 or 3")
 
@@ -104,12 +107,13 @@ def main(argv=None):
             # save df to parquet
             item.gt_label_scope = "loc"
             item.gt_label = None
-            
-        else:
 
-            if args.scope == 'fov':
+        else:
+            if args.scope == "fov":
                 item.gt_label_scope = "fov"
-                raise NotImplementedError("User needs to implement their own annotation")
+                raise NotImplementedError(
+                    "User needs to implement their own annotation"
+                )
                 # Need to assign a label to the fov
                 # Below is an example
                 # if file.startswith('positive_case'):
@@ -119,8 +123,7 @@ def main(argv=None):
                 #
                 # item.gt_label = label
 
-                
-            elif args.scope == 'loc':
+            elif args.scope == "loc":
                 item.gt_label_scope = "loc"
                 item.gt_label = None
                 raise NotImplementedError("This is not implemented yet")
@@ -134,10 +137,9 @@ def main(argv=None):
                 # item.df.with_columns(
                 #    (pl.col("x") * 2).alias("gt_label")
                 # )
-                
+
             else:
                 raise ValueError("Scope should be fov or loc")
-
 
         item.gt_label_map = config["gt_label_map"]
         item.save_to_parquet(

@@ -60,10 +60,9 @@ def main(argv=None):
         "--preprocessed_folder",
         action="store",
         type=str,
-        help="the location of the preprocessed folder relative to the project directory e.g."\
-             " preprocessed/train",
+        help="the location of the preprocessed folder relative to the project directory e.g."
+        " preprocessed/train",
     )
-
 
     args = parser.parse_args(argv)
 
@@ -140,14 +139,10 @@ def main(argv=None):
         # if succesfully get to here on first occasion create folder for data
         if index == 0:
             if config["gt_label_scope"] is not None:
-                output_directory = os.path.join(
-                    output_folder, "gt_label"
-                )
+                output_directory = os.path.join(output_folder, "gt_label")
                 os.makedirs(output_directory)
             else:
-                output_directory = os.path.join(
-                    output_folder, "no_gt_label"
-                )
+                output_directory = os.path.join(output_folder, "no_gt_label")
                 os.makedirs(output_directory)
 
         item.save_to_parquet(

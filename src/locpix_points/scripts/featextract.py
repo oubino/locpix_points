@@ -52,7 +52,7 @@ def main(argv=None):
         "--preprocessed_folder",
         action="store",
         type=str,
-        help="the location of the preprocessed folder relative to the project directory"
+        help="the location of the preprocessed folder relative to the project directory",
     )
 
     args = parser.parse_args(argv)
@@ -90,12 +90,8 @@ def main(argv=None):
         raise ValueError("There should be some files to open")
 
     # if output directory not present create it
-    output_loc_directory = os.path.join(
-        preprocessed_folder, "featextract/locs"
-    )
-    output_cluster_directory = os.path.join(
-        preprocessed_folder, "featextract/clusters"
-    )
+    output_loc_directory = os.path.join(preprocessed_folder, "featextract/locs")
+    output_cluster_directory = os.path.join(preprocessed_folder, "featextract/clusters")
     folders = [output_loc_directory, output_cluster_directory]
     for folder in folders:
         if not os.path.exists(folder):
@@ -116,9 +112,7 @@ def main(argv=None):
     for index, file in enumerate(files):
         print("file", file)
         item = datastruc.item(None, None, None, None, None)
-        item.load_from_parquet(
-            os.path.join(preprocessed_folder, f"gt_label/{file}")
-        )
+        item.load_from_parquet(os.path.join(preprocessed_folder, f"gt_label/{file}"))
 
         # clustering (clusterID)
         df = featextract.cluster_data(

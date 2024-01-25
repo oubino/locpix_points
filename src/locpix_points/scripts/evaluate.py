@@ -244,7 +244,7 @@ def main(argv=None):
                 },
                 name=args.run_name,
             )
-        
+
     else:
         wandb.config["model"] = args.model_loc
 

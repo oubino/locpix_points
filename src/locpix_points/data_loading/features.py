@@ -15,6 +15,7 @@ from torch_geometric.utils import (
     to_undirected,
 )
 
+
 def sort_edge_index(x):
     idx = torch.sort(x[1]).indices
 
@@ -27,6 +28,7 @@ def sort_edge_index(x):
     x[1] = x[1][idx]
 
     return x
+
 
 def load_loc_cluster(
     data,
@@ -210,7 +212,7 @@ def load_loc_cluster(
     data["clusters"].pos = cluster_coords.float()
 
     data["locs", "in", "clusters"].edge_index = loc_cluster_edges
-    #loc_loc_edges = sort_edge_index(loc_loc_edges)
+    # loc_loc_edges = sort_edge_index(loc_loc_edges)
     data["locs", "clusteredwith", "locs"].edge_index = loc_loc_edges
     data["clusters", "near", "clusters"].edge_index = cluster_cluster_edges
 

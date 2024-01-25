@@ -61,7 +61,7 @@ featanalyse = "locpix_points.scripts.featanalyse:main"
 featextract = "locpix_points.scripts.featextract:main"
 k_fold = "locpix_points.scripts.k_fold:main"
 visualise = "locpix_points.scripts.visualise:main"
-final_test = "locpix_points.scripts.final_test:main
+final_test = "locpix_points.scripts.final_test:main"
 
 [project.urls]
 "Homepage" = "https://github.com/oubino/locpix_points"

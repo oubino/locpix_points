@@ -123,15 +123,15 @@ def parse_data(data, device):
             x_dict["clusters"]
             cluster_feats_present = True
         except KeyError:
-            #num_clusters = data.pos_dict["clusters"].shape[0]
-            x_dict["clusters"] = None #torch.ones((num_clusters, 1), device=device)
+            # num_clusters = data.pos_dict["clusters"].shape[0]
+            x_dict["clusters"] = None  # torch.ones((num_clusters, 1), device=device)
             cluster_feats_present = False
     # neither locs nor clusters have features
     except KeyError:
         num_clusters = data.pos_dict["clusters"].shape[0]
         x_dict = {
             "locs": None,
-            "clusters": None, #torch.ones((num_clusters, 1), device=device),
+            "clusters": None,  # torch.ones((num_clusters, 1), device=device),
         }
         cluster_feats_present = False
 
@@ -324,41 +324,42 @@ class LocNet(torch.nn.Module):
             output.log_softmax(dim=-1): Log probabilities for the classes"""
 
         # parse the data
-        
 
         # get x/pos for locs
-        x_locs = x_dict['locs']
-        pos_locs = pos_dict['locs']
+        x_locs = x_dict["locs"]
+        pos_locs = pos_dict["locs"]
 
         # get clusterID for each localisation
-        clusterID = edge_index_dict['locs','in','clusters'][1,:]
+        clusterID = edge_index_dict["locs", "in", "clusters"][1, :]
 
         # need clusterID sorted as is used as batch parameter therefore sort pos and clusterID together
         # var is temporary variable
         clusterID_exp = torch.unsqueeze(clusterID, dim=1)
         var = torch.cat((pos_locs, clusterID_exp), 1)
-        var = var[var[:,-1].argsort()]
-        pos_locs = var[:,:-1]
-        clusterID = var[:,-1].to(torch.int64) 
+        var = var[var[:, -1].argsort()]
+        pos_locs = var[:, :-1]
+        clusterID = var[:, -1].to(torch.int64)
 
         # embed each localisation and aggregate into each cluster
         if not self.transformer:
             x_cluster = self.pointnet(
-                x_locs, pos_locs, clusterID=clusterID, edge_index=edge_index_dict["locs","clusteredwith","locs"]
+                x_locs,
+                pos_locs,
+                clusterID=clusterID,
+                edge_index=edge_index_dict["locs", "clusteredwith", "locs"],
             )
         else:
-            x_cluster = self.pointtransformer(
-                x_locs, pos_locs, clusterID=clusterID
-            )
+            x_cluster = self.pointtransformer(x_locs, pos_locs, clusterID=clusterID)
         return x_cluster
 
         # aggregate over fov, return classification
-        #if self.classify_fov:
+        # if self.classify_fov:
         #    x_cluster = global_mean_pool(x_cluster, batch=batch)
         #    return x_cluster.log_softmax(dim=-1)
-        #else:
+        # else:
         #    return x_cluster, cluster_feats_present
-        
+
+
 class LocNetClassifyFOV(torch.nn.Module):
     """Network that embeds the localisations and makes a prediction for each cluster
     then aggregates the predictions over the FOV to classify the FOV
@@ -369,12 +370,11 @@ class LocNetClassifyFOV(torch.nn.Module):
         transformer (bool): If true use PointTransformer to encode localisations"""
 
     def __init__(self, config, device="cpu", transformer=False):
-
         super().__init__()
         self.name = "locnetclassifyfov"
         self.loc_net = LocNet(config, transformer=transformer)
-        self.device=device
-        
+        self.device = device
+
     def forward(self, data):
         """Method called when data runs through network
 
@@ -384,7 +384,6 @@ class LocNetClassifyFOV(torch.nn.Module):
         Returns:
             output.log_softmax(dim=-1): Log probabilities for the FOV"""
 
-        
         # parse data
         x_dict, pos_dict, edge_index_dict, _ = parse_data(data, self.device)
 
@@ -420,7 +419,7 @@ class LocClusterNet(torch.nn.Module):
             self.loc_net = LocNet(config, transformer=False)
         else:
             self.loc_net = LocNet(config, transformer=True)
-        
+
         self.cluster_net = ClusterNet(
             ClusterEncoder(
                 config["ClusterEncoderChannels"][0], dropout=config["dropout"]
@@ -443,18 +442,17 @@ class LocClusterNet(torch.nn.Module):
         Returns:
             output.log_softmax(dim=-1): Log probabilities for the classes"""
 
-        
         # parse data
-        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(data, self.device)
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
+            data, self.device
+        )
 
         # embed each localisation
         x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
 
         # add on cluster features if present
         if cluster_feats_present:
-            x_dict["clusters"] = torch.cat(
-                (x_dict["clusters"], x_cluster), dim=-1
-            )
+            x_dict["clusters"] = torch.cat((x_dict["clusters"], x_cluster), dim=-1)
         else:
             x_dict["clusters"] = x_cluster
 
@@ -462,6 +460,7 @@ class LocClusterNet(torch.nn.Module):
         output = self.cluster_net(x_dict, edge_index_dict, data["clusters"].batch)
 
         return output.log_softmax(dim=-1)
+
 
 # -----------------------------------------------------------------------
 
@@ -533,7 +532,7 @@ class LocClusterNet(torch.nn.Module):
 #         )
 
 #         return x_locs
-    
+
 
 # class LocNetOnly(torch.nn.Module):
 #     """Neural network that acts on localisations but no clusternetwork after
@@ -608,14 +607,13 @@ class LocClusterNet(torch.nn.Module):
 #         x_dict, _, edge_index_dict = self.loc_net(data)
 
 
-
 #         # aggregate over fov
 #         x = global_mean_pool(x_dict["clusters"], batch=data["clusters"].batch)
 
 #         # print('output', x.log_softmax(dim=-1).argmax(dim=1))
 
 #         return x.log_softmax(dim=-1)
-    
+
 
 # class LocNetOld(torch.nn.Module):
 #     """Network that encodes the localisations and aggregates to the clusters
@@ -676,7 +674,7 @@ class LocClusterNet(torch.nn.Module):
 #             x_dict, edge_index_dict, cluster_feats_present
 #         )
 #         return x_dict, pos_dict, edge_index_dict
-    
+
 # class Loc2Cluster(torch.nn.Module):
 #     """Module that takes the features from localisations and
 #     aggregates them to the cluster"""
@@ -720,5 +718,3 @@ class LocClusterNet(torch.nn.Module):
 #         else:
 #             x_dict["clusters"] = x_clusters
 #         return x_dict["clusters"]
-    
-

@@ -10,6 +10,7 @@ import os
 import tkinter as tk
 from tkinter import filedialog
 
+
 def get_valid_response(prompt, allowed):
     while True:
         response = input(prompt)
@@ -19,6 +20,7 @@ def get_valid_response(prompt, allowed):
             continue
 
     return response
+
 
 def main():
     # Get user name (needs to match weights and bias entity)
@@ -32,7 +34,7 @@ def main():
     project_directory = os.path.join(project_path, project_name)
 
     # Get dataset location
-    print('Choose the dataset folder, this should contain two folder train/ and test/')
+    print("Choose the dataset folder, this should contain two folder train/ and test/")
     root = tk.Tk()
     root.withdraw()
     data_path = filedialog.askdirectory(title="Dataset folder")
@@ -79,10 +81,12 @@ def main():
         shutil.copy(file, dest)
 
     # Copy preprocessed files from another task
-    prompt = "--------------------------------------------------------------\n"\
-             "Would you like to copy preprocessed files from another folder?\n"\
-             "(yes/no): "
-    copy_preprocessed = get_valid_response(prompt, ["yes", "no"]) 
+    prompt = (
+        "--------------------------------------------------------------\n"
+        "Would you like to copy preprocessed files from another folder?\n"
+        "(yes/no): "
+    )
+    copy_preprocessed = get_valid_response(prompt, ["yes", "no"])
 
     if copy_preprocessed == "yes":
         folder_loc = input("Location of the project folder: ")
@@ -106,16 +110,14 @@ def main():
             metadata["preprocess.py"] = other_metadata["preprocess.py"]
             metadata["gt_label_map"] = other_metadata["gt_label_map"]
     else:
-
-        prompt = "---------------------------\n"\
-                  "Are your files .csv files?\n"\
-                 "(yes/no): "
+        prompt = (
+            "---------------------------\n" "Are your files .csv files?\n" "(yes/no): "
+        )
         csvs = get_valid_response(prompt, ["yes", "no"])
 
         if csvs == "yes":
-            
             # make data folder
-            data_folder = os.path.join(project_directory, 'input_data')
+            data_folder = os.path.join(project_directory, "input_data")
             os.makedirs(data_folder)
 
             # load in csvs from data_path
@@ -125,18 +127,22 @@ def main():
                 csv_path = os.path.join(data_path, file)
                 df = pl.read_csv(csv_path)
                 # save as parquet files
-                df.write_parquet(os.path.join(data_folder, f"{file.replace('.csv','.parquet')}"))
+                df.write_parquet(
+                    os.path.join(data_folder, f"{file.replace('.csv','.parquet')}")
+                )
 
             # update metadata with new data path
             metadata["data_path"] = "./input_data"
 
     # gt label for files
-    prompt =  "-----------------------------------------------------------------\n"\
-              "Data should have per FOV label located in the parquet metadata OR\n"\
-              "Data should have per localisation label located in a column in the dataframe\n"\
-              "Does your data already have this label?\n"\
-              "(yes/no): "
-    gt_label_present = get_valid_response(prompt, ["yes","no"])
+    prompt = (
+        "-----------------------------------------------------------------\n"
+        "Data should have per FOV label located in the parquet metadata OR\n"
+        "Data should have per localisation label located in a column in the dataframe\n"
+        "Does your data already have this label?\n"
+        "(yes/no): "
+    )
+    gt_label_present = get_valid_response(prompt, ["yes", "no"])
 
     if gt_label_present == "yes":
         print("-----------------------------------\n")
@@ -147,7 +153,7 @@ def main():
         )
         dest = os.path.join(project_directory, "config/preprocess.yaml")
         shutil.copy(src, dest)
-    else:        
+    else:
         raise NotImplementedError("This needs to be implemented")
 
     # save metadata

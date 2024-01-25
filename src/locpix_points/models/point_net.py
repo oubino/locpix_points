@@ -90,9 +90,17 @@ class PointNetEmbedding(torch.nn.Module):
 
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
-        self.sa1_module = SAModule(MLP(local_channels[0], dropout=dropout, plain_last=False), MLP(global_channels[0], dropout=dropout, plain_last=False))
-        self.sa2_module = SAModule(MLP(local_channels[1], dropout=dropout, plain_last=False), MLP(global_channels[1], dropout=dropout, plain_last=False))
-        self.sa3_module = GlobalSAModule(MLP(global_sa_channels, dropout=dropout, plain_last=False))
+        self.sa1_module = SAModule(
+            MLP(local_channels[0], dropout=dropout, plain_last=False),
+            MLP(global_channels[0], dropout=dropout, plain_last=False),
+        )
+        self.sa2_module = SAModule(
+            MLP(local_channels[1], dropout=dropout, plain_last=False),
+            MLP(global_channels[1], dropout=dropout, plain_last=False),
+        )
+        self.sa3_module = GlobalSAModule(
+            MLP(global_sa_channels, dropout=dropout, plain_last=False)
+        )
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(final_channels, dropout=dropout, plain_last=True)
@@ -105,7 +113,7 @@ class PointNetEmbedding(torch.nn.Module):
 
         return self.mlp(x)
 
-    
+
 class FPModule(torch.nn.Module):
     """FP module adapted from https://github.com/pyg-team/pytorch_geometric/blob/master/
     examples/pointnet2_segmentation.py from PointNet/PointNet++
