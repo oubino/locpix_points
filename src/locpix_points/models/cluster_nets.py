@@ -333,7 +333,7 @@ class LocNet(torch.nn.Module):
         # get clusterID for each localisation
         clusterID = edge_index_dict['locs','in','clusters'][1,:]
 
-        # need clusterID sorted therefore sort pos and clusterID together
+        # need clusterID sorted as is used as batch parameter therefore sort pos and clusterID together
         # var is temporary variable
         clusterID_exp = torch.unsqueeze(clusterID, dim=1)
         var = torch.cat((pos_locs, clusterID_exp), 1)

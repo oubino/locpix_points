@@ -90,12 +90,12 @@ class PointNetEmbedding(torch.nn.Module):
 
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
-        self.sa1_module = SAModule(MLP(local_channels[0], dropout=dropout), MLP(global_channels[0], dropout=dropout))
-        self.sa2_module = SAModule(MLP(local_channels[1], dropout=dropout), MLP(global_channels[1], dropout=dropout))
-        self.sa3_module = GlobalSAModule(MLP(global_sa_channels, dropout=dropout))
+        self.sa1_module = SAModule(MLP(local_channels[0], dropout=dropout, plain_last=False), MLP(global_channels[0], dropout=dropout, plain_last=False))
+        self.sa2_module = SAModule(MLP(local_channels[1], dropout=dropout, plain_last=False), MLP(global_channels[1], dropout=dropout, plain_last=False))
+        self.sa3_module = GlobalSAModule(MLP(global_sa_channels, dropout=dropout, plain_last=False))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(final_channels, dropout=dropout)
+        self.mlp = MLP(final_channels, dropout=dropout, plain_last=True)
 
     def forward(self, x, pos, clusterID, edge_index):
         x = self.sa1_module(x, pos, edge_index)
