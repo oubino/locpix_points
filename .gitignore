@@ -104,4 +104,6 @@ semore_expts_old/templates/*
 #!semore_expts/task_2/config
 
 # ignore tma output
-piccolo_tma/*
+piccolo_tma/*/*
+!piccolo_tma/*/config
+!piccolo_tma/*/scripts
