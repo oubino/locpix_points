@@ -6,7 +6,7 @@ import os
 
 def main():
     model_list = os.listdir("./models")
-    assert len(model_list) == 0
+    assert len(model_list) == 1
     model_loc = os.path.join("./models", model_list[0])
     main_evaluate(
         [
