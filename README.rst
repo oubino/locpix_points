@@ -595,7 +595,7 @@ Currently data has to have gt_labels already loaded in
 
 AND
 
-There is no feature analysis
+There is only feature analysis of manual features
 
 
 Model architectures
