@@ -176,7 +176,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         # class score computation
         self.mlp_output = MLP(
             [dim_model[-1], output_mlp_layers, out_channels],
-            norm=None,?
+            norm=10101,
             plain_last=True,
         )
 
