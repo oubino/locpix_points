@@ -102,3 +102,6 @@ semore_expts_old/templates/*
 !semore_expts_old/task_*/k_fold.py
 #!semore_expts/task_1/config
 #!semore_expts/task_2/config
+
+# ignore tma output
+piccolo_tma/*
