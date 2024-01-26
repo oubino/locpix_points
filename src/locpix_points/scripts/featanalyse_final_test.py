@@ -185,7 +185,7 @@ def analyse_manual_feats(
 
     for index, file in enumerate(cluster_train_files):
         cluster_path = os.path.join(
-            project_directory, f"preprocessed/featextract/clusters/{file}"
+            project_directory, f"preprocessed/train/featextract/clusters/{file}"
         )
 
         cluster_df = pq.read_table(cluster_path)
@@ -207,7 +207,7 @@ def analyse_manual_feats(
 
     for index, file in enumerate(cluster_test_files):
         cluster_path = os.path.join(
-            project_directory, f"preprocessed/featextract/clusters/{file}"
+            project_directory, f"preprocessed/test/featextract/clusters/{file}"
         )
 
         cluster_df = pq.read_table(cluster_path)
@@ -234,7 +234,7 @@ def analyse_manual_feats(
     test_df = test_df.to_pandas()
 
     # check columns same
-    assert train_df.columns == test_df.columns
+    assert (train_df.columns == test_df.columns).all()
     columns = train_df.columns
 
     # get features present in the dataframe
@@ -276,7 +276,6 @@ def analyse_manual_feats(
         parameters = config["log_reg"]
         penalty = parameters["penalty"]
         C = parameters["C"]
-        save_dir = os.path.join(project_directory, "output/log_reg")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         model = LogisticRegression(max_iter=1000, penalty=penalty, C=C)
@@ -300,7 +299,6 @@ def analyse_manual_feats(
         parameters = config["dec_tree"]
         max_depth = parameters["max_depth"]
         max_features = parameters["max_features"]
-        save_dir = os.path.join(project_directory, "output/dec_tree")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         model = DecisionTreeClassifier(max_depth=max_depth, max_features=max_features)
@@ -324,7 +322,6 @@ def analyse_manual_feats(
         parameters = config["knn"]
         n_neighbors = parameters["n_neighbors"]
         weights = parameters["weights"]
-        save_dir = os.path.join(project_directory, "output/knn")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         model = KNeighborsClassifier(n_neighbors=n_neighbors, weights=weights)
@@ -349,7 +346,6 @@ def analyse_manual_feats(
         C = parameters["C"]
         kernel = parameters["kernel"]
         gamma = parameters["gamma"]
-        save_dir = os.path.join(project_directory, "output/svm")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
         model = SVC(C=C, kernel=kernel, gamma=gamma)
@@ -457,7 +453,7 @@ def gen_fn(
     test_X = scaler.transform(test_X)
 
     # fit & predict
-    model = model.fit(train_X)
+    model = model.fit(train_X, train_Y)
     train_predict = model.predict(train_X)
     test_predict = model.predict(test_X)
 
