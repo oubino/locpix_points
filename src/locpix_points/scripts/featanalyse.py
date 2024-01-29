@@ -238,10 +238,22 @@ def analyse_manual_feats(
         df_save_path = os.path.join(project_directory, "output/pca_conv_hull_area.csv")
         df_save.to_csv(df_save_path, index=False)
 
-    # 2. Plot boxplots of features
-    df_save = df[features + ["type"]]
+    # 2. Save features + cluster/type counts to .csv and plot boxplots of features
+    df_save = df[features + ["type", "file_name"]]
     df_save_path = os.path.join(project_directory, "output/features.csv")
     df_save.to_csv(df_save_path, index=False)
+
+    df_save_pl = pl.from_pandas(df[["type", "file_name"]])
+    cluster_counts = df_save_pl["file_name"].value_counts()
+    type_counts = df_save_pl["type"].value_counts()
+    cluster_counts = df_save_pl.join(cluster_counts, on="file_name")[
+        ["file_name", "type", "counts"]
+    ].unique()
+    df_save_path = os.path.join(project_directory, "output/cluster_count.csv")
+    cluster_counts.write_csv(df_save_path)
+    df_save_path = os.path.join(project_directory, "output/type_count.csv")
+    type_counts.write_csv(df_save_path)
+
     if config["boxplots"]:
         plot_boxplots(features, df)
 
