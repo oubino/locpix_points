@@ -136,7 +136,8 @@ class PointTransformerEmbedding(torch.nn.Module):
         attn_nn_layers = config["attn_nn_layers"]
 
         # dummy feature is created if there is none given
-        in_channels = max(in_channels, 1)
+        if in_channels is None:
+            in_channels = 2
 
         # first block
         self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
@@ -165,7 +166,7 @@ class PointTransformerEmbedding(torch.nn.Module):
 
             self.transformers_down.append(
                 TransformerBlock(
-                    in_channels=dim_model[i + 1],
+                    in_channels=dim_model[i],
                     out_channels=dim_model[i + 1],
                     dim=dim,
                     pos_nn_layers=pos_nn_layers,
@@ -176,28 +177,29 @@ class PointTransformerEmbedding(torch.nn.Module):
         # class score computation
         self.mlp_output = MLP(
             [dim_model[-1], output_mlp_layers, out_channels],
-            norm=10101,
+            norm=None,
             plain_last=True,
         )
 
-    def forward(self, x, pos, clusterID=None):
+    def forward(self, x, pos, clusterID=None, edge_index=None):
         # refactor
         batch = clusterID
 
         # add dummy features in case there is none
         if x is None:
-            x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+            # x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+            x = pos
 
         # first block
         x = self.mlp_input(x)
-        edge_index = knn_graph(pos, k=self.k, batch=batch)
+        # edge_index_mod = knn_graph(pos, k=self.k+1, batch=batch, loop=True)
         x = self.transformer_input(x, pos, edge_index)
 
         # backbone
         for i in range(len(self.transformers_down)):
-            x, pos, batch = self.transition_down[i](x, pos, batch=batch)
+            # x, pos, batch = self.transition_down[i](x, pos, batch=batch)
 
-            edge_index = knn_graph(pos, k=self.k, batch=batch)
+            # edge_index = knn_graph(pos, k=self.k, batch=batch)
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling

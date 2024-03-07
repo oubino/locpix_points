@@ -333,14 +333,6 @@ class LocNet(torch.nn.Module):
         # get clusterID for each localisation
         clusterID = edge_index_dict["locs", "in", "clusters"][1, :]
 
-        # need clusterID sorted as is used as batch parameter therefore sort pos and clusterID together
-        # var is temporary variable
-        clusterID_exp = torch.unsqueeze(clusterID, dim=1)
-        var = torch.cat((pos_locs, clusterID_exp), 1)
-        var = var[var[:, -1].argsort()]
-        pos_locs = var[:, :-1]
-        clusterID = var[:, -1].to(torch.int64)
-
         # embed each localisation and aggregate into each cluster
         if not self.transformer:
             x_cluster = self.pointnet(
@@ -350,15 +342,13 @@ class LocNet(torch.nn.Module):
                 edge_index=edge_index_dict["locs", "clusteredwith", "locs"],
             )
         else:
-            x_cluster = self.pointtransformer(x_locs, pos_locs, clusterID=clusterID)
+            x_cluster = self.pointtransformer(
+                x_locs,
+                pos_locs,
+                clusterID=clusterID,
+                edge_index=edge_index_dict["locs", "clusteredwith", "locs"],
+            )
         return x_cluster
-
-        # aggregate over fov, return classification
-        # if self.classify_fov:
-        #    x_cluster = global_mean_pool(x_cluster, batch=batch)
-        #    return x_cluster.log_softmax(dim=-1)
-        # else:
-        #    return x_cluster, cluster_feats_present
 
 
 class LocNetClassifyFOV(torch.nn.Module):
