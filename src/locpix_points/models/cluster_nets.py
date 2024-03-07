@@ -451,6 +451,9 @@ class LocClusterNet(torch.nn.Module):
         # embed each localisation
         x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
 
+        # apply activation function to cluster embedding to constrain between 0 and 1
+        x_cluster = x_cluster.sigmoid()
+
         # add on cluster features if present
         if cluster_feats_present:
             x_dict["clusters"] = torch.cat((x_dict["clusters"], x_cluster), dim=-1)
