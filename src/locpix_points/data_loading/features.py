@@ -71,6 +71,10 @@ def load_loc_cluster(
         data (torch_geometric data) : Data with
             position and feature for eacch node"""
 
+    loc_table = pl.from_arrow(loc_table)
+    cluster_table = pl.from_arrow(cluster_table)
+    loc_table = loc_table.sort("clusterID")
+
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
@@ -110,9 +114,6 @@ def load_loc_cluster(
         feat_data = torch.clamp(feat_data, min=0, max=1)
         data["clusters"].x = feat_data.float()  # might not need .float()
 
-    # compute edge connections - use polars for loc table
-    loc_table = pl.from_arrow(loc_table)
-
     # locs with clusterID connected to that cluster clusterID
     loc_cluster_edges = np.stack([np.arange(0, len(loc_table)), loc_table["clusterID"]])
     loc_cluster_edges = torch.from_numpy(loc_cluster_edges)
@@ -150,22 +151,12 @@ def load_loc_cluster(
         loc_loc_edges, _ = add_self_loops(loc_loc_edges)
     else:
         batch_loc_loc = torch.tensor(loc_table["clusterID"].to_numpy())
-        indices = torch.sort(batch_loc_loc).indices
-        x_locs_idx = x_locs[indices]
-        y_locs_idx = y_locs[indices]
-        batch_loc_loc = batch_loc_loc[indices]
-        loc_indices = np.arange(0, len(loc_table))[indices]
-        loc_coords = torch.stack([x_locs_idx, y_locs_idx], axis=-1)
+        # loc_indices = np.arange(0, len(loc_table))[indices]
+        loc_coords = torch.stack([x_locs, y_locs], axis=-1)
         # add 1 as with loop = True considers itself as one of the k neighbours
         loc_loc_edges = knn_graph(
             loc_coords, k=kneighbourslocs + 1, batch=batch_loc_loc, loop=True
         )
-        # loc loc edges [0] is the neighbours
-        # loc loc edges [1] is the original points
-        locs_zero = loc_indices[loc_loc_edges[0]]
-        locs_one = loc_indices[loc_loc_edges[1]]
-        loc_loc_edges = np.stack([locs_zero, locs_one])
-        loc_loc_edges = torch.from_numpy(loc_loc_edges)
     # loc_loc_edges = loc_loc_edges.to(torch.int64)
 
     # Load in positions afterwards as scale data to between -1 and 1 - this might affect
