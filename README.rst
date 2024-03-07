@@ -95,18 +95,6 @@ Then install pytorch geometric
 
 Note need to install locpix points as well
 
-Environment 3 (visualise)
--------------------------
-
-Install external packages
-
-.. code-block:: python
-
-    micromamba create -n visualise python=3.10 
-    micromamba activate visualise
-    pip install matplotlib numpy open3d polars torch
-
-
 Quickstart (Linux)
 ==================
 
@@ -181,7 +169,6 @@ in a folder inside the project directory (but this is not strictly necessary!)
     └── ...
 
 Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
-and visualise which must be run with Environment 3
 
 Initialise
 ----------
@@ -530,8 +517,6 @@ This includes
 
 Visualise
 ---------
-
-USING ENVIRONMENT 3
 
 .. code-block:: python
 
