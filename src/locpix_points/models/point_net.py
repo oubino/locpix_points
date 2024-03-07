@@ -20,6 +20,7 @@ from torch_geometric.nn import (
     knn_interpolate,
     radius,
 )
+import warnings
 
 # TODO: layer sizes
 # make sure sizes multiples of 8 to map onto tensor cores
@@ -63,6 +64,8 @@ class GlobalSAModule(torch.nn.Module):
         x = global_max_pool(x, clusterID)
         # this is only relevant to segmentation
         pos = pos.new_zeros((x.size(0), pos.shape[-1]))
+        # this only works if ClusterID was ordered in the first place
+        # as otherwise won't match up
         clusterID = torch.arange(x.size(0), device=clusterID.device)
         return x, pos, clusterID
 
@@ -104,6 +107,8 @@ class PointNetEmbedding(torch.nn.Module):
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(final_channels, dropout=dropout, plain_last=True)
+
+        warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
     def forward(self, x, pos, clusterID, edge_index):
         x = self.sa1_module(x, pos, edge_index)
@@ -171,8 +176,6 @@ class PointNetSegmentation(torch.nn.Module):
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(output_channels, dropout=dropout)
-
-        import warnings
 
         warnings.warn("There are redundant linear layers here...")
 
