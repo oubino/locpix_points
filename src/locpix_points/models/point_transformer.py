@@ -8,6 +8,7 @@ https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transfo
 
 Originally in
 PointTransformer http://arxiv.org/abs/2012.09164
+
 """
 
 import torch
