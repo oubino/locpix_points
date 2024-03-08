@@ -93,15 +93,21 @@ semore_expts/final_test/*
 
 
 # ignore old semore output
+#semore_expts_old/task_*/*
+#semore_expts_old/visualise/*
+#semore_expts_old/templates/*
+#!semore_expts_old/task_1/config
+#!semore_expts_old/task_1/scripts
+#!semore_expts_old/task_*/train.sh
+#!semore_expts_old/task_*/k_fold.py
 semore_expts_old/task_*/*
-semore_expts_old/visualise/*
-semore_expts_old/templates/*
-!semore_expts_old/task_1/config
-!semore_expts_old/task_1/scripts
-!semore_expts_old/task_*/train.sh
-!semore_expts_old/task_*/k_fold.py
-#!semore_expts/task_1/config
-#!semore_expts/task_2/config
+semore_expts_old/final_test/*
+!semore_expts_old/task_*/config/
+!semore_expts_old/task_*/scripts/
+!semore_expts_old/task_*/README.md
+!semore_expts_old/final_test/config/
+!semore_expts_old/final_test/scripts/
+!semore_expts_old/final_test/README.md
 
 # ignore tma output
 piccolo_tma/*/*
