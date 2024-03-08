@@ -12,6 +12,7 @@ import os
 import time
 import warnings
 
+import pandas as pd
 import torch
 import torch_geometric.loader as L
 import yaml
@@ -297,7 +298,7 @@ def main(argv=None):
             num_workers=0,
         )
         print("\n")
-        metrics = evaluate.make_prediction_test(
+        metrics, roc_metrics = evaluate.make_prediction_test(
             model,
             explain_loader,
             device,
@@ -369,7 +370,7 @@ def main(argv=None):
         print("\n")
         print("---- Predict on test set... ----")
         print("\n")
-        metrics = evaluate.make_prediction_test(
+        metrics, roc_metrics = evaluate.make_prediction_test(
             model,
             test_loader,
             device,
@@ -380,7 +381,16 @@ def main(argv=None):
         for key, value in metrics.items():
             print(f"{key} : {value.item()}")
 
+    # log metrics
     wandb.log(metrics)
+
+    for i in range(num_classes):
+        FPR = roc_metrics[f"TestFPR_{i}"].cpu()
+        TPR = roc_metrics[f"TestTPR_{i}"].cpu()
+        THRESH = roc_metrics[f"TestThreshold_{i}"].cpu()
+        df = pd.DataFrame({"FPR": FPR, "TPR": TPR, "THRESH": THRESH})
+        roc_table = wandb.Table(dataframe=df)
+        wandb.log({f"Test_ROC_{i}": roc_table})
 
     time_o = time.gmtime(time.time())
     time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"

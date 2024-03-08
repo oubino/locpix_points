@@ -11,6 +11,7 @@ import os
 import json
 import time
 
+import pandas as pd
 import torch.optim
 import torch_geometric.loader as L
 import yaml
@@ -392,7 +393,7 @@ def main(argv=None):
     print("\n")
     print("---- Predict on train & val set... ----")
     print("\n")
-    metrics = evaluate.make_prediction(
+    metrics, roc_metrics = evaluate.make_prediction(
         model,
         optimiser,
         train_loader,
@@ -401,7 +402,18 @@ def main(argv=None):
         num_classes,
     )
 
+    # log metrics
     wandb.log(metrics)
+
+    # log roc metrics
+    for i in range(num_classes):
+        for split in ["Train", "Val"]:
+            FPR = roc_metrics[f"{split}FPR_{i}"].cpu()
+            TPR = roc_metrics[f"{split}TPR_{i}"].cpu()
+            THRESH = roc_metrics[f"{split}Threshold_{i}"].cpu()
+            df = pd.DataFrame({"FPR": FPR, "TPR": TPR, "THRESH": THRESH})
+            roc_table = wandb.Table(dataframe=df)
+            wandb.log({f"{split}_ROC_{i}": roc_table})
 
     # print("\n")
     # print("----- Saving model... ------")
