@@ -61,13 +61,13 @@ class GlobalSAModule(torch.nn.Module):
     def forward(self, x, pos, clusterID):
         x = self.nn(torch.cat([x, pos], dim=1))
         # aggregate the features for each cluster
+        sorted_clusterID, _ = torch.sort(clusterID)
+        assert torch.equal(clusterID, sorted_clusterID)
         x = global_max_pool(x, clusterID)
         # this is only relevant to segmentation
         pos = pos.new_zeros((x.size(0), pos.shape[-1]))
         # this only works if ClusterID was ordered in the first place
         # as otherwise won't match up
-        sorted_clusterID, _ = torch.sort(clusterID)
-        assert torch.equal(clusterID, sorted_clusterID)
         clusterID = torch.arange(x.size(0), device=clusterID.device)
         return x, pos, clusterID
 
