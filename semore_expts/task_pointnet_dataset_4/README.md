@@ -2,6 +2,8 @@
 
 ## Overview
 
+THIS WAS FOR TESTING CAN DISREGARD RESULTS ETC.
+
 Dataset used: 'Semore-Dataset 4' - Dataset of pure fibrils vs pure iso (/w 0% noise) therefore have per FOV label
                Only 1 aggregate per FOV to simplify
 
