@@ -20,6 +20,7 @@ from torch_geometric.nn import (
     knn_interpolate,
     radius,
 )
+from torch_geometric.utils import sort_edge_index, coalesce
 import warnings
 
 # TODO: layer sizes
@@ -38,13 +39,25 @@ class SAModule(torch.nn.Module):
             is the PointNet architecture defining function applied to each
             point"""
 
-    def __init__(self, local_nn, global_nn):
+    def __init__(self, ratio, r, k, local_nn, global_nn):
         super().__init__()
+        self.ratio = ratio
+        self.r = r
+        self.k = k
         self.conv = PointNetConv(local_nn, global_nn, add_self_loops=False)
 
-    def forward(self, x, pos, edge_index):
-        x = self.conv(x, pos, edge_index)
-        return x
+    def forward(self, x, pos, batch):
+        idx = fps(pos, batch, ratio=self.ratio)
+        row, col = radius(
+            pos, pos[idx], self.r, batch, batch[idx], max_num_neighbors=self.k
+        )
+        edge_index = torch.stack([col, row], dim=0)
+        # remove duplicate edges
+        edge_index = coalesce(edge_index)
+        x_dst = None if x is None else x[idx]
+        x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
+        pos, batch = pos[idx], batch[idx]
+        return x, pos, batch
 
 
 class GlobalSAModule(torch.nn.Module):
@@ -58,18 +71,18 @@ class GlobalSAModule(torch.nn.Module):
         super().__init__()
         self.nn = nn
 
-    def forward(self, x, pos, clusterID):
+    def forward(self, x, pos, batch):
         x = self.nn(torch.cat([x, pos], dim=1))
         # aggregate the features for each cluster
-        sorted_clusterID, _ = torch.sort(clusterID)
-        assert torch.equal(clusterID, sorted_clusterID)
-        x = global_max_pool(x, clusterID)
+        sorted_batch, _ = torch.sort(batch)
+        assert torch.equal(batch, sorted_batch)
+        x = global_max_pool(x, batch)
         # this is only relevant to segmentation
         pos = pos.new_zeros((x.size(0), pos.shape[-1]))
-        # this only works if ClusterID was ordered in the first place
+        # this only works if batch was ordered in the first place
         # as otherwise won't match up
-        clusterID = torch.arange(x.size(0), device=clusterID.device)
-        return x, pos, clusterID
+        batch = torch.arange(x.size(0), device=batch.device)
+        return x, pos, batch
 
 
 class PointNetEmbedding(torch.nn.Module):
@@ -92,31 +105,38 @@ class PointNetEmbedding(torch.nn.Module):
         global_sa_channels = config["global_sa_channels"]
         final_channels = config["final_channels"]
         dropout = config["dropout"]
+        k = config["k"]
+        radius = config["radius"]
+        ratio = config["ratio"]
 
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
         self.sa1_module = SAModule(
-            MLP(local_channels[0], dropout=dropout, plain_last=False),
-            MLP(global_channels[0], dropout=dropout, plain_last=False),
+            ratio,
+            radius,
+            k,
+            MLP(local_channels[0]),
+            MLP(global_channels[0]),
         )
         self.sa2_module = SAModule(
-            MLP(local_channels[1], dropout=dropout, plain_last=False),
-            MLP(global_channels[1], dropout=dropout, plain_last=False),
+            ratio,
+            radius,
+            k,
+            MLP(local_channels[1]),
+            MLP(global_channels[1]),
         )
-        self.sa3_module = GlobalSAModule(
-            MLP(global_sa_channels, dropout=dropout, plain_last=False)
-        )
+        self.sa3_module = GlobalSAModule(MLP(global_sa_channels))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(final_channels, dropout=dropout, plain_last=True)
+        self.mlp = MLP(final_channels, dropout=dropout, norm=None)
 
         warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
-    def forward(self, x, pos, clusterID, edge_index):
-        x = self.sa1_module(x, pos, edge_index)
-        x = self.sa2_module(x, pos, edge_index)
-        sa3_out = self.sa3_module(x, pos, clusterID)
-        x, pos, clusterID = sa3_out
+    def forward(self, x, pos, batch):
+        x = self.sa1_module(x, pos, batch)
+        x = self.sa2_module(*x)
+        sa3_out = self.sa3_module(*x)
+        x, pos, batch = sa3_out
 
         return self.mlp(x)
 

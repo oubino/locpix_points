@@ -338,8 +338,7 @@ class LocNet(torch.nn.Module):
             x_cluster = self.pointnet(
                 x_locs,
                 pos_locs,
-                clusterID=clusterID,
-                edge_index=edge_index_dict["locs", "clusteredwith", "locs"],
+                batch=clusterID,
             )
         else:
             x_cluster = self.pointtransformer(
