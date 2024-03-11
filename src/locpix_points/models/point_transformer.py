@@ -127,12 +127,12 @@ class PointTransformerEmbedding(torch.nn.Module):
         super().__init__()
 
         self.name = "PointTransformerClassifier"
-        self.k = config["k"]
+        # self.k = config["k"]
         in_channels = config["in_channels"]
         out_channels = config["out_channels"]
         dim_model = config["dim_model"]
         output_mlp_layers = config["output_mlp_layers"]
-        ratio = config["ratio"]
+        # ratio = config["ratio"]
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
 
@@ -152,18 +152,18 @@ class PointTransformerEmbedding(torch.nn.Module):
         )
         # backbone layers
         self.transformers_down = torch.nn.ModuleList()
-        self.transition_down = torch.nn.ModuleList()
+        # self.transition_down = torch.nn.ModuleList()
 
         for i in range(len(dim_model) - 1):
             # Add Transition Down block followed by a Transformer block
-            self.transition_down.append(
-                TransitionDown(
-                    in_channels=dim_model[i],
-                    out_channels=dim_model[i + 1],
-                    ratio=ratio,
-                    k=self.k,
-                )
-            )
+            # self.transition_down.append(
+            #    TransitionDown(
+            #        in_channels=dim_model[i],
+            #        out_channels=dim_model[i + 1],
+            #        ratio=ratio,
+            #        k=self.k,
+            #    )
+            # )
 
             self.transformers_down.append(
                 TransformerBlock(
