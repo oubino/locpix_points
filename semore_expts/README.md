@@ -51,8 +51,9 @@ Project saved = semore_expts
 Dataset location = PATH-TO-SEMORE-DATA  /mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/data/semore/data/dataset_1/train
 Dataset name = semore_dataset_1
 Copy preprocessed = yes
-.csv files = no
-Already labelled = yes
+Location of the project folder = semore_expts/task_1
+Copy k-fold splits = yes
+Does your data already have this label = yes
 
 ### Preprocess
 

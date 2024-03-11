@@ -1,0 +1,41 @@
+# configuration for feature analysis
+
+pca_vs_convex_hull: False
+boxplots: False
+umap: False
+
+# sklearn parameters
+log_reg:
+  penalty: ["l1", "l2"]
+  C: [0.1, 0.5, 1]
+dec_tree:
+  max_depth: [40, 45, 50]
+  max_features: [4, 5, 6]
+svm:
+  C: [1]
+  #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
+  kernel: ["rbf"]
+  gamma: ["scale"]  # , 'auto']
+knn:
+  n_neighbors: [3]
+  weights": ["distance"]
+
+
+label_map:
+  fib: 0
+  iso: 1
+
+# if nn_feat
+nn_feat:
+  dim: 2
+  locclusternet:
+    ClusterEncoderChannels: [[16, 16],[16, 24], [24, 32]]
+    LocEncoderChannels_local: [[2, 8], [18, 32], [66, 32]]
+    LocEncoderChannels_global: [[8, 16], [32, 64], [32, 8]]
+    OutputChannels: 2
+    dropout: 0.0
+  model: locclusternet
+  fold: 0
+  # find the model name from weights&bias for the corresponding fold
+  model_name: semore_task1_semore_10:14_22:12:2023_.pt
+  device: gpu
