@@ -7,13 +7,17 @@ model: locclusternet
 
 # parameters for the network
 locclusternet:
-  local_channels: [[2,16,32],[66,80,96]]
-  global_channels: [[32,32,64],[96,96,128]]
-  global_sa_channels: [130, 192, 256]
-  final_channels: [256, 128, 8]
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  dropout: 0.5
+  ratio: 1.0
+  radius: 1.0
+  k: 4
   ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2
-  dropout: 0.5
+  dropout: 0.0
 
 # optimiser parameters
 optimiser: adam
