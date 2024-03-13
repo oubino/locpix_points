@@ -3,19 +3,11 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternet
+model: clusternet
 
 # parameters for the network
-locclusternet:
-  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
-  global_channels: [[64, 128, 128],[128, 256, 256]]
-  global_sa_channels: [258, 128, 128, 128]
-  final_channels: [128, 64, 32, 8]
-  dropout: 0.5
-  ratio: 1.0
-  radius: 1.0
-  k: 4
-  ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
+clusternet:
+  ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2
   dropout: 0.0
 
@@ -25,7 +17,7 @@ lr: 0.001
 weight_decay: 0.0001
 
 # training parameters
-epochs: 100
+epochs: 2
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll

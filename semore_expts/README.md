@@ -12,13 +12,15 @@ Below is an overview of the details for each task
 
 | Task ID  | Manual features used | Deep features used | Model |
 | ------------- | ------------- | ------------- | ------------- |
-| Task 1  | No  | Yes (PointNet) | LocClusterNet |
-| Task 2  | Yes  | Yes (PointNet) | LocClusterNet |
-| Task 3  | Yes  | No | ClusterNet |
-| Task 4  | Yes  | No | ClusterMLP |
-| Task 5  | No  | Yes (PointTransformer) | LocClusterNet |
-| Task 6  | No  | Yes (PointTransformer) | LocNet |
-| Task 7  | No  | Yes (PointNet) | LocNet |
+| Task 1  | Yes  | No | ClusterMLP |
+| Task 2  | Yes  | No | ClusterNet |
+| Task 3  | No  | Yes (PointNet) | LocNet |
+| Task 4  | No  | Yes (PointTransformer) | LocNet |
+| Task 5  | No  | Yes (PointNet) | LocClusterNet |
+| Task 6  | No  | Yes (PointTransformer) | LocClusterNet |
+| Task 7  | Yes  | Yes (PointNet) | LocClusterNet |
+| Task 8  | Yes  | Yes (PointTransformer) | LocClusterNet |
+
 
 ## Commands run
 

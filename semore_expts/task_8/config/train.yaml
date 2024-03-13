@@ -17,10 +17,9 @@ locclusternettransformer:
   pos_nn_layers: 64
   attn_nn_layers: 64
   # clusterencoder
-  ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
+  ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2
   dropout: 0.0
-  
 
 # optimiser parameters
 optimiser: adam
@@ -42,9 +41,10 @@ transforms:
   # fov_x/fov_y is defined in process.yaml
   # here 1 unit = 20,000nm
   # therefore 15nm = 0.00075 units
+  # therefore 30nm = 0.00150 units
   jitter: 0.00075 # number of nm
   randscale: [0.95,1.05]
-  shear: 0.05
+  shear: 0.05 # 05
   x_flip: null
   y_flip: null
   z_rotate: null

@@ -5,18 +5,20 @@ load_data_from_gpu: False
 label_level: graph # graph
 
 # model parameters
-model: locclusternet
+model: locclusternettransformer
 
 # parameters for the network
-locclusternet:
-  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
-  global_channels: [[64, 128, 128],[128, 256, 256]]
-  global_sa_channels: [258, 128, 128, 128]
-  final_channels: [128, 64, 32, 8]
-  dropout: 0.0
-  ratio: 1.0
-  radius: 1.0
+locclusternettransformer:
+  # locnet
   k: 4
+  in_channels: 0
+  out_channels: 8
+  dim_model: [16, 32, 64]
+  output_mlp_layers: 128
+  ratio: 1.0
+  pos_nn_layers: 64
+  attn_nn_layers: 64
+  # clusterencoder
   ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2
   dropout: 0.0
