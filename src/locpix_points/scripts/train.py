@@ -115,6 +115,7 @@ def main(argv=None):
     num_workers = config["num_workers"]
     loss_fn = config["loss_fn"]
     label_level = config["label_level"]
+    imbalanced_sampler = config["imbalanced_sampler"]
 
     # load metadata
     metadata_path = os.path.join(project_directory, "metadata.json")
@@ -230,14 +231,48 @@ def main(argv=None):
         raise ValueError("load_data_from_gpu should be True or False")
 
     # initialise dataloaders
-    train_loader = L.DataLoader(
+    if imbalanced_sampler:
+        train_sampler = L.ImbalancedSampler(train_set)
+        train_loader_train = L.DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            sampler=train_sampler,
+        )
+        val_sampler = L.ImbalancedSampler(val_set)
+        val_loader_train = L.DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            sampler=val_sampler,
+        )
+    else:
+        train_loader_train = L.DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+        )
+        val_loader_train = L.DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+        )
+    train_loader_predict = L.DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=pin_memory,
         num_workers=num_workers,
     )
-    val_loader = L.DataLoader(
+    val_loader_predict = L.DataLoader(
         val_set,
         batch_size=batch_size,
         shuffle=False,
@@ -258,7 +293,7 @@ def main(argv=None):
     print("Number train graphs", num_train_graph)
     num_val_graph = len(val_set)
     print("Number val graphs", num_val_graph)
-    for index, data in enumerate(train_loader):
+    for index, data in enumerate(train_loader_train):
         first_train_item = data
     # nodes = first_train_item.num_nodes
     # label = first_train_item.y
@@ -370,8 +405,8 @@ def main(argv=None):
         epochs,
         model,
         optimiser,
-        train_loader,
-        val_loader,
+        train_loader_train,
+        val_loader_train,
         loss_fn,
         device,
         label_level,
@@ -396,8 +431,8 @@ def main(argv=None):
     metrics, roc_metrics = evaluate.make_prediction(
         model,
         optimiser,
-        train_loader,
-        val_loader,
+        train_loader_predict,
+        val_loader_predict,
         device,
         num_classes,
     )
