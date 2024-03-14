@@ -26,6 +26,9 @@ batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
 
+# whether to sample imbalanced i.e. oversample from minority class/undersample from majority
+imbalanced_sampler: False
+
 # what trying to predict
 label_level: graph # node
 
