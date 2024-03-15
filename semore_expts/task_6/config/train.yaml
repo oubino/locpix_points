@@ -27,6 +27,9 @@ optimiser: adam
 lr: 0.001
 weight_decay: 0.0001
 
+# whether to sample imbalanced i.e. oversample from minority class/undersample from majority
+imbalanced_sampler: False
+
 # training parameters
 epochs: 100
 batch_size: 2
