@@ -240,7 +240,7 @@ def analyse_manual_feats(
 
     # 2. Save features + cluster/type counts to .csv and plot boxplots of features
     df_save = df[features + ["type", "file_name"]]
-    df_save_path = os.path.join(project_directory, "output/features.csv")
+    df_save_path = os.path.join(project_directory, "output/cluster_features.csv")
     df_save.to_csv(df_save_path, index=False)
 
     df_save_pl = pl.from_pandas(df[["type", "file_name"]])
@@ -249,10 +249,19 @@ def analyse_manual_feats(
     cluster_counts = df_save_pl.join(cluster_counts, on="file_name")[
         ["file_name", "type", "counts"]
     ].unique()
-    df_save_path = os.path.join(project_directory, "output/cluster_count.csv")
+    df_save_path = os.path.join(project_directory, "output/fov_cluster_count.csv")
     cluster_counts.write_csv(df_save_path)
-    df_save_path = os.path.join(project_directory, "output/type_count.csv")
+    df_save_path = os.path.join(project_directory, "output/cluster_type_count.csv")
     type_counts.write_csv(df_save_path)
+
+    # save per fov features grouped by mean with std
+    fov_mean = df_save.groupby(["file_name", "type"]).mean()
+    fov_std = df_save.groupby(["file_name", "type"]).std()
+    fov_output = fov_mean.merge(
+        fov_std, on=["file_name", "type"], suffixes=["_mean", "_std"]
+    )
+    fov_save_path = os.path.join(project_directory, "output/fov_features.csv")
+    fov_output.to_csv(fov_save_path, index=True)
 
     if config["boxplots"]:
         plot_boxplots(features, df)
