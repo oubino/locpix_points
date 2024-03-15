@@ -582,6 +582,40 @@ AND
 
 There is only feature analysis of manual features
 
+Generate figures using OriginPro
+================================
+
+1. File > New > Project
+2. File > Open > [Change file type to ASCII data] > [Open cluster_features.csv located in output folder in project_directory]
+3. File > Open > [Change file type to ASCII data] > [Open fov_features.csv located in output folder in project_directory]
+4. File > Save > Research Project/results/piccolo_tma/FOLDER/manual_features
+5. Move cluster_features.csv and fov_features.csv into top of directory
+6. Create two sub folders from top directory called clusters and fov i.e. manual_features/clusters AND manual_features/fov
+7. Create two sub folders within clusters called no_outliers and outliers
+
+For cluster_features.csv and fov_features.csv 
+1. Highlight each column (in case of fov_features only mean columns) > Plot Grouped Box Charts - Indexed > Click play button in Group Column(s) - Click type > Click OK
+2. Double click on vertical axis label and set Tick Labels > Display to Scientific:10^3 
+3. Click Scale and change Type to log10 if necessary
+4. Close dialogue box 
+5. Right click vertical axis and click Rescale to Show All
+6. Change y_axis label to the name of the feature if necessary plotted and add /[UNITS] i.e. Length/m
+7. If changed scale to log_10 add this to the y_axis label in brackets (Ticks placed on log10 scale) - in size 12 font
+8. Change name of graph to the name of the features being plotted
+9. Move graph to outliers
+10. Then right click graph file and click duplicate 
+11. Move this to no_outliers and remove [- Copy]
+12. Double click an outlier and click Box tab 
+13. Then unclick outliers
+14. Right click vertical axis and click Rescale to Show All
+15. Double click y-axis label and change scale to Linear if necessary and change y-axis label accordingly
+
+Cluster type count
+1. Open cluster_type_count.csv
+
+FOV cluster count
+1. Open fov_cluster_count.csv
+2. Plot Grouped Box Charts - Indexed by type to get number of clusters per fov (y-axis) against type (x-axis)
 
 Model architectures
 ===================
