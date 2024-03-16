@@ -6,5 +6,6 @@ source /root/micromamba/etc/profile.d/micromamba.sh
 # Activate correct environment
 micromamba activate locpix-points
 
-# Preprocess
-python scripts/featanalyse_manual.py
+# Run k_fold split
+python scripts/generate_k_fold_splits.py
+

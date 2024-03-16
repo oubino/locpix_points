@@ -1,11 +1,11 @@
 """Test pipeline"""
 
-from locpix_points.scripts.k_fold import main as main_k
+from locpix_points.scripts.generate_k_fold_splits import main as main_gen_k
 
 
 def main():
     # run k-fold on data
-    main_k(
+    main_gen_k(
         [
             "-i",
             ".",
