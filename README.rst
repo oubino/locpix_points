@@ -126,19 +126,25 @@ Quickstart (Linux)
 
     bash scripts/featextract.sh
 
-7. Run k-fold training (runs process + train + evaluate)
+7. Generate k-fold splits
+
+.. code-block:: shell
+
+    bash scripts/generate_k_fold_splits.sh
+
+8. Run k-fold training (runs process + train + evaluate)
 
 .. code-block:: shell
 
     bash scripts/k_fold.sh
 
-8. Analyse manual features
+9. Analyse manual features
 
 .. code-block:: shell
 
     bash scripts/featanalyse_manual.sh
 
-9. Analyse neural network features for one fold
+10. Analyse neural network features for one fold
 
 Adjust config file to choose fold
 
@@ -146,7 +152,7 @@ Adjust config file to choose fold
 
     bash scripts/featanalyse_nn.sh
 
-10.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
 .. code-block:: shell
 
@@ -247,7 +253,6 @@ Annotate
 .. code-block:: python
 
     annotate
-
 
 *Arguments*
     
@@ -447,6 +452,27 @@ Model is loaded from
 
     - {args.model_loc}
 
+Generate k-fold splits
+----------------------
+
+.. code-block:: python
+
+    generate_k_fold_splits.py
+
+*Arguments*
+
+    - -i Path to the project folder
+    - -c Path to folder with configuration .yaml file
+    - -s Number of splits
+    - -f Whether to force and override config.yaml if already present
+
+*Description*
+
+Generates k-fold splits for the dataset and saves in config
+
+Needs to be run before k-fold AND analyse_manual_features, if the latter includes classic analysis (dec tree, etc.)
+
+
 k-fold
 ------
 
@@ -458,12 +484,10 @@ k-fold
 
     - -i Path to the project folder
     - -c Path to folder with configuration .yaml file
-    - -r (Optional) If specified this integer defines the number of random splits to perform
-
 
 *Description*
 
-If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+The split is read from the configuration file.
 
 For each fold, the data is processed and trained using the train and validation folds.
 
