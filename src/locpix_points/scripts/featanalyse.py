@@ -275,9 +275,15 @@ def analyse_manual_feats(
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
 
-    X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
-    )
+    method_names = ["log_reg", "dec_tree", "knn", "svm"]
+    if any(item in config.keys() for item in method_names):
+        (
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+        ) = prep_for_sklearn(data_feats, data_labels, names, args)
 
     # 4. Logistic regression
     if "log_reg" in config.keys():
@@ -861,7 +867,7 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
     )
 
     # load config
-    config_path = os.path.join(args.project_directory, "k_fold.yaml")
+    config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
     with open(config_path, "r") as ymlfile:
         k_fold_config = yaml.safe_load(ymlfile)
 
