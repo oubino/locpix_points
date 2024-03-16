@@ -110,6 +110,8 @@ semore_expts_old/final_test/*
 !semore_expts_old/final_test/README.md
 
 # ignore tma output
-piccolo_tma/*/*
-!piccolo_tma/*/config
-!piccolo_tma/*/scripts
+piccolo_tma/normal_cancer_ARCHIVE/*
+piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/*
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/config/
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/scripts/
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/README.md
