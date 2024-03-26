@@ -236,19 +236,19 @@ def main(argv=None):
         train_loader_train = L.DataLoader(
             train_set,
             batch_size=batch_size,
-            shuffle=True,
             pin_memory=pin_memory,
             num_workers=num_workers,
             sampler=train_sampler,
+            drop_last=True,
         )
         val_sampler = L.ImbalancedSampler(val_set)
         val_loader_train = L.DataLoader(
             val_set,
             batch_size=batch_size,
-            shuffle=False,
             pin_memory=pin_memory,
             num_workers=num_workers,
             sampler=val_sampler,
+            drop_last=True,
         )
     else:
         train_loader_train = L.DataLoader(
@@ -257,6 +257,7 @@ def main(argv=None):
             shuffle=True,
             pin_memory=pin_memory,
             num_workers=num_workers,
+            drop_last=True,
         )
         val_loader_train = L.DataLoader(
             val_set,
@@ -264,6 +265,7 @@ def main(argv=None):
             shuffle=False,
             pin_memory=pin_memory,
             num_workers=num_workers,
+            drop_last=True,
         )
     train_loader_predict = L.DataLoader(
         train_set,
@@ -271,6 +273,7 @@ def main(argv=None):
         shuffle=True,
         pin_memory=pin_memory,
         num_workers=num_workers,
+        drop_last=True,
     )
     val_loader_predict = L.DataLoader(
         val_set,
@@ -278,6 +281,7 @@ def main(argv=None):
         shuffle=False,
         pin_memory=pin_memory,
         num_workers=num_workers,
+        drop_last=True,
     )
 
     # print parameters
