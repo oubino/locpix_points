@@ -28,5 +28,5 @@ kneighbourslocs: 3
 save_on_gpu: False
 
 # size of fov
-fov_x: 40000.0
-fov_y: 40000.0
+fov_x: 50000.0
+fov_y: 80000.0
