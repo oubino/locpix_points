@@ -385,13 +385,8 @@ def class_report_fn(df):
         f1 (float): F1 score
         acc (float): Accuracy score"""
 
-    # take average prediction across all the clusters for each fov
-    df = df.group_by("name").mean()
-    # if average prediction is above 0.5 then predict as 1 otherwise 0
-    # LABEL_ISSUE
-    df = df.with_columns(
-        pl.when(pl.col("output") < 0.5).then(0).otherwise(1).alias("output")
-    )
+    # take mode prediction across all the clusters for each fov
+    df = df.groupby("name").agg(lambda x: pd.Series.mode(x)[0])
 
     # calculate classification report
     y_true = df["target"].to_list()
@@ -459,10 +454,10 @@ def gen_fn(
     test_predict = model.predict(test_X)
 
     # prediction by the best model
-    train_df_output = pl.DataFrame(
+    train_df_output = pd.DataFrame(
         {"name": train_names, "output": train_predict, "target": train_Y}
     )
-    test_df_output = pl.DataFrame(
+    test_df_output = pd.DataFrame(
         {"name": test_names, "output": test_predict, "target": test_Y}
     )
 
