@@ -115,3 +115,7 @@ piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/*
 !piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/config/
 !piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/scripts/
 !piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/README.md
+piccolo_tma/NORMAL_VS_CANCER/task_*/*
+!piccolo_tma/NORMAL_VS_CANCER/task_*/config/
+!piccolo_tma/NORMAL_VS_CANCER/task_*/scripts/
+!piccolo_tma/NORMAL_VS_CANCER/task_*/README.md
