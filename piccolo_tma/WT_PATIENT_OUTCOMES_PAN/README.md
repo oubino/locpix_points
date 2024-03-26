@@ -4,4 +4,9 @@ Data: WT_PATIENT_OUTCOMES_PAN - only FOVs that: 1. Are cancer 2. Were in the pan
 
 Labels: Data has two labels 0: no_response 1: any_response
 
-## Task 1
+| Task ID  | Manual features used | Deep features used | Model |
+| ------------- | ------------- | ------------- | ------------- |
+| Task 1  | Yes  | No | ClusterMLP |
+| Task 2  | Yes  | No | ClusterNet |
+| Task 7  | Yes  | Yes (PointNet) | LocClusterNet |
+| Task 8  | Yes  | Yes (PointTransformer) | LocClusterNet |
