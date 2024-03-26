@@ -83,17 +83,39 @@ sandpit/data
 
 # ignore semore output
 semore_expts/task_*/*
+semore_expts/final_test/*
 !semore_expts/task_*/config/
 !semore_expts/task_*/scripts/
 !semore_expts/task_*/README.md
+!semore_expts/final_test/config/
+!semore_expts/final_test/scripts/
+!semore_expts/final_test/README.md
+
 
 # ignore old semore output
+#semore_expts_old/task_*/*
+#semore_expts_old/visualise/*
+#semore_expts_old/templates/*
+#!semore_expts_old/task_1/config
+#!semore_expts_old/task_1/scripts
+#!semore_expts_old/task_*/train.sh
+#!semore_expts_old/task_*/k_fold.py
 semore_expts_old/task_*/*
-semore_expts_old/visualise/*
-semore_expts_old/templates/*
-!semore_expts_old/task_1/config
-!semore_expts_old/task_1/scripts
-!semore_expts_old/task_*/train.sh
-!semore_expts_old/task_*/k_fold.py
-#!semore_expts/task_1/config
-#!semore_expts/task_2/config
+semore_expts_old/final_test/*
+!semore_expts_old/task_*/config/
+!semore_expts_old/task_*/scripts/
+!semore_expts_old/task_*/README.md
+!semore_expts_old/final_test/config/
+!semore_expts_old/final_test/scripts/
+!semore_expts_old/final_test/README.md
+
+# ignore tma output
+piccolo_tma/normal_cancer_ARCHIVE/*
+piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/*
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/config/
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/scripts/
+!piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_*/README.md
+piccolo_tma/NORMAL_VS_CANCER/task_*/*
+!piccolo_tma/NORMAL_VS_CANCER/task_*/config/
+!piccolo_tma/NORMAL_VS_CANCER/task_*/scripts/
+!piccolo_tma/NORMAL_VS_CANCER/task_*/README.md

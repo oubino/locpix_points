@@ -2,8 +2,6 @@
 
 from locpix_points.scripts.preprocess import main as main_pre
 import json
-import time
-import os
 
 
 def main():
@@ -13,7 +11,6 @@ def main():
         metadata_path,
     ) as file:
         metadata = json.load(file)
-        # add time ran this script to metadata
         data_path = metadata["data_path"]
 
     main_pre(

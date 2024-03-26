@@ -8,6 +8,7 @@ https://github.com/pyg-team/pytorch_geometric/blob/master/examples/point_transfo
 
 Originally in
 PointTransformer http://arxiv.org/abs/2012.09164
+
 """
 
 import torch
@@ -105,7 +106,7 @@ class TransitionDown(torch.nn.Module):
         )
 
         # transformation of features through a simple MLP
-        x = self.mlp(x)
+        x = self.mlp(x, batch=batch)
 
         # Max pool onto each cluster the features from knn in points
         x_out = scatter(
@@ -121,7 +122,7 @@ class TransitionDown(torch.nn.Module):
         return out, sub_pos, sub_batch
 
 
-class Classifier(torch.nn.Module):
+class PointTransformerEmbedding(torch.nn.Module):
     def __init__(self, config, dim=2):
         super().__init__()
 
@@ -165,16 +166,18 @@ class Classifier(torch.nn.Module):
 
             self.transformers_down.append(
                 TransformerBlock(
-                    in_channels=dim_model[i + 1], out_channels=dim_model[i + 1]
-                ),
-                dim=dim,
-                pos_nn_layers=pos_nn_layers,
-                attn_nn_layers=attn_nn_layers,
+                    in_channels=dim_model[i + 1],
+                    out_channels=dim_model[i + 1],
+                    dim=dim,
+                    pos_nn_layers=pos_nn_layers,
+                    attn_nn_layers=attn_nn_layers,
+                )
             )
 
         # class score computation
         self.mlp_output = MLP(
-            [dim_model[-1], output_mlp_layers, out_channels], norm=None
+            [dim_model[-1], output_mlp_layers, out_channels],
+            norm=None,
         )
 
     def forward(self, x, pos, batch=None):
@@ -183,7 +186,7 @@ class Classifier(torch.nn.Module):
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
         # first block
-        x = self.mlp_input(x)
+        x = self.mlp_input(x, batch=batch)
         edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
@@ -200,8 +203,7 @@ class Classifier(torch.nn.Module):
         # Class score
         out = self.mlp_output(x)
 
-        # Log probability
-        return F.log_softmax(out, dim=-1)
+        return out
 
 
 class Segmenter(torch.nn.Module):

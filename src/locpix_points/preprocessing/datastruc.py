@@ -588,7 +588,7 @@ class item:
             exit()
 
         # save to location
-        save_df.write_csv(csv_loc, sep=",")
+        save_df.write_csv(csv_loc)
 
     def save_to_parquet(
         self,

@@ -40,6 +40,7 @@ dependencies = [
     "pre-commit",
     "importlib_resources",
     "scikit-learn",
+    "open3d",
     # "umap",
     # need to install https://github.com/mims-harvard/GraphXAI
 
@@ -61,6 +62,8 @@ featanalyse = "locpix_points.scripts.featanalyse:main"
 featextract = "locpix_points.scripts.featextract:main"
 k_fold = "locpix_points.scripts.k_fold:main"
 visualise = "locpix_points.scripts.visualise:main"
+final_test = "locpix_points.scripts.final_test:main"
+generate_k_fold_splits = "locpix_points.scripts.generate_k_fold_splits:main"
 
 [project.urls]
 "Homepage" = "https://github.com/oubino/locpix_points"

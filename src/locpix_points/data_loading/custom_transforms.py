@@ -1,4 +1,7 @@
-"""This module defines custom transforms to apply to the data"""
+"""This module defines custom transforms to apply to the data
+
+Note that any random augmentations to feature values should be considered with care to avoid the
+deep and manual cluster features being of different scales"""
 
 import math
 import numbers

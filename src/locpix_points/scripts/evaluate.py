@@ -12,6 +12,7 @@ import os
 import time
 import warnings
 
+import pandas as pd
 import torch
 import torch_geometric.loader as L
 import yaml
@@ -87,6 +88,14 @@ def main(argv=None):
     )
 
     parser.add_argument("-e", "--explain", action="store_true")
+
+    parser.add_argument(
+        "-n",
+        "--run_name",
+        action="store",
+        type=str,
+        help="name of the run in wandb",
+    )
 
     args = parser.parse_args(argv)
 
@@ -203,21 +212,40 @@ def main(argv=None):
 
     # initialise wandb
     if not args.wandbstarted:
-        # start a new wandb run to track this script
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project=dataset_name,
-            # set the entity to the user
-            entity=user,
-            # group by dataset
-            group=project_name,
-            # track hyperparameters and run metadata
-            config={
-                "model": args.model_loc,
-                "architecture": model.name,
-                "dataset": dataset_name,
-            },
-        )
+        if args.run_name is None:
+            # start a new wandb run to track this script
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "model": args.model_loc,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                },
+            )
+        else:
+            # start a new wandb run to track this script
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "model": args.model_loc,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                },
+                name=args.run_name,
+            )
+
     else:
         wandb.config["model"] = args.model_loc
 
@@ -270,7 +298,7 @@ def main(argv=None):
             num_workers=0,
         )
         print("\n")
-        metrics = evaluate.make_prediction_test(
+        metrics, roc_metrics = evaluate.make_prediction_test(
             model,
             explain_loader,
             device,
@@ -342,7 +370,7 @@ def main(argv=None):
         print("\n")
         print("---- Predict on test set... ----")
         print("\n")
-        metrics = evaluate.make_prediction_test(
+        metrics, roc_metrics = evaluate.make_prediction_test(
             model,
             test_loader,
             device,
@@ -353,7 +381,16 @@ def main(argv=None):
         for key, value in metrics.items():
             print(f"{key} : {value.item()}")
 
+    # log metrics
     wandb.log(metrics)
+
+    for i in range(num_classes):
+        FPR = roc_metrics[f"TestFPR_{i}"].cpu()
+        TPR = roc_metrics[f"TestTPR_{i}"].cpu()
+        THRESH = roc_metrics[f"TestThreshold_{i}"].cpu()
+        df = pd.DataFrame({"FPR": FPR, "TPR": TPR, "THRESH": THRESH})
+        roc_table = wandb.Table(dataframe=df)
+        wandb.log({f"Test_ROC_{i}": roc_table})
 
     time_o = time.gmtime(time.time())
     time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"

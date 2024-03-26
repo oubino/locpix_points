@@ -7,9 +7,11 @@ model: locclusternet
 
 # parameters for the network
 locclusternet:
+  local_channels: [[2,64],[66,128]]
+  global_channels: [[64,64],[128,128]]
+  global_sa_channels: [130, 256]
+  final_channels: [256, 8]
   ClusterEncoderChannels: [[8, 16],[16, 24], [24, 32]]
-  LocEncoderChannels_local: [[2, 8], [18, 32], [66, 32]]
-  LocEncoderChannels_global: [[8, 16], [32, 64], [32, 8]]
   OutputChannels: 2
   dropout: 0.5
 
@@ -24,6 +26,9 @@ batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
 
+# whether to sample imbalanced i.e. oversample from minority class/undersample from majority
+imbalanced_sampler: False
+
 # what trying to predict
 label_level: graph # node
 
@@ -31,9 +36,9 @@ label_level: graph # node
 transforms:
   # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
   # fov_x/fov_y is defined in process.yaml
-  # here 1 unit = 20,000nm
-  # therefore 15nm = 0.00075 units
-  jitter: 0.00075 # number of nm
+  # here 1 unit = 40,000nm
+  # therefore 15nm = 0.000375 units
+  jitter: 0.000375 # number of nm
   randscale: [0.95,1.05]
   shear: 0.05
   x_flip: null

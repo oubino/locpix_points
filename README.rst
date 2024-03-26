@@ -95,18 +95,6 @@ Then install pytorch geometric
 
 Note need to install locpix points as well
 
-Environment 3 (visualise)
--------------------------
-
-Install external packages
-
-.. code-block:: python
-
-    micromamba create -n visualise python=3.10 
-    micromamba activate visualise
-    pip install matplotlib numpy open3d polars torch
-
-
 Quickstart (Linux)
 ==================
 
@@ -138,19 +126,25 @@ Quickstart (Linux)
 
     bash scripts/featextract.sh
 
-7. Run k-fold training (runs process + train + evaluate)
+7. Generate k-fold splits
+
+.. code-block:: shell
+
+    bash scripts/generate_k_fold_splits.sh
+
+8. Run k-fold training (runs process + train + evaluate)
 
 .. code-block:: shell
 
     bash scripts/k_fold.sh
 
-8. Analyse manual features
+9. Analyse manual features
 
 .. code-block:: shell
 
     bash scripts/featanalyse_manual.sh
 
-9. Analyse neural network features for one fold
+10. Analyse neural network features for one fold
 
 Adjust config file to choose fold
 
@@ -158,7 +152,7 @@ Adjust config file to choose fold
 
     bash scripts/featanalyse_nn.sh
 
-10.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
 .. code-block:: shell
 
@@ -181,7 +175,6 @@ in a folder inside the project directory (but this is not strictly necessary!)
     └── ...
 
 Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
-and visualise which must be run with Environment 3
 
 Initialise
 ----------
@@ -260,7 +253,6 @@ Annotate
 .. code-block:: python
 
     annotate
-
 
 *Arguments*
     
@@ -460,6 +452,27 @@ Model is loaded from
 
     - {args.model_loc}
 
+Generate k-fold splits
+----------------------
+
+.. code-block:: python
+
+    generate_k_fold_splits.py
+
+*Arguments*
+
+    - -i Path to the project folder
+    - -c Path to folder with configuration .yaml file
+    - -s Number of splits
+    - -f Whether to force and override config.yaml if already present
+
+*Description*
+
+Generates k-fold splits for the dataset and saves in config
+
+Needs to be run before k-fold AND analyse_manual_features, if the latter includes classic analysis (dec tree, etc.)
+
+
 k-fold
 ------
 
@@ -471,12 +484,10 @@ k-fold
 
     - -i Path to the project folder
     - -c Path to folder with configuration .yaml file
-    - -r (Optional) If specified this integer defines the number of random splits to perform
-
 
 *Description*
 
-If -r flag is specified then a random split of the data occurs, otherwise the split is read from the configuration file.
+The split is read from the configuration file.
 
 For each fold, the data is processed and trained using the train and validation folds.
 
@@ -531,8 +542,6 @@ This includes
 Visualise
 ---------
 
-USING ENVIRONMENT 3
-
 .. code-block:: python
 
     visualise
@@ -555,6 +564,82 @@ Clean up
 --------
 
 Removes files ending in f".egg-info", "__pycache__", ".tox" or ".vscode"
+
+Final test
+----------
+
+.. code-block:: python
+
+    final_test
+
+Initialise a project directory, linked to the dataset you want to analyse.
+Project directory contains the configuration files, scripts and metadata required.
+
+::
+    
+    Project directory
+    ├── config
+    │   ├── evaluate.yaml
+    │   └── ...
+    ├── scripts
+    │   ├── featextract.py
+    │   └── ...
+    └── metadata.json
+
+This is different to initialise as we now ASSUME that your input data is located as
+
+::
+    
+    Input data folder
+    ├── train
+    │   ├── file_0.parquet
+    │   └── ...
+    └── test
+        ├── file_0.parquet
+        └── ...
+    
+*Warning*
+
+Currently data has to have gt_labels already loaded in
+
+AND
+
+There is only feature analysis of manual features
+
+Generate figures using OriginPro
+================================
+
+1. File > New > Project
+2. File > Open > [Change file type to ASCII data] > [Open cluster_features.csv located in output folder in project_directory]
+3. File > Open > [Change file type to ASCII data] > [Open fov_features.csv located in output folder in project_directory]
+4. File > Save > Research Project/results/piccolo_tma/FOLDER/manual_features
+5. Move cluster_features.csv and fov_features.csv into top of directory
+6. Create two sub folders from top directory called clusters and fov i.e. manual_features/clusters AND manual_features/fov
+7. Create two sub folders within clusters called no_outliers and outliers
+
+For cluster_features.csv and fov_features.csv 
+1. Highlight each column (in case of fov_features only mean columns) > Plot Grouped Box Charts - Indexed > Click play button in Group Column(s) - Click type > Click OK
+2. Double click on vertical axis label and set Tick Labels > Display to Scientific:10^3 
+3. Click Scale and change Type to log10 if necessary
+4. Close dialogue box 
+5. Right click vertical axis and click Rescale to Show All
+6. Change y_axis label to the name of the feature if necessary plotted and add /[UNITS] i.e. Length/m
+7. If changed scale to log_10 add this to the y_axis label in brackets (Ticks placed on log10 scale) - in size 12 font
+8. Change name of graph to the name of the features being plotted
+9. Move graph to outliers
+10. Then right click graph file and click duplicate 
+11. Move this to no_outliers and remove [- Copy]
+12. Double click an outlier and click Box tab 
+13. Then unclick outliers
+14. Right click vertical axis and click Rescale to Show All
+15. Double click y-axis label and change scale to Linear if necessary and change y-axis label accordingly
+
+Cluster type count
+1. Open cluster_type_count.csv
+
+FOV cluster count
+1. Open fov_cluster_count.csv
+2. Plot Grouped Box Charts - Indexed by type to get number of clusters per fov (y-axis) against type (x-axis)
 
 Model architectures
 ===================

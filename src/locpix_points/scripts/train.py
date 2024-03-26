@@ -11,6 +11,7 @@ import os
 import json
 import time
 
+import pandas as pd
 import torch.optim
 import torch_geometric.loader as L
 import yaml
@@ -87,6 +88,14 @@ def main(argv=None):
         help="if specified then wandb has already been initialised",
     )
 
+    parser.add_argument(
+        "-n",
+        "--run_name",
+        action="store",
+        type=str,
+        help="name of the run in wandb",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -106,6 +115,7 @@ def main(argv=None):
     num_workers = config["num_workers"]
     loss_fn = config["loss_fn"]
     label_level = config["label_level"]
+    imbalanced_sampler = config["imbalanced_sampler"]
 
     # load metadata
     metadata_path = os.path.join(project_directory, "metadata.json")
@@ -221,19 +231,57 @@ def main(argv=None):
         raise ValueError("load_data_from_gpu should be True or False")
 
     # initialise dataloaders
-    train_loader = L.DataLoader(
+    if imbalanced_sampler:
+        train_sampler = L.ImbalancedSampler(train_set)
+        train_loader_train = L.DataLoader(
+            train_set,
+            batch_size=batch_size,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            sampler=train_sampler,
+            drop_last=True,
+        )
+        val_sampler = L.ImbalancedSampler(val_set)
+        val_loader_train = L.DataLoader(
+            val_set,
+            batch_size=batch_size,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            sampler=val_sampler,
+            drop_last=True,
+        )
+    else:
+        train_loader_train = L.DataLoader(
+            train_set,
+            batch_size=batch_size,
+            shuffle=True,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            drop_last=True,
+        )
+        val_loader_train = L.DataLoader(
+            val_set,
+            batch_size=batch_size,
+            shuffle=False,
+            pin_memory=pin_memory,
+            num_workers=num_workers,
+            drop_last=True,
+        )
+    train_loader_predict = L.DataLoader(
         train_set,
         batch_size=batch_size,
         shuffle=True,
         pin_memory=pin_memory,
         num_workers=num_workers,
+        drop_last=True,
     )
-    val_loader = L.DataLoader(
+    val_loader_predict = L.DataLoader(
         val_set,
         batch_size=batch_size,
         shuffle=False,
         pin_memory=pin_memory,
         num_workers=num_workers,
+        drop_last=True,
     )
 
     # print parameters
@@ -249,7 +297,7 @@ def main(argv=None):
     print("Number train graphs", num_train_graph)
     num_val_graph = len(val_set)
     print("Number val graphs", num_val_graph)
-    for index, data in enumerate(train_loader):
+    for index, data in enumerate(train_loader_train):
         first_train_item = data
     # nodes = first_train_item.num_nodes
     # label = first_train_item.y
@@ -290,21 +338,39 @@ def main(argv=None):
     # initialise wandb
     if not args.wandbstarted:
         # start a new wandb run to track this script
-        wandb.init(
-            # set the wandb project where this run will be logged
-            project=dataset_name,
-            # set the entity to the user
-            entity=user,
-            # group by dataset
-            group=project_name,
-            # track hyperparameters and run metadata
-            config={
-                "learning_rate": lr,
-                "architecture": model.name,
-                "dataset": dataset_name,
-                "epochs": epochs,
-            },
-        )
+        if args.run_name is None:
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "learning_rate": lr,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                    "epochs": epochs,
+                },
+            )
+        else:
+            wandb.init(
+                # set the wandb project where this run will be logged
+                project=dataset_name,
+                # set the entity to the user
+                entity=user,
+                # group by dataset
+                group=project_name,
+                # track hyperparameters and run metadata
+                config={
+                    "learning_rate": lr,
+                    "architecture": model.name,
+                    "dataset": dataset_name,
+                    "epochs": epochs,
+                },
+                name=args.run_name,
+            )
     else:
         wandb.config["learning_rate"] = lr
         wandb.config["architecture"] = model.name
@@ -343,8 +409,8 @@ def main(argv=None):
         epochs,
         model,
         optimiser,
-        train_loader,
-        val_loader,
+        train_loader_train,
+        val_loader_train,
         loss_fn,
         device,
         label_level,
@@ -366,16 +432,27 @@ def main(argv=None):
     print("\n")
     print("---- Predict on train & val set... ----")
     print("\n")
-    metrics = evaluate.make_prediction(
+    metrics, roc_metrics = evaluate.make_prediction(
         model,
         optimiser,
-        train_loader,
-        val_loader,
+        train_loader_predict,
+        val_loader_predict,
         device,
         num_classes,
     )
 
+    # log metrics
     wandb.log(metrics)
+
+    # log roc metrics
+    for i in range(num_classes):
+        for split in ["Train", "Val"]:
+            FPR = roc_metrics[f"{split}FPR_{i}"].cpu()
+            TPR = roc_metrics[f"{split}TPR_{i}"].cpu()
+            THRESH = roc_metrics[f"{split}Threshold_{i}"].cpu()
+            df = pd.DataFrame({"FPR": FPR, "TPR": TPR, "THRESH": THRESH})
+            roc_table = wandb.Table(dataframe=df)
+            wandb.log({f"{split}_ROC_{i}": roc_table})
 
     # print("\n")
     # print("----- Saving model... ------")

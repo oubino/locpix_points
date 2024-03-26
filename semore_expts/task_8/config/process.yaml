@@ -10,7 +10,15 @@ pos: xy
 # what to load into features
 # Options: uniform (ones), xy, ...
 loc_feat: null
-cluster_feat: null
+cluster_feat:
+  - count
+  - RGyration
+  - linearity
+  - planarity
+  - length_pca
+  - area_pca
+  - perimeter
+  - density_pca
 
 # label level
 # graph or node

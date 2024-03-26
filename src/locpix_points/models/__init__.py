@@ -15,11 +15,11 @@ Currently available models:
     point_transformer
 """
 
-from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP, LocNetOnly, LocPointNet
+from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP, LocNetClassifyFOV
 
 # from .simple_gcn_1 import SimpleGCN1
-from .point_net import PointNetClassification, PointNetSegmentation
-from .point_transformer import Classifier, Segmenter
+# from .point_net import PointNetEmbedding, PointNetSegmentation
+# from .point_transformer import Classifier, Segmenter
 
 
 def model_choice(name, *args, **kwargs):
@@ -38,17 +38,17 @@ def model_choice(name, *args, **kwargs):
 
     # if name == "simplegcn1":
     #    return SimpleGCN1(*args)
-    if name == "pointnetclass":
-        return PointNetClassification(*args)
-    elif name == "pointnetseg":
-        return PointNetSegmentation(*args)
-    elif name == "pointtransformerseg":
-        dim = kwargs["dim"]
-        return Segmenter(*args, dim=dim)
-    elif name == "pointtransformerclass":
-        dim = kwargs["dim"]
-        return Classifier(*args, dim=dim)
-    elif name == "locclusternet":
+    # if name == "pointnetembedding":
+    #    return PointNetEmbedding(*args)
+    # elif name == "pointnetseg":
+    #    return PointNetSegmentation(*args)
+    # elif name == "pointtransformerseg":
+    #    dim = kwargs["dim"]
+    #    return Segmenter(*args, dim=dim)
+    # elif name == "pointtransformerclass":
+    #    dim = kwargs["dim"]
+    #    return Classifier(*args, dim=dim)
+    if name == "locclusternet":
         device = kwargs["device"]
         return LocClusterNet(*args, device=device)
     elif name == "locclusternettransformer":
@@ -58,14 +58,14 @@ def model_choice(name, *args, **kwargs):
         return ClusterNetHetero(*args)
     elif name == "clustermlp":
         return ClusterMLP(*args)
-    elif name == "locnetonly_transformer":
-        device = kwargs["device"]
-        return LocNetOnly(*args, device=device, transformer=True)
     elif name == "locnetonly_pointnet":
         device = kwargs["device"]
-        return LocNetOnly(*args, device=device, transformer=False)
-    elif name == "locpointnet":
+        return LocNetClassifyFOV(*args, device=device)
+    elif name == "locnetonly_pointtransformer":
         device = kwargs["device"]
-        return LocPointNet(*args, device=device)
+        return LocNetClassifyFOV(*args, device=device, transformer=True)
+    # elif name == "locpointnet":
+    #    device = kwargs["device"]
+    #    return LocPointNet(*args, device=device)
     else:
         raise ValueError(f"{name} is not a supported model")

@@ -4,7 +4,15 @@ This contains functions for evaluating the models
 """
 
 import torch
-from torchmetrics import Accuracy, F1Score, MetricCollection, Precision, Recall
+from torchmetrics import (
+    Accuracy,
+    F1Score,
+    MetricCollection,
+    Precision,
+    Recall,
+    ROC,
+    AUROC,
+)
 from torchmetrics.classification import (
     MulticlassConfusionMatrix,
     MulticlassJaccardIndex,
@@ -40,6 +48,11 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
+    train_metrics_roc = MetricCollection(
+        ROC(task="multiclass", num_classes=num_classes),
+        AUROC(task="multiclass", num_classes=num_classes, average="none"),
+    ).to(device)
+
     val_metrics = MetricCollection(
         MulticlassConfusionMatrix(num_classes=num_classes),
         Recall(task="multiclass", num_classes=num_classes, average="none"),
@@ -48,6 +61,16 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         MulticlassJaccardIndex(num_classes=num_classes, average="none"),
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
+
+    val_metrics_roc = MetricCollection(
+        ROC(task="multiclass", num_classes=num_classes),
+        AUROC(task="multiclass", num_classes=num_classes, average="none"),
+    ).to(device)
+
+    warnings.warn(
+        "Assumes that the output from the network is log probability"
+        "for the ROC curves"
+    )
 
     # training data
     model.eval()
@@ -62,9 +85,12 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
             # forward pass - with autocasting
             with torch.autocast(device_type="cuda"):
                 output = model(data)
-                train_predictions = output.argmax(dim=1)
 
-                # per batch metric
+                # output is log softmax therefore convert back to prob
+                train_metrics_roc.update(torch.exp(output), data.y)
+
+                # argmax predictions
+                train_predictions = output.argmax(dim=1)
                 train_metrics.update(train_predictions, data.y)
 
     for index, data in enumerate(val_loader):
@@ -78,17 +104,23 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
             # forward pass - with autocasting
             with torch.autocast(device_type="cuda"):
                 output = model(data)
-                val_predictions = output.argmax(dim=1)
 
-                # per batch metric
+                # output is log softmax therefore convert back to prob
+                val_metrics_roc.update(torch.exp(output), data.y)
+
+                # argmax predictions
+                val_predictions = output.argmax(dim=1)
                 val_metrics.update(val_predictions, data.y)
 
     # metric over all batches
     train_metrics = train_metrics.compute()
     val_metrics = val_metrics.compute()
+    train_metrics_roc = train_metrics_roc.compute()
+    val_metrics_roc = val_metrics_roc.compute()
 
     # output metrics
     metrics = {}
+    roc_metrics = {}
 
     # make into format acceptable to wandb
     for i in range(num_classes):
@@ -102,6 +134,16 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         metrics[f"ValJaccardIndex_{i}"] = val_metrics["MulticlassJaccardIndex"][i]
         metrics[f"TrainAccuracy_{i}"] = train_metrics["MulticlassAccuracy"][i]
         metrics[f"ValAccuracy_{i}"] = val_metrics["MulticlassAccuracy"][i]
+
+        roc_metrics[f"TrainFPR_{i}"] = train_metrics_roc["MulticlassROC"][0][i]
+        roc_metrics[f"ValFPR_{i}"] = val_metrics_roc["MulticlassROC"][0][i]
+        roc_metrics[f"TrainTPR_{i}"] = train_metrics_roc["MulticlassROC"][1][i]
+        roc_metrics[f"ValTPR_{i}"] = val_metrics_roc["MulticlassROC"][1][i]
+        roc_metrics[f"TrainThreshold_{i}"] = train_metrics_roc["MulticlassROC"][2][i]
+        roc_metrics[f"ValThreshold_{i}"] = val_metrics_roc["MulticlassROC"][2][i]
+        metrics[f"TrainAUROC_{i}"] = train_metrics_roc["MulticlassAUROC"][i]
+        metrics[f"ValAUROC_{i}"] = val_metrics_roc["MulticlassAUROC"][i]
+
         for j in range(num_classes):
             metrics[f"train_actual_{i}_pred_{j}"] = train_metrics[
                 "MulticlassConfusionMatrix"
@@ -110,7 +152,20 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
                 "MulticlassConfusionMatrix"
             ][i][j]
 
-    return metrics
+    if num_classes == 2:
+        for split in ["train", "val"]:
+            tp = metrics[f"{split}_actual_1_pred_1"]
+            fp = metrics[f"{split}_actual_0_pred_1"]
+            tn = metrics[f"{split}_actual_0_pred_0"]
+            fn = metrics[f"{split}_actual_1_pred_0"]
+            p = tp + fn
+            n = tn + fp
+            tpr = tp / p
+            fpr = fp / n
+            plr = tpr / fpr
+            metrics[f"{split}_PositiveLikelihoodRatio"] = plr
+
+    return metrics, roc_metrics
 
 
 def make_prediction_test(
@@ -145,6 +200,11 @@ def make_prediction_test(
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
+    test_metrics_roc = MetricCollection(
+        ROC(task="multiclass", num_classes=num_classes),
+        AUROC(task="multiclass", num_classes=num_classes, average="none"),
+    ).to(device)
+
     # test data
     model.eval()
     for index, data in enumerate(test_loader):
@@ -166,16 +226,21 @@ def make_prediction_test(
                     print("label", data.y)
                 else:
                     output = model(data)
-                test_predictions = output.argmax(dim=1)
 
-                # per batch metric
+                # output is log softmax therefore convert back to prob
+                test_metrics_roc.update(torch.exp(output), data.y)
+
+                # argmax predictions
+                test_predictions = output.argmax(dim=1)
                 test_metrics.update(test_predictions, data.y)
 
     # metric over all batches
     test_metrics = test_metrics.compute()
+    test_metrics_roc = test_metrics_roc.compute()
 
     # output metrics
     metrics = {}
+    roc_metrics = {}
 
     # make into format acceptable to wandb
     for i in range(num_classes):
@@ -189,4 +254,21 @@ def make_prediction_test(
                 "MulticlassConfusionMatrix"
             ][i][j]
 
-    return metrics
+        roc_metrics[f"TestFPR_{i}"] = test_metrics_roc["MulticlassROC"][0][i]
+        roc_metrics[f"TestTPR_{i}"] = test_metrics_roc["MulticlassROC"][1][i]
+        roc_metrics[f"TestThreshold_{i}"] = test_metrics_roc["MulticlassROC"][2][i]
+        metrics[f"TestAUROC_{i}"] = test_metrics_roc["MulticlassAUROC"][i]
+
+    if num_classes == 2:
+        tp = metrics["Test_actual_1_pred_1"]
+        fp = metrics["Test_actual_0_pred_1"]
+        tn = metrics["Test_actual_0_pred_0"]
+        fn = metrics["Test_actual_1_pred_0"]
+        p = tp + fn
+        n = tn + fp
+        tpr = tp / p
+        fpr = fp / n
+        plr = tpr / fpr
+        metrics["Test_PositiveLikelihoodRatio"] = plr
+
+    return metrics, roc_metrics

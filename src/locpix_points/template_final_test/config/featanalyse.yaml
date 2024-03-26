@@ -1,0 +1,31 @@
+# configuration for feature analysis
+
+# Features to analyse
+features:
+  - count
+  - RGyration
+  - linearity
+  - planarity
+  - length_pca
+  - area_pca
+  - density_pca
+  - perimeter
+
+# sklearn parameters
+log_reg:
+  penalty: [CHANGE]
+  C: [CHANGE]
+dec_tree:
+  max_depth: [CHANGE]
+  max_features: [CHANGE]
+#svm:
+#  C: 1
+#  kernel: [CHANGE] "rbf"
+#  gamma: "scale"  # , 'auto']
+knn:
+  n_neighbors: [CHANGE]
+  weights: [CHANGE]
+
+label_map:
+  fib: 0
+  iso: 1

@@ -21,7 +21,12 @@ import pyarrow.parquet as pq
 import seaborn as sns
 import umap
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import classification_report, confusion_matrix, f1_score, accuracy_score
+from sklearn.metrics import (
+    classification_report,
+    confusion_matrix,
+    f1_score,
+    accuracy_score,
+)
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
 from sklearn.preprocessing import StandardScaler
@@ -153,6 +158,9 @@ def analyse_manual_feats(
         label_map (dict): Map from the label name to number
         config (dict): Configuration for this script
         args (dict): Arguments passed to this script
+
+    Raises:
+        NotImplementedError: UMAP is currently not implemented
     """
 
     # aggregate cluster features into collated df
@@ -192,7 +200,7 @@ def analyse_manual_feats(
     features = [x for x in df.columns if x not in not_features]
 
     # now remove features not selected by user
-    user_selected_features = config['features']
+    user_selected_features = config["features"]
     removed_features = [f for f in features if f not in user_selected_features]
     print("Removed features: ", removed_features)
     features = [f for f in features if f in user_selected_features]
@@ -215,39 +223,67 @@ def analyse_manual_feats(
     # 1. Plot PCA length/area calculation vs convex hull to compare
     if config["pca_vs_convex_hull"]:
         ax = sns.lineplot(data=df, x="length_pca", y="length_convex_hull")
-        ax.set(xlabel="Length (PCA)",
-               ylabel="Length (Convex hull)")
+        ax.set(xlabel="Length (PCA)", ylabel="Length (Convex hull)")
         plt.show()
         # save data to excel sheet
         df_save = df[["length_pca", "length_convex_hull"]]
-        df_save_path = os.path.join(project_directory, "output/pca_conv_hull_length.csv")
-        df_save.to_csv(df_save_path,index=False)
+        df_save_path = os.path.join(
+            project_directory, "output/pca_conv_hull_length.csv"
+        )
+        df_save.to_csv(df_save_path, index=False)
         ax = sns.lineplot(data=df, x="area_pca", y="area_convex_hull")
         plt.show()
         # save data to excel sheet
         df_save = df[["area_pca", "area_convex_hull"]]
         df_save_path = os.path.join(project_directory, "output/pca_conv_hull_area.csv")
-        df_save.to_csv(df_save_path,index=False)
+        df_save.to_csv(df_save_path, index=False)
 
-    # 2. Plot boxplots of features
-    df_save = df[features + ["type"]]
-    df_save_path = os.path.join(project_directory, "output/features.csv")
+    # 2. Save features + cluster/type counts to .csv and plot boxplots of features
+    df_save = df[features + ["type", "file_name"]]
+    df_save_path = os.path.join(project_directory, "output/cluster_features.csv")
     df_save.to_csv(df_save_path, index=False)
+
+    df_save_pl = pl.from_pandas(df[["type", "file_name"]])
+    cluster_counts = df_save_pl["file_name"].value_counts()
+    type_counts = df_save_pl["type"].value_counts()
+    cluster_counts = df_save_pl.join(cluster_counts, on="file_name")[
+        ["file_name", "type", "counts"]
+    ].unique()
+    df_save_path = os.path.join(project_directory, "output/fov_cluster_count.csv")
+    cluster_counts.write_csv(df_save_path)
+    df_save_path = os.path.join(project_directory, "output/cluster_type_count.csv")
+    type_counts.write_csv(df_save_path)
+
+    # save per fov features grouped by mean with std
+    fov_mean = df_save.groupby(["file_name", "type"]).mean()
+    fov_std = df_save.groupby(["file_name", "type"]).std()
+    fov_output = fov_mean.merge(
+        fov_std, on=["file_name", "type"], suffixes=["_mean", "_std"]
+    )
+    fov_save_path = os.path.join(project_directory, "output/fov_features.csv")
+    fov_output.to_csv(fov_save_path, index=True)
+
     if config["boxplots"]:
         plot_boxplots(features, df)
 
     # 3. Plot UMAP
     if config["umap"]:
-        raise ValueError("Not scaled")
+        raise NotImplementedError("Not scaled")
         plot_umap(data_feats_scaled, df)
 
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
 
-    X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
-    )
+    method_names = ["log_reg", "dec_tree", "knn", "svm"]
+    if any(item in config.keys() for item in method_names):
+        (
+            X,
+            Y,
+            train_indices_main,
+            val_indices_main,
+            test_indices_main,
+        ) = prep_for_sklearn(data_feats, data_labels, names, args)
 
     # 4. Logistic regression
     if "log_reg" in config.keys():
@@ -269,7 +305,7 @@ def analyse_manual_feats(
             save_dir,
             label_map,
         )
-    
+
     # 5. Decision tree
     if "dec_tree" in config.keys():
         parameters = config["dec_tree"]
@@ -288,7 +324,7 @@ def analyse_manual_feats(
             args,
             None,
             save_dir,
-            label_map
+            label_map,
         )
 
     # 6. K-NN
@@ -308,7 +344,7 @@ def analyse_manual_feats(
             args,
             None,
             save_dir,
-            label_map
+            label_map,
         )
 
     # 7. SVM
@@ -328,7 +364,7 @@ def analyse_manual_feats(
             args,
             None,
             save_dir,
-            label_map
+            label_map,
         )
 
 
@@ -524,13 +560,15 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     print(np.array(X))
     input_chan = config["nn_feat"][model_type]["ClusterEncoderChannels"][0][0]
     loc_chan = config["nn_feat"][model_type]["LocEncoderChannels_global"][-1][-1]
-    with open('config/process.yaml', "r") as ymlfile:
+    with open("config/process.yaml", "r") as ymlfile:
         process_config = yaml.safe_load(ymlfile)
     cluster_features = process_config["cluster_feat"]
-    print('cluster features', cluster_features, 'length', len(cluster_features))
-    print('loc chan', loc_chan)
-    print('input channels - this should be sum of last two', input_chan)
-    print(f'i think that first {loc_chan} is from nn and then the remaining {len(cluster_features)} is manual feature')
+    print("cluster features", cluster_features, "length", len(cluster_features))
+    print("loc chan", loc_chan)
+    print("input channels - this should be sum of last two", input_chan)
+    print(
+        f"i think that first {loc_chan} is from nn and then the remaining {len(cluster_features)} is manual feature"
+    )
     raise ValueError("check what to do")
 
     # train/test indices are list of lists
@@ -556,7 +594,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             args,
             fold,
             save_dir,
-            label_map
+            label_map,
         )
 
     # 3. Decision tree
@@ -577,7 +615,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             args,
             fold,
             save_dir,
-            label_map
+            label_map,
         )
 
     # 4. K-NN
@@ -597,7 +635,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             args,
             fold,
             save_dir,
-            label_map
+            label_map,
         )
 
     # 5. SVM
@@ -617,16 +655,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             args,
             fold,
             save_dir,
-            label_map
+            label_map,
         )
+
 
 def class_report_fn(df, indices):
     """Produce class report for the given dataframe and indices
-    
+
     Args:
         df (DataFrame): Contains the results
-        indices (list): Indices of data to be analysed"""
-        
+        indices (list): Indices of data to be analysed
+
+    Returns:
+        conf_maxtrix (array): Confusion matrix
+        f1 (float): F1 score
+        acc (float): Accuracy score"""
+
     # filter dataframe by only test items
     df = df[indices]
     # take average prediction across all the clusters for each fov
@@ -651,10 +695,11 @@ def class_report_fn(df, indices):
     print(classification_report(y_true, y_pred))
 
     conf_matrix = confusion_matrix(y_true, y_pred)
-    f1 = f1_score(y_true, y_pred, average='macro')
+    f1 = f1_score(y_true, y_pred, average="macro")
     acc = accuracy_score(y_true, y_pred)
 
     return conf_matrix, f1, acc
+
 
 def class_report(predicted, Y, names, train_indices, test_indices, args, fold):
     """Produce report on classification for test set, for particular fold using
@@ -670,18 +715,36 @@ def class_report(predicted, Y, names, train_indices, test_indices, args, fold):
             of the test set
         args (parser args): Arguments passed to the script
         fold (int): Integer representing the fold we are evaluating on
+
+    Returns:
+        train_conf_maxtrix (array): Confusion matrix for training set
+        test_conf_maxtrix (array): Confusion matrix for test set
+        f1_train (float): F1 score for the training set
+        acc_train (float): Accuracy score for the training set
+        f1_test (float): F1 score for the test set
+        acc_test (float): Accuracy score for the test set
     """
 
     # prediction by the best model
     df_output = pl.DataFrame({"name": names, "output": predicted, "target": Y})
 
     print(f"--- Classification report (train set) for fold {fold} ---")
-    train_confusion_matrix, f1_train, acc_train = class_report_fn(df_output, train_indices)
+    train_confusion_matrix, f1_train, acc_train = class_report_fn(
+        df_output, train_indices
+    )
     print(f"--- Classification report (test set) for fold {fold} ---")
     test_confusion_matrix, f1_test, acc_test = class_report_fn(df_output, test_indices)
 
-    print('Rows = True; Columns = Prediction')
-    return train_confusion_matrix, test_confusion_matrix, f1_train, acc_train, f1_test, acc_test
+    print("Rows = True; Columns = Prediction")
+    return (
+        train_confusion_matrix,
+        test_confusion_matrix,
+        f1_train,
+        acc_train,
+        f1_test,
+        acc_test,
+    )
+
 
 def plot_boxplots(features, df):
     """Plot boxplots of the features
@@ -804,7 +867,7 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
     )
 
     # load config
-    config_path = os.path.join(args.project_directory, "k_fold.yaml")
+    config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
     with open(config_path, "r") as ymlfile:
         k_fold_config = yaml.safe_load(ymlfile)
 
@@ -863,7 +926,18 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
     return X, Y, train_indices_main, val_indices_main, test_indices_main
 
 
-def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args, fold, save_dir, label_map):
+def fold_results(
+    X,
+    Y,
+    model,
+    train_indices_main,
+    test_indices_main,
+    names,
+    args,
+    fold,
+    save_dir,
+    label_map,
+):
     """foo
 
     Args:
@@ -875,7 +949,11 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
         names (list): FOV for each cluster
         args (parser args): Args passed to script
         fold (int): denotes the fold we are evaluating or is None
+        save_dir (string): directory to save results to
         label_map (dict): from real name to integer
+
+    Raises:
+        ValueError: If I (Oli) have made a mistake
     """
 
     print("---- Fit to the specified fold or each fold ----")
@@ -891,8 +969,8 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
     else:
         fold_index = 0
 
-    train_results = {'fold':[], 'f1':[], 'acc':[]}
-    test_results = {'fold': [], 'f1':[], 'acc':[]}
+    train_results = {"fold": [], "f1": [], "acc": []}
+    test_results = {"fold": [], "f1": [], "acc": []}
 
     for train_fold, test_fold in cv:
         train_fold = np.array(train_fold)
@@ -900,11 +978,18 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
 
         # scale data
         scaler = StandardScaler().fit(X[train_fold])
-        X = scaler.transform(X) 
+        X = scaler.transform(X)
 
         model = model.fit(X[train_fold], Y[train_fold])
         output = model.predict(X)
-        train_report, test_report, f1_train, acc_train, f1_test, acc_test = class_report(
+        (
+            train_report,
+            test_report,
+            f1_train,
+            acc_train,
+            f1_test,
+            acc_test,
+        ) = class_report(
             output,
             Y,
             names,
@@ -916,12 +1001,12 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
         col_names = list(dict(sorted(label_map.items())).keys())
 
         # append results
-        train_results['f1'].append(f1_train)
-        train_results['acc'].append(acc_train)
-        test_results['f1'].append(f1_test)
-        test_results['acc'].append(acc_test)
-        train_results['fold'].append(fold_index)
-        test_results['fold'].append(fold_index)
+        train_results["f1"].append(f1_train)
+        train_results["acc"].append(acc_train)
+        test_results["f1"].append(f1_test)
+        test_results["acc"].append(acc_test)
+        train_results["fold"].append(fold_index)
+        test_results["fold"].append(fold_index)
 
         # save train results
         df_save = pd.DataFrame(train_report, columns=col_names, index=col_names)
@@ -939,9 +1024,9 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
                 evaluated = True
             else:
                 raise ValueError("Error from designer")
-        
+
         fold_index += 1
-    
+
     # save overall
     df_save = pd.DataFrame(train_results)
     df_save_path = os.path.join(save_dir, f"fov_train.csv")
@@ -951,6 +1036,7 @@ def fold_results(X, Y, model, train_indices_main, test_indices_main, names, args
     df_save = pd.DataFrame(test_results)
     df_save_path = os.path.join(save_dir, f"fov_test.csv")
     df_save.to_csv(df_save_path, index=False)
+
 
 def log_reg(
     X,
@@ -981,6 +1067,13 @@ def log_reg(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
     cv = iter(zip(train_indices_main, val_indices_main))
 
@@ -992,12 +1085,14 @@ def log_reg(
 
     clf.fit(X, Y)
     df = pd.DataFrame(clf.cv_results_)
-    df = df[["param_C",
-             "param_penalty",
-             "mean_test_score",
-             "std_test_score",
-             "rank_test_score",
-            ]
+    df = df[
+        [
+            "param_C",
+            "param_penalty",
+            "mean_test_score",
+            "std_test_score",
+            "rank_test_score",
+        ]
     ]
     print("------ Best parameters (ignore values) (results are on validation set) ---")
     df = df.sort_values(by=["rank_test_score"])
@@ -1061,7 +1156,15 @@ def dec_tree(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
+
     cv = iter(zip(train_indices_main, val_indices_main))
 
     model = DecisionTreeClassifier()
@@ -1074,11 +1177,13 @@ def dec_tree(
     clf.fit(X, Y)
     df = pd.DataFrame(clf.cv_results_)
     df = df[
-        ["param_max_depth",
-        "param_max_features",
-        "mean_test_score",
-        "std_test_score",
-        "rank_test_score",]
+        [
+            "param_max_depth",
+            "param_max_features",
+            "mean_test_score",
+            "std_test_score",
+            "rank_test_score",
+        ]
     ]
     print("------ Best parameters (ignore values) (results are on validation set) ---")
     df = df.sort_values(by=["rank_test_score"])
@@ -1141,6 +1246,13 @@ def svm(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
 
     cv = iter(zip(train_indices_main, val_indices_main))
@@ -1155,12 +1267,14 @@ def svm(
     clf.fit(X, Y)
     df = pd.DataFrame(clf.cv_results_)
     df = df[
-        ["param_C",
-        "param_kernel",
-        "param_gamma",
-        "mean_test_score",
-        "std_test_score",
-        "rank_test_score",]
+        [
+            "param_C",
+            "param_kernel",
+            "param_gamma",
+            "mean_test_score",
+            "std_test_score",
+            "rank_test_score",
+        ]
     ]
     print("------ Best parameters (ignore values) (results are on validation set) ---")
     df = df.sort_values(by=["rank_test_score"])
@@ -1215,6 +1329,13 @@ def knn(
         fold (int): If specified denotes the fold we are evaluating
         save_dir (str): Folder to save results to
         label_map (dict): From real names to integers
+
+    Raises:
+        ValueError: If training and test sets overlap
+
+    Returns:
+        best_model (estimator): The model which gave the highest score
+
     """
 
     cv = iter(zip(train_indices_main, val_indices_main))
@@ -1229,11 +1350,13 @@ def knn(
     clf.fit(X, Y)
     df = pd.DataFrame(clf.cv_results_)
     df = df[
-        ["param_n_neighbors",
-        #"param_weights",
-        "mean_test_score",
-        "std_test_score",
-        "rank_test_score",]
+        [
+            "param_n_neighbors",
+            # "param_weights",
+            "mean_test_score",
+            "std_test_score",
+            "rank_test_score",
+        ]
     ]
     print("------ Best parameters (ignore values) (results are on validation set) ---")
     df = df.sort_values(by=["rank_test_score"])
