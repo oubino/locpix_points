@@ -80,6 +80,7 @@ class ClusterNet(torch.nn.Module):
             batch (torch.tensor): batch for the clusters
 
         Returns:
+            # LABEL_ISSUE
             self.linear(x_dict['clusters']): Log-probability for the two classes
                 for that FOV
         """
@@ -265,6 +266,7 @@ class ClusterMLP(torch.nn.Module):
         # needs to have two channels at end for each probability
         # needs to have 8 channels input for the cluster features
         assert channels[0] == 8
+        # LABEL_ISSUE
         assert channels[-1] == 2
         self.MLP_in = MLP(
             config["channels"][:-1], plain_last=False, dropout=config["dropout"]

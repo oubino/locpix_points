@@ -388,6 +388,7 @@ def class_report_fn(df):
     # take average prediction across all the clusters for each fov
     df = df.group_by("name").mean()
     # if average prediction is above 0.5 then predict as 1 otherwise 0
+    # LABEL_ISSUE
     df = df.with_columns(
         pl.when(pl.col("output") < 0.5).then(0).otherwise(1).alias("output")
     )
