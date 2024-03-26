@@ -14,7 +14,7 @@ Are your files .csv files: no
 Does your data already have this label: yes
 
 ```
-cd piccolo_tma/WT_PATIENT_OUTCOMES_PAN
+cd piccolo_tma/WT_PATIENT_OUTCOMES_PAN/task_1
 ```
 
 Adjust preprocess.yaml
@@ -40,4 +40,10 @@ Adjust featanalyse.yaml
 bash scripts/featanalyse_manual.sh
 ```
 
-STOP
+Adjust process.yaml, train.yaml and evaluate.yaml
+
+Run k-fold training
+
+```
+bash scripts/k_fold.sh
+```
