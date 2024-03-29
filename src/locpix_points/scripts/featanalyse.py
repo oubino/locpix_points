@@ -673,12 +673,8 @@ def class_report_fn(df, indices):
 
     # filter dataframe by only test items
     df = df[indices]
-    # take average prediction across all the clusters for each fov
-    df = df.group_by("name").mean()
-    # if average prediction is above 0.5 then predict as 1 otherwise 0
-    df = df.with_columns(
-        pl.when(pl.col("output") < 0.5).then(0).otherwise(1).alias("output")
-    )
+    # take mode prediction across all the clusters for each fov
+    df = df.groupby("name").agg(lambda x: pd.Series.mode(x)[0])
 
     # double check that test files agree
     # load config
@@ -726,7 +722,7 @@ def class_report(predicted, Y, names, train_indices, test_indices, args, fold):
     """
 
     # prediction by the best model
-    df_output = pl.DataFrame({"name": names, "output": predicted, "target": Y})
+    df_output = pd.DataFrame({"name": names, "output": predicted, "target": Y})
 
     print(f"--- Classification report (train set) for fold {fold} ---")
     train_confusion_matrix, f1_train, acc_train = class_report_fn(

@@ -153,6 +153,7 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
             ][i][j]
 
     if num_classes == 2:
+        # ISSUE: This metric is specific only to when have two classes
         for split in ["train", "val"]:
             tp = metrics[f"{split}_actual_1_pred_1"]
             fp = metrics[f"{split}_actual_0_pred_1"]
@@ -260,6 +261,7 @@ def make_prediction_test(
         metrics[f"TestAUROC_{i}"] = test_metrics_roc["MulticlassAUROC"][i]
 
     if num_classes == 2:
+        # ISSUE: This metric is specific only to when have two classes
         tp = metrics["Test_actual_1_pred_1"]
         fp = metrics["Test_actual_0_pred_1"]
         tn = metrics["Test_actual_0_pred_0"]
