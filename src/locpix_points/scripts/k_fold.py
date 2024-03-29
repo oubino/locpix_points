@@ -166,8 +166,9 @@ def main(argv=None):
         print("Cleaning up")
 
         # clean up process folder check it first during debugging
-        keep_files = ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]
-        # keep_files = []
+        # can't keep these files as if I do then when re-running k-fold on dataset pytorch geometric assumes data has been processed and skips processing
+        # keep_files = ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]
+        keep_files = []
         train_files = os.listdir(
             f"{args.project_directory}/processed/fold_{index}/train"
         )
