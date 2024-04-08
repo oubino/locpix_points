@@ -16,6 +16,7 @@ from torch_geometric import transforms
 from torch_geometric.data import Data, Dataset, HeteroData
 
 from . import custom_transforms, features
+from ..models.cluster_nets import parse_data
 
 
 class SMLMDataset(Dataset):
@@ -347,11 +348,15 @@ class ClusterDataset(SMLMDataset):
                 hetero_data.to(self.device)
 
                 # pass through loc net
-                x_dict, _, edge_index_dict = self.loc_net(hetero_data)
-                data.x = x_dict["clusters"]
-                data.edge_index = edge_index_dict["clusters", "near", "clusters"]
+                x_dict, pos_dict, edge_index_dict, _ = parse_data(
+                    hetero_data, self.device
+                )
+                x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
+                x_cluster = x_cluster.sigmoid()
 
-                # save to the homogeneous data item
+                # assign to homogeneous data item
+                data.x = x_cluster
+                data.edge_index = edge_index_dict["clusters", "near", "clusters"]
                 data.name = hetero_data.name
                 data.y = hetero_data.y
 
