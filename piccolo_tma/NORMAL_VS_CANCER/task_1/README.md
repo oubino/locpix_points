@@ -34,7 +34,7 @@ Generate k-fold splits
 bash scripts/generate_k_fold_splits.sh
 ```
 
-Adjust featanalyse.yaml
+Adjust featanalyse_manual.yaml
 
 ```
 bash scripts/featanalyse_manual.sh
