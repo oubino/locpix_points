@@ -487,9 +487,15 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         device=device,
     )
 
-    dataset = torch.utils.data.ConcatDataset([train_set, val_set, test_set])
+    # ------- GRAPHXAI --------
+
+    # -------- UMAP -----------
+
+    # ------- SKLEARN ---------
 
     # aggregate cluster features into collated df
+    dataset = torch.utils.data.ConcatDataset([train_set, val_set, test_set])
+
     dfs = []
 
     # load in gt_label_map
@@ -556,33 +562,25 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         data_feats, data_labels, names, args
     )
 
-    print(np.array(X).shape)
-    print(np.array(X))
-    input_chan = config["nn_feat"][model_type]["ClusterEncoderChannels"][0][0]
-    loc_chan = config["nn_feat"][model_type]["LocEncoderChannels_global"][-1][-1]
+    # need to ensure no manual features being analysed
     with open("config/process.yaml", "r") as ymlfile:
         process_config = yaml.safe_load(ymlfile)
     cluster_features = process_config["cluster_feat"]
-    print("cluster features", cluster_features, "length", len(cluster_features))
-    print("loc chan", loc_chan)
-    print("input channels - this should be sum of last two", input_chan)
-    print(
-        f"i think that first {loc_chan} is from nn and then the remaining {len(cluster_features)} is manual feature"
-    )
-    raise ValueError("check what to do")
+    assert cluster_features is None
 
     # train/test indices are list of lists
     # with one list for each fold
     train_indices_main = [train_indices_main[fold]]
+    val_indices_main = [val_indices_main[fold]]
     test_indices_main = [test_indices_main[fold]]
 
-    # 2. Logistic regression
+    # Logistic regression
     if "log_reg" in config.keys():
         parameters = config["log_reg"]
         save_dir = os.path.join(project_directory, "output/log_reg_nn")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        best_model = log_reg(
+        log_reg(
             X,
             Y,
             train_indices_main,
@@ -597,13 +595,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             label_map,
         )
 
-    # 3. Decision tree
+    # Decision tree
     if "dec_tree" in config.keys():
         parameters = config["dec_tree"]
         save_dir = os.path.join(project_directory, "output/dec_tree_nn")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        best_model = dec_tree(
+        dec_tree(
             X,
             Y,
             train_indices_main,
@@ -618,13 +616,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             label_map,
         )
 
-    # 4. K-NN
+    # K-NN
     if "knn" in config.keys():
         parameters = config["knn"]
         save_dir = os.path.join(project_directory, "output/knn_nn")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        best_model = knn(
+        knn(
             X,
             Y,
             train_indices_main,
@@ -638,13 +636,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             label_map,
         )
 
-    # 5. SVM
+    # SVM
     if "svm" in config.keys():
         parameters = config["svm"]
         save_dir = os.path.join(project_directory, "output/svm_nn")
         if not os.path.exists(save_dir):
             os.makedirs(save_dir)
-        best_model = svm(
+        svm(
             X,
             Y,
             train_indices_main,
@@ -674,7 +672,9 @@ def class_report_fn(df, indices):
     # filter dataframe by only test items
     df = df[indices]
     # take mode prediction across all the clusters for each fov
+    df = df.to_pandas()
     df = df.groupby("name").agg(lambda x: pd.Series.mode(x)[0])
+    df = pl.from_pandas(df)
 
     # double check that test files agree
     # load config
@@ -722,7 +722,7 @@ def class_report(predicted, Y, names, train_indices, test_indices, args, fold):
     """
 
     # prediction by the best model
-    df_output = pd.DataFrame({"name": names, "output": predicted, "target": Y})
+    df_output = pl.DataFrame({"name": names, "output": predicted, "target": Y})
 
     print(f"--- Classification report (train set) for fold {fold} ---")
     train_confusion_matrix, f1_train, acc_train = class_report_fn(
@@ -1188,7 +1188,6 @@ def dec_tree(
     df.to_csv(save_df_path, index=False)
 
     best_model = clf.best_estimator_
-    print("length", best_model.feature_importances_.tolist())
     best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
     print("------ Coefficients --------")
     coeffs = sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)

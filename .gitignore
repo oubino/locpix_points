@@ -119,3 +119,6 @@ piccolo_tma/NORMAL_VS_CANCER/task_*/*
 !piccolo_tma/NORMAL_VS_CANCER/task_*/config/
 !piccolo_tma/NORMAL_VS_CANCER/task_*/scripts/
 !piccolo_tma/NORMAL_VS_CANCER/task_*/README.md
+
+# ignore temp
+test_explain/*
