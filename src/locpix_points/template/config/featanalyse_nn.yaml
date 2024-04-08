@@ -1,23 +1,8 @@
 # configuration for feature analysis
 
 # Options for what to analyse
-pca_vs_convex_hull: True
 boxplots: True
 umap: False
-
-# Features to analyse
-features:
-  - count
-  - RGyration
-  - linearity
-  - planarity
-  - length_pca
-  - area_pca
-  - density_pca
-  - perimeter
-  #- area_convex_hull
-  #- length_convex_hull
-  #- density_convex_hull
 
 # sklearn parameters
 log_reg:
@@ -35,12 +20,10 @@ knn:
   n_neighbors: [3,5,7,9,11]
   weights: ["distance"]
 
-
 label_map:
   fib: 0
   iso: 1
 
-# if nn_feat
 nn_feat:
   dim: 2
   locclusternet:
@@ -52,5 +35,5 @@ nn_feat:
   model: locclusternet
   fold: 0
   # find the model name from weights&bias for the corresponding fold
-  model_name: task_1_semore_dataset_1_17:41_11:1:2024_.pt
+  model_name: INSERTMODELNAME.pt
   device: gpu
