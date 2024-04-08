@@ -191,12 +191,13 @@ def main(argv=None):
             if i not in keep_files
         ]
 
-        for file in train_files:
-            os.remove(file)
-        for file in val_files:
-            os.remove(file)
-        for file in test_files:
-            os.remove(file)
+        # Can't remove files is then want to reuse for explain later
+        # for file in train_files:
+        #    os.remove(file)
+        # for file in val_files:
+        #    os.remove(file)
+        # for file in test_files:
+        #    os.remove(file)
 
         # remove directories
         # os.rmdir(f'{args.project_directory}/processed/fold_{index}/train')
