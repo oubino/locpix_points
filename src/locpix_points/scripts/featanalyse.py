@@ -10,11 +10,15 @@ import json
 import os
 import time
 
+from graphxai.explainers import SubgraphX, PGExplainer
 from locpix_points.data_loading import datastruc
+from locpix_points.models.cluster_nets import ClusterNetHomogeneous
 from locpix_points.models import model_choice
+import matplotlib.colors as cl
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import numpy as np
+import open3d as o3d
 import pandas as pd
 import polars as pl
 import pyarrow.parquet as pq
@@ -35,6 +39,51 @@ from sklearn.tree import DecisionTreeClassifier
 import torch
 import warnings
 import yaml
+
+
+def visualise_cluster_explanation(dataitem, node_imp, edge_imp):
+    """Visualise dataitem.
+    Visualise the clusters coloured by importance
+
+    Args:
+        dataitem (torch geometric dataitem) : Pytorch geometric data item to visualise
+        node_imp (numpy array) : Numpy array of 1.0 or 0.0 according to if node is important
+            or not
+        edge_imp (numpy array) : Numpy array of 1.0 or 0.0 according to if edge is important
+            or not"""
+
+    pos = dataitem.pos.cpu().numpy()
+    edge_index = dataitem.edge_index.cpu().numpy()
+
+    # convert 2d to 3d if required
+    if pos.shape[1] == 2:
+        z = np.ones(pos.shape[0])
+        z = np.expand_dims(z, axis=1)
+        pos = np.concatenate([pos, z], axis=1)
+
+    # cluster to cluster edges
+    lines = np.swapaxes(edge_index, 0, 1)
+    colors = np.full((len(lines), 3), fill_value=[0.33, 0.33, 0.33])
+    idx = edge_imp.nonzero()
+    colors[idx] = [1, 1, 0]
+
+    clusters_to_clusters = o3d.geometry.LineSet()
+    clusters_to_clusters.points = o3d.utility.Vector3dVector(pos)
+    clusters_to_clusters.lines = o3d.utility.Vector2iVector(lines)
+    clusters_to_clusters.colors = o3d.utility.Vector3dVector(colors)
+
+    # cluster positions
+    colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
+    idx = node_imp.nonzero()
+    colors[idx] = [1, 0, 0]
+
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(pos)
+    point_cloud.colors = o3d.utility.Vector3dVector(colors)
+
+    # visualise
+    _ = o3d.visualization.Visualizer()
+    o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
 
 
 def main(argv=None):
@@ -393,6 +442,9 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     model_type = config["nn_feat"]["model"]
 
+    # only works for locclusternet at the moment
+    assert model_type == "locclusternet"
+
     # initialise model
     model = model_choice(
         model_type,
@@ -402,6 +454,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         device=device,
     )
 
+    # load in best model
     print("\n")
     print("Loading in best model")
     print("\n")
@@ -442,6 +495,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         if not os.path.exists(folder):
             os.makedirs(folder)
 
+    # initialise train/validation and test sets
     train_set = datastruc.ClusterDataset(
         input_train_folder,
         output_train_folder,
@@ -489,7 +543,99 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # ------- GRAPHXAI --------
 
+    warnings.warn(
+        "Assumes\
+                      1. Using a ClusterNet \
+                      2. Embedding is in a final cluster encoder layer\
+                      3. Graph level explanation"
+    )
+
+    # need to create a model that acts on the homogeneous data
+    model = ClusterNetHomogeneous(model.cluster_net, config["nn_feat"][model_type])
+    model.to(device)
+
+    # get item to evaluate on
+    # for index, data in enumerate(test_set):
+    #    last_item = data
+    dataitem = test_set.next()
+
+    # ---- subgraphx -----
+    explainer = SubgraphX(
+        model,
+        rollout=config["nn_feat"]["subgraphx"]["rollout"],
+        min_atoms=config["nn_feat"]["subgraphx"]["min_atoms"],
+        c_puct=config["nn_feat"]["subgraphx"]["c_puct"],
+        expand_atoms=config["nn_feat"]["subgraphx"]["expand_atoms"],
+        high2low=config["nn_feat"]["subgraphx"]["high2low"],
+        local_radius=config["nn_feat"]["subgraphx"]["local_radius"],
+        sample_num=config["nn_feat"]["subgraphx"]["sample_num"],
+        reward_method=config["nn_feat"]["subgraphx"]["reward_method"],
+        subgraph_building_method=config["nn_feat"]["subgraphx"][
+            "subgraph_building_method"
+        ],
+    )
+
+    exp = explainer.get_explanation_graph(
+        x=dataitem.x,
+        edge_index=dataitem.edge_index,
+        label=dataitem.y,
+        max_nodes=config["nn_feat"]["subgraphx"]["max_nodes"],
+        forward_kwargs={"batch": torch.tensor([0], device=device)},
+    )
+
+    visualise_cluster_explanation(
+        dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+    )
+
+    # ---- pgexplainer ----
+
+    emb_layer_name = config["nn_feat"]["pgex"]["emb_layer_name"]
+    coeff_size = config["nn_feat"]["pgex"]["coeff_size"]
+    coeff_ent = config["nn_feat"]["pgex"]["coeff_ent"]
+    explain_graph = config["nn_feat"]["pgex"]["explain_graph"]
+    max_epochs = config["nn_feat"]["pgex"]["max_epochs"]
+    lr = config["nn_feat"]["pgex"]["lr"]
+
+    mult = 2  # in pg_explainer mult is 2 unless it is per node then mult is 3
+    in_channels = config["nn_feat"][model_type]["ClusterEncoderChannels"][-1][-1]
+    in_channels *= mult
+    #
+    ## Embedding layer name is final GNN embedding layer in the model
+    ## Note that PGExplainer expects unnormalized class score as final output
+    ## therefore final layer is linear
+    pgex = PGExplainer(
+        model,
+        emb_layer_name=emb_layer_name,
+        coeff_size=coeff_size,
+        coeff_ent=coeff_ent,
+        explain_graph=explain_graph,
+        max_epochs=max_epochs,
+        lr=lr,
+        in_channels=in_channels,
+    )
+
+    ## Required to first train PGExplainer on the dataset:
+    train_set = torch.utils.data.ConcatDataset([train_set, val_set])
+
+    pgex.train_explanation_model(
+        train_set,
+        forward_kwargs={"batch": torch.tensor([0], device=device)},
+    )
+
+    exp = pgex.get_explanation_graph(
+        x=dataitem.x,
+        edge_index=dataitem.edge_index,
+        label=dataitem.y,
+        forward_kwargs={"batch": torch.tensor([0], device=device)},
+    )
+
+    visualise_cluster_explanation(
+        dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+    )
+
     # -------- UMAP -----------
+
+    input("stop")
 
     # ------- SKLEARN ---------
 
