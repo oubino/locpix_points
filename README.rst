@@ -432,13 +432,11 @@ Evaluate
     - -c Path to configuration .yaml file
     - -m Path to the model to to evaluate
     - -p (Optional) Location of processed files, if not specified defaults to project_directory/processed
-    - -e (Optional) If given then explain algorithms are run on the datas
 
 *Description*
 
 Data is loaded in from the test folder and the model from the model_path.
 This model is then evaluated on the dataset and metrics are provided.
-If the explain argument is given then explain algorithms are also run on the dataset
 
 Data loaded in from
 
@@ -532,6 +530,7 @@ Featanalyse
 Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
 This includes
   - Box plots of the features 
+  - Graph explainability for the neural network features
   - UMAP
   - Classification of the fields of view using scikit-learn
     - Logisitic regression
