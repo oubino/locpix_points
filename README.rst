@@ -56,9 +56,11 @@ Also need to install https://github.com/mims-harvard/GraphXAI
 
 To do this clone the repository to your desired location
 
+However, we also need a custom version of this repo fixing some bugs therefore we use our fork
+
 .. code-block:: python 
 
-    git clone https://github.com/mims-harvard/GraphXAI.git
+    git clone https://github.com/oubino/GraphXAI.git 
 
 Then navigate to the directory and install using 
 
