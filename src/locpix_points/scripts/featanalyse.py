@@ -207,9 +207,6 @@ def analyse_manual_feats(
         label_map (dict): Map from the label name to number
         config (dict): Configuration for this script
         args (dict): Arguments passed to this script
-
-    Raises:
-        NotImplementedError: UMAP is currently not implemented
     """
 
     # aggregate cluster features into collated df
@@ -315,26 +312,21 @@ def analyse_manual_feats(
     if config["boxplots"]:
         plot_boxplots(features, df)
 
-    # 3. Plot UMAP
+    X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
+        data_feats, data_labels, names, args
+    )
+
+    # Plot UMAP
     if config["umap"]:
-        raise NotImplementedError("Not scaled")
-        plot_umap(data_feats_scaled, df)
+        scaler = StandardScaler().fit(X)
+        X = scaler.transform(X)
+        plot_umap(X, df, config["label_map"])
 
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
 
-    method_names = ["log_reg", "dec_tree", "knn", "svm"]
-    if any(item in config.keys() for item in method_names):
-        (
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-        ) = prep_for_sklearn(data_feats, data_labels, names, args)
-
-    # 4. Logistic regression
+    # Logistic regression
     if "log_reg" in config.keys():
         parameters = config["log_reg"]
         save_dir = os.path.join(project_directory, "output/log_reg")
@@ -355,7 +347,7 @@ def analyse_manual_feats(
             label_map,
         )
 
-    # 5. Decision tree
+    # Decision tree
     if "dec_tree" in config.keys():
         parameters = config["dec_tree"]
         save_dir = os.path.join(project_directory, "output/dec_tree")
@@ -376,7 +368,7 @@ def analyse_manual_feats(
             label_map,
         )
 
-    # 6. K-NN
+    # K-NN
     if "knn" in config.keys():
         parameters = config["knn"]
         save_dir = os.path.join(project_directory, "output/knn")
@@ -396,7 +388,7 @@ def analyse_manual_feats(
             label_map,
         )
 
-    # 7. SVM
+    # SVM
     if "svm" in config.keys():
         parameters = config["svm"]
         save_dir = os.path.join(project_directory, "output/svm")
@@ -557,7 +549,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # get item to evaluate on
     # for index, data in enumerate(test_set):
     #    last_item = data
-    dataitem = test_set.next()
+    dataitem = test_set.get(0)
 
     # ---- subgraphx -----
     explainer = SubgraphX(
@@ -633,11 +625,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
     )
 
-    # -------- UMAP -----------
-
-    input("stop")
-
-    # ------- SKLEARN ---------
+    # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
 
     # aggregate cluster features into collated df
     dataset = torch.utils.data.ConcatDataset([train_set, val_set, test_set])
@@ -670,8 +658,6 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
         dfs.append(cluster_df)
 
-    # --------------------------
-
     # aggregate dfs into one big df
     df = pl.concat(dfs)
     df = df.to_pandas()
@@ -693,16 +679,12 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     names = df.file_name
 
     # Analyses
-    # 1. Plot boxplots of features
+    # Plot boxplots of features
     df_save = df[features + ["type"]]
     df_save_path = os.path.join(project_directory, "output/features_nn.csv")
     df_save.to_csv(df_save_path, index=False)
     if config["boxplots"]:
         plot_boxplots(features, df)
-
-    # ---------------------------------------------------------------------- #
-    # Prediction methods taking in the folds
-    # ---------------------------------------------------------------------- #
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
         data_feats, data_labels, names, args
@@ -714,6 +696,14 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     cluster_features = process_config["cluster_feat"]
     assert cluster_features is None
 
+    # --------------- UMAP --------------------------
+    # Plot UMAP
+    if config["umap"]:
+        scaler = StandardScaler().fit(X)
+        X = scaler.transform(X)
+        plot_umap(X, df, config["label_map"])
+
+    # ------ Prediction methods taking in the folds (sklearn) ----- #
     # train/test indices are list of lists
     # with one list for each fold
     train_indices_main = [train_indices_main[fold]]
@@ -899,86 +889,31 @@ def plot_boxplots(features, df):
         plt.show()
 
 
-def plot_umap(data_feats_scaled, df):
+def plot_umap(data_feats_scaled, df, label_map):
     """Plot UMAP for the features
 
     Args:
         data_feats_scaled (array): Features scaled between 0 and 1
         df (pl.DataFrame): Dataframe with the localisation data
+        label_map (dict): Keys are real concepts and values are integers
     """
 
-    warnings.warn("Not generic code")
     reducer = umap.UMAP()
     embedding = reducer.fit_transform(data_feats_scaled)
 
-    # Plot UMAP - normal vs cancer
+    # Plot UMAP - per cluster
     plt.scatter(
         embedding[:, 0],
         embedding[:, 1],
-        c=[
-            sns.color_palette()[x] for x in df.type.map({"normal": 0, "cancer": 1})
-        ],  # edit
-        label=[x for x in df.type.map({"normal": 0, "cancer": 1})],  # edit
+        c=[sns.color_palette()[x] for x in df.type.map(label_map)],
+        label=[x for x in df.type.map(label_map)],
     )
-    normal_patch = mpatches.Patch(color=sns.color_palette()[0], label="Normal")  # edit
-    cancer_patch = mpatches.Patch(color=sns.color_palette()[1], label="Cancer")  # edit
-    plt.legend(handles=[normal_patch, cancer_patch])  # edit
-    plt.gca().set_aspect("equal", "datalim")
-    plt.title("UMAP projection of the dataset", fontsize=24)
-    plt.show()
-
-    # edit
-    # --------------------
-    # Plot UMAP patients
-    plt.scatter(
-        embedding[:, 0],
-        embedding[:, 1],
-        c=[
-            sns.color_palette()[x]
-            for x in df.file_name.map(
-                {
-                    "cancer_0.parquet": 0,
-                    "cancer_1.parquet": 1,
-                    "cancer_2.parquet": 2,
-                    "normal_0.parquet": 3,
-                    "normal_1.parquet": 4,
-                    "normal_2.parquet": 5,
-                }
-            )
-        ],
-        label=[
-            x
-            for x in df.type.map(
-                {
-                    "cancer_0.parquet": 0,
-                    "cancer_1.parquet": 1,
-                    "cancer_2.parquet": 2,
-                    "normal_0.parquet": 3,
-                    "normal_1.parquet": 4,
-                    "normal_2.parquet": 5,
-                }
-            )
-        ],
-    )
-    # lgened
-    cancer_patch_0 = mpatches.Patch(color=sns.color_palette()[0], label="Cancer 0")
-    cancer_patch_1 = mpatches.Patch(color=sns.color_palette()[1], label="Cancer 1")
-    cancer_patch_2 = mpatches.Patch(color=sns.color_palette()[2], label="Cancer 2")
-    normal_patch_0 = mpatches.Patch(color=sns.color_palette()[3], label="Normal 0")
-    normal_patch_1 = mpatches.Patch(color=sns.color_palette()[4], label="Normal 1")
-    normal_patch_2 = mpatches.Patch(color=sns.color_palette()[5], label="Normal 2")
-    plt.legend(
-        handles=[
-            cancer_patch_0,
-            cancer_patch_1,
-            cancer_patch_2,
-            normal_patch_0,
-            normal_patch_1,
-            normal_patch_2,
-        ]
-    )
-    # ------------------------
-    # edit
+    num_classes = len(label_map.keys())
+    patches = [
+        mpatches.Patch(color=sns.color_palette()[i], label=list(label_map.keys())[i])
+        for i in range(num_classes)
+    ]
+    plt.legend(handles=patches)
     plt.gca().set_aspect("equal", "datalim")
     plt.title("UMAP projection of the dataset", fontsize=24)
     plt.show()
