@@ -24,6 +24,8 @@ import polars as pl
 import pyarrow.parquet as pq
 import seaborn as sns
 import umap
+from sklearn.cluster import KMeans
+from sklearn.decomposition import PCA
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import (
     classification_report,
@@ -319,8 +321,22 @@ def analyse_manual_feats(
     # Plot UMAP
     if config["umap"]:
         scaler = StandardScaler().fit(X)
-        X = scaler.transform(X)
-        plot_umap(X, df, config["label_map"])
+        X_umap = scaler.transform(X)
+        plot_umap(X_umap, df, config["label_map"])
+
+    # PCA
+    if config["pca"]["implement"]:
+        scaler = StandardScaler().fit(X)
+        X_pca = scaler.transform(X)
+        reduced_data = plot_pca(
+            X_pca, df, config["label_map"], config["pca"]["n_components"]
+        )
+
+    # k-means
+    if config["kmeans"]:
+        scaler = StandardScaler().fit(X)
+        X_kmeans = scaler.transform(X)
+        kmeans(X_kmeans, df, config["label_map"])
 
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
@@ -703,6 +719,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         X = scaler.transform(X)
         plot_umap(X, df, config["label_map"])
 
+    # ---------------- PCA --------------------------
+    # PCA
+    if config["pca"]["implement"]:
+        scaler = StandardScaler().fit(X)
+        X_pca = scaler.transform(X)
+        reduced_data = plot_pca(
+            X_pca, df, config["label_map"], config["pca"]["n_components"]
+        )
+
+    # ---------------- K-MEANS ----------------------
+    # k-means
+    if config["kmeans"]:
+        scaler = StandardScaler().fit(X)
+        X_kmeans = scaler.transform(X)
+        kmeans(X_kmeans, df, config["label_map"])
+
     # ------ Prediction methods taking in the folds (sklearn) ----- #
     # train/test indices are list of lists
     # with one list for each fold
@@ -917,6 +949,70 @@ def plot_umap(data_feats_scaled, df, label_map):
     plt.gca().set_aspect("equal", "datalim")
     plt.title("UMAP projection of the dataset", fontsize=24)
     plt.show()
+
+
+def plot_pca(data_feats_scaled, df, label_map, n_components=2):
+    """Plot PCA for the features
+
+    Args:
+        data_feats_scaled (array): Features scaled between 0 and 1
+        df (pl.DataFrame): Dataframe with the localisation data
+        label_map (dict): Keys are real concepts and values are integers
+        n_components (int): Number of components to retain in PCA
+
+    Returns:
+        output_data (array): Output fitted and transformed data
+    """
+
+    # transform via PCA
+    n_classes = len(label_map.keys())
+    reduced_data = PCA(n_components=n_components).fit_transform(data_feats_scaled)
+    output_data = reduced_data.copy()
+
+    # convert 2d to 3d if required for plotting
+    if reduced_data.shape[1] == 2:
+        z = np.ones(reduced_data.shape[0])
+        z = np.expand_dims(z, axis=1)
+        reduced_data = np.concatenate([reduced_data, z], axis=1)
+
+    # colour clusters according to class
+    colors = np.zeros((len(reduced_data), 3))
+    for cls in range(n_classes):
+        idx = np.argwhere(df.type.map(label_map) == cls)
+        colors[idx] = sns.color_palette()[cls]
+        print(f"Class {cls} is {sns.color_palette()[cls]}")
+
+    # plot clusters in o3d
+    point_cloud = o3d.geometry.PointCloud()
+    point_cloud.points = o3d.utility.Vector3dVector(reduced_data)
+    point_cloud.colors = o3d.utility.Vector3dVector(colors)
+
+    # visualise
+    _ = o3d.visualization.Visualizer()
+    o3d.visualization.draw_geometries([point_cloud])
+
+    return output_data
+
+
+def kmeans(data_feats_scaled, df, label_map):
+    """Plot KMeans for the features
+
+    Args:
+        data_feats_scaled (array): Features scaled between 0 and 1
+        df (pl.DataFrame): Dataframe with the localisation data
+        label_map (dict): Keys are real concepts and values are integers
+    """
+
+    n_clusters = len(label_map.keys())
+    reduced_data = PCA(n_components=2).fit_transform(data_feats_scaled)
+    kmeans = KMeans(init="k-means++", n_clusters=n_clusters, n_init=4)
+    kmeans.fit(reduced_data)
+
+    y_true = df.type.map(label_map).to_numpy()
+    y_pred = kmeans.labels_
+
+    print("--- K means report ---")
+    print(classification_report(y_true, y_pred))
 
 
 def prep_for_sklearn(data_feats, data_labels, names, args):
