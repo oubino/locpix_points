@@ -23,17 +23,42 @@ class ClusterEncoder(torch.nn.Module):
 
     Attributes:
         channel_list (list): Channel sizes for the MLP used in the neural network
-            used in GINConv
+            used in Conv
         dropout (int): Dropout to apply to MLP"""
 
-    def __init__(self, channel_list, dropout):
+    def __init__(
+        self,
+        dropout,
+        conv_type="gin",
+        channel_list=None,
+        out_channels=None,
+        heads=1,
+        concat=True,
+        beta=False,
+    ):
         super().__init__()
-        # raise ValueError("Is number of channels correct, and max or average aggregate")
-        nn = MLP(channel_list, plain_last=False, dropout=dropout)
         # note here as all the same relation the aggr has no effect
-        self.conv = HeteroConv(
-            {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
-        )
+        if conv_type == "gin":
+            nn = MLP(channel_list, plain_last=False, dropout=dropout)
+            self.conv = HeteroConv(
+                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
+            )
+        elif conv_type == "transformer":
+            self.conv = HeteroConv(
+                {
+                    ("clusters", "near", "clusters"): conv.TransformerConv(
+                        -1,
+                        out_channels,
+                        heads=heads,
+                        concat=concat,
+                        beta=beta,
+                        dropout=dropout,
+                    )
+                },
+                aggr="sum",
+            )
+        else:
+            raise ValueError("conv_type should be gin or transformer")
 
     def forward(self, x_dict, edge_index_dict):
         """The method called when the encoder is used on a data item
@@ -47,7 +72,7 @@ class ClusterEncoder(torch.nn.Module):
             out["clusters"].relu() (torch.tensor): Encoded cluster features
         """
         out = self.conv(x_dict, edge_index_dict)
-        return out["clusters"]  # .relu()
+        return out["clusters"]
         # raise ValueError("Wrong axis when have batch")
 
 
@@ -153,51 +178,106 @@ class ClusterNetHomogeneous(torch.nn.Module):
 
     def __init__(self, cluster_net_hetero, config):
         super().__init__()
-        # first
-        self.cluster_encoder_0 = conv.GINConv(
-            MLP(
-                config["ClusterEncoderChannels"][0],
-                plain_last=False,
+
+        if config["conv_type"] == "gin":
+            # first
+            self.cluster_encoder_0 = conv.GINConv(
+                MLP(
+                    config["ClusterEncoderChannels"][0],
+                    plain_last=False,
+                    dropout=config["dropout"],
+                )
+            )
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
+            }
+            self.cluster_encoder_0.load_state_dict(state_dict_saved)
+            # second
+            self.cluster_encoder_1 = conv.GINConv(
+                MLP(
+                    config["ClusterEncoderChannels"][1],
+                    plain_last=False,
+                    dropout=config["dropout"],
+                )
+            )
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
+            }
+            self.cluster_encoder_1.load_state_dict(state_dict_saved)
+            # third
+            self.cluster_encoder_2 = conv.GINConv(
+                MLP(
+                    config["ClusterEncoderChannels"][2],
+                    plain_last=False,
+                    dropout=config["dropout"],
+                )
+            )
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
+            }
+            self.cluster_encoder_2.load_state_dict(state_dict_saved)
+            # linear
+            self.linear = Linear(
+                config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+            )
+            state_dict_saved = cluster_net_hetero.linear.state_dict()
+            self.linear.load_state_dict(state_dict_saved)
+
+        elif config["conv_type"] == "transformer":
+            # first
+            self.cluster_encoder_0 = conv.TransformerConv(
+                -1,
+                out_channels=config["ClusterEncoderOutChannels"][0],
+                heads=config["heads"],
+                concat=config["concat"],
+                beta=config["beta"],
                 dropout=config["dropout"],
             )
-        )
-        state_dict_saved = {
-            key[40:]: value
-            for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
-        }
-        self.cluster_encoder_0.load_state_dict(state_dict_saved)
-        # second
-        self.cluster_encoder_1 = conv.GINConv(
-            MLP(
-                config["ClusterEncoderChannels"][1],
-                plain_last=False,
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
+            }
+            self.cluster_encoder_0.load_state_dict(state_dict_saved)
+            # second
+            self.cluster_encoder_1 = conv.TransformerConv(
+                -1,
+                out_channels=config["ClusterEncoderOutChannels"][1],
+                heads=config["heads"],
+                concat=config["concat"],
+                beta=config["beta"],
                 dropout=config["dropout"],
             )
-        )
-        state_dict_saved = {
-            key[40:]: value
-            for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
-        }
-        self.cluster_encoder_1.load_state_dict(state_dict_saved)
-        # third
-        self.cluster_encoder_2 = conv.GINConv(
-            MLP(
-                config["ClusterEncoderChannels"][2],
-                plain_last=False,
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
+            }
+            self.cluster_encoder_1.load_state_dict(state_dict_saved)
+            # third
+            self.cluster_encoder_2 = conv.TransformerConv(
+                -1,
+                out_channels=config["ClusterEncoderOutChannels"][2],
+                heads=config["heads"],
+                concat=config["concat"],
+                beta=config["beta"],
                 dropout=config["dropout"],
             )
-        )
-        state_dict_saved = {
-            key[40:]: value
-            for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
-        }
-        self.cluster_encoder_2.load_state_dict(state_dict_saved)
-        # linear
-        self.linear = Linear(
-            config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
-        )
-        state_dict_saved = cluster_net_hetero.linear.state_dict()
-        self.linear.load_state_dict(state_dict_saved)
+            state_dict_saved = {
+                key[40:]: value
+                for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
+            }
+            self.cluster_encoder_2.load_state_dict(state_dict_saved)
+            # linear
+            self.linear = Linear(
+                config["ClusterEncoderOutChannels"][2], config["OutputChannels"]
+            )
+            state_dict_saved = cluster_net_hetero.linear.state_dict()
+            self.linear.load_state_dict(state_dict_saved)
+
+        else:
+            raise ValueError("conv_type should be transformer or ginconv")
 
     def forward(self, x, edge_index, batch):
         """The method called when ClusterNetHomogeneous is used on a dataitem
@@ -228,18 +308,59 @@ class ClusterNetHetero(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.name = "cluster_net"
-        self.cluster_net = ClusterNet(
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][0], dropout=config["dropout"]
-            ),
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][1], dropout=config["dropout"]
-            ),
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][2], dropout=config["dropout"]
-            ),
-            Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
-        )
+        if config["conv_type"] == "gin":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                ),
+            )
+        elif config["conv_type"] == "transformer":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][0],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][1],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][2],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                Linear(
+                    config["ClusterEncoderOutChannels"][2], config["OutputChannels"]
+                ),
+            )
+        else:
+            raise ValueError("conv_type should be gin or transformer")
 
     def forward(self, data):
         x_dict = data.x_dict
@@ -405,18 +526,59 @@ class LocClusterNet(torch.nn.Module):
         else:
             self.loc_net = LocNet(config, transformer=True)
 
-        self.cluster_net = ClusterNet(
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][0], dropout=config["dropout"]
-            ),
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][1], dropout=config["dropout"]
-            ),
-            ClusterEncoder(
-                config["ClusterEncoderChannels"][2], dropout=config["dropout"]
-            ),
-            Linear(config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]),
-        )
+        if config["conv_type"] == "gin":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                ),
+            )
+        elif config["conv_type"] == "transformer":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][0],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][1],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    out_channels=config["ClusterEncoderOutChannels"][2],
+                    heads=config["heads"],
+                    concat=config["concat"],
+                    beta=config["beta"],
+                ),
+                Linear(
+                    config["ClusterEncoderOutChannels"][2], config["OutputChannels"]
+                ),
+            )
+        else:
+            raise ValueError("conv_type should be gin or transformer")
 
     def forward(self, data):
         """Method called when data runs through network
