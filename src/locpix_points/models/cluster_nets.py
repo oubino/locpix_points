@@ -24,7 +24,13 @@ class ClusterEncoder(torch.nn.Module):
     Attributes:
         channel_list (list): Channel sizes for the MLP used in the neural network
             used in Conv
-        dropout (int): Dropout to apply to MLP"""
+        dropout (int): Dropout to apply to MLP
+        conv_type (str): Either gin or transformer for GinConv or Transformer respectively
+        channel_list (list): Channels for MLP if using GinConv
+        out_channels (int): Out channels for TransformerConv
+        heads (int): Number of multihead attention heads for TransformerConv
+        concat (bool): If true concatenate features from heads, if false then average
+        beta (bool): See pytorch geometric for more details"""
 
     def __init__(
         self,
