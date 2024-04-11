@@ -86,6 +86,12 @@ def main(argv=None):
         "which we load in",
     )
 
+    raise ValueError(
+        "Have changed featanalyse so this should be updated to reflect that"
+        "However rather than just updating this script rewrite so final test is an argument of featanalyse"
+        "To prevent rewriting all of this sript as well so it will just match feat analyse"
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
