@@ -480,13 +480,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     Raises:
         ValueError: If device specified is neither cpu or gpu OR
             if attention to examine is not correctly specified
-        NotImplementedError: Temporary until implement
-            explainability for PointTransformer
     """
 
     # ----------------------------
 
-    dim = config["dim"]
     if config["device"] == "gpu":
         device = torch.device("cuda")
     elif config["device"] == "cpu":
@@ -497,14 +494,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     model_type = config["model"]
 
     # only works for locclusternet at the moment
-    assert model_type == "locclusternet"
+    # assert model_type == "locclusternet"
 
     # initialise model
     model = model_choice(
         model_type,
         # this should parameterise the chosen model
         config[model_type],
-        dim=dim,
         device=device,
     )
 
@@ -550,7 +546,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             os.makedirs(folder)
 
     # initialise train/validation and test sets
-    train_set = datastruc.ClusterDataset(
+
+    # note these datastructures have been passed through
+    # PointNet/PointTransformer therefore localisations
+    # have been embedded into cluster
+    cluster_train_set = datastruc.ClusterDataset(
         input_train_folder,
         output_train_folder,
         label_level=None,
@@ -565,7 +565,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         device=device,
     )
 
-    val_set = datastruc.ClusterDataset(
+    cluster_val_set = datastruc.ClusterDataset(
         input_val_folder,
         output_val_folder,
         label_level=None,
@@ -580,7 +580,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         device=device,
     )
 
-    test_set = datastruc.ClusterDataset(
+    cluster_test_set = datastruc.ClusterDataset(
         input_test_folder,
         output_test_folder,
         label_level=None,
@@ -593,6 +593,30 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         from_hetero_loc_cluster=True,
         loc_net=model.loc_net,
         device=device,
+    )
+
+    # test set where localisations are yet to be passed through any network
+
+    # load in test dataset
+    loc_test_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        input_test_folder,  # processed_dir_root
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
     )
 
     # ------- GRAPHXAI --------
@@ -611,7 +635,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # get item to evaluate on
     dataitem_idx = config["dataitem"]
     for idx in dataitem_idx:
-        dataitem = test_set.get(idx)
+        cluster_dataitem = cluster_test_set.get(idx)
+        loc_dataitem = loc_test_set.get(idx)
 
         # ---- subgraphx -----
         if "subgraphx" in config.keys():
@@ -631,15 +656,15 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             )
 
             exp = explainer.get_explanation_graph(
-                x=dataitem.x,
-                edge_index=dataitem.edge_index,
-                label=dataitem.y,
+                x=cluster_dataitem.x,
+                edge_index=cluster_dataitem.edge_index,
+                label=cluster_dataitem.y,
                 max_nodes=config["subgraphx"]["max_nodes"],
                 forward_kwargs={"batch": torch.tensor([0], device=device)},
             )
 
             visualise_cluster_explanation(
-                dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+                cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
             )
 
         # ---- pgexplainer ----
@@ -669,22 +694,24 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             )
 
             ## Required to first train PGExplainer on the dataset:
-            train_set = torch.utils.data.ConcatDataset([train_set, val_set])
+            pgex_train_set = torch.utils.data.ConcatDataset(
+                [cluster_train_set, cluster_val_set]
+            )
 
             pgex.train_explanation_model(
-                train_set,
+                pgex_train_set,
                 forward_kwargs={"batch": torch.tensor([0], device=device)},
             )
 
             exp = pgex.get_explanation_graph(
-                x=dataitem.x,
-                edge_index=dataitem.edge_index,
-                label=dataitem.y,
+                x=cluster_dataitem.x,
+                edge_index=cluster_dataitem.edge_index,
+                label=cluster_dataitem.y,
                 forward_kwargs={"batch": torch.tensor([0], device=device)},
             )
 
             visualise_cluster_explanation(
-                dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+                cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
             )
 
         # -------- PYTORCH GEO XAI -------------
@@ -697,14 +724,9 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             if attention_model == "cluster":
                 attention_model = cluster_model
                 return_type = "raw"
-            elif attention_model == "point":
-                raise NotImplementedError(
-                    "Need to use correct model, correct return type and also need dataloaders"
-                )
-            elif attention_model == "pointcluster":
-                raise NotImplementedError(
-                    "Need to use correct model, correct return type and also need dataloaders"
-                )
+            elif attention_model == "point" or attention_model == "pointcluster":
+                attention_model = model
+                return_type = "log_probs"
             else:
                 raise ValueError(
                     "attention model must be cluster, point or pointcluster"
@@ -722,20 +744,29 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     return_type=return_type,
                 ),
             )
-
-            explanation = explainer(
-                x=dataitem.x,
-                edge_index=dataitem.edge_index,
-                target=None,
-                batch=torch.tensor([0], device=device),
-            )
-
-            visualise_edge_attention(dataitem, explanation.edge_mask)
+            if attention_model == "cluster":
+                explanation = explainer(
+                    x=cluster_dataitem.x,
+                    edge_index=cluster_dataitem.edge_index,
+                    target=None,
+                    batch=torch.tensor([0], device=device),
+                )
+                visualise_edge_attention(cluster_dataitem, explanation.edge_mask)
+            elif attention_model == "point" or attention_model == "pointcluster":
+                explanation = explainer(
+                    x=loc_dataitem.x,
+                    edge_index=loc_dataitem.edge_index,
+                    target=None,
+                    batch=torch.tensor([0], device=device),
+                )
+                raise ValueError("bob")
 
     # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
 
     # aggregate cluster features into collated df
-    dataset = torch.utils.data.ConcatDataset([train_set, val_set, test_set])
+    dataset = torch.utils.data.ConcatDataset(
+        [cluster_train_set, cluster_val_set, cluster_test_set]
+    )
 
     dfs = []
 
