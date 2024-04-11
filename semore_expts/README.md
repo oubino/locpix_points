@@ -20,6 +20,7 @@ Below is an overview of the details for each task
 | Task 6  | No  | Yes (PointTransformer) | LocClusterNet |
 | Task 7  | Yes  | Yes (PointNet) | LocClusterNet |
 | Task 8  | Yes  | Yes (PointTransformer) | LocClusterNet |
+| Task 9  | Yes  | Yes (PointNet) | LocClusterNet (Transformer not gin) |
 
 
 ## Commands run
