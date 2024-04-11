@@ -48,6 +48,16 @@ Then install this repository
 
 Before installing the remaining requirements, making sure you have activated the environment first
 
+We need to install our version of pytorch geometric which we do by
+
+.. code-block:: python
+
+    git clone https://github.com/oubino/pytorch_geometric.git
+    cd pytorch_geometric
+    pip install -e .
+
+Install other requirements
+
 .. code-block:: python
 
     pip install -r requirements.txt
