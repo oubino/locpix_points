@@ -100,8 +100,6 @@ def main(argv=None):
             # coord2histo
             item.coord_2_histo(
                 histo_size,
-                plot=config["napari"]["plot"],
-                vis_interpolation=config["napari"]["vis_interpolation"],
             )
 
             # manual segment
