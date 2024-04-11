@@ -354,6 +354,13 @@ class ClusterDataset(SMLMDataset):
                 x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
                 x_cluster = x_cluster.sigmoid()
 
+                # if have manual cluster features as well
+                try:
+                    manual_feats = hetero_data.x_dict["clusters"]
+                    x_cluster = torch.cat((manual_feats, x_cluster), dim=-1)
+                except KeyError:
+                    pass
+
                 # assign to homogeneous data item
                 data.x = x_cluster
                 data.pos = pos_dict["clusters"]
