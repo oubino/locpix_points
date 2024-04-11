@@ -1,6 +1,7 @@
 # The following are the names of the
 # x column, y column, z column if present, channel, frame,
 # in the parquet files being processed
+# note here quotation marks can be important so ensure they are present
 x_col: 'x'
 y_col: 'y'
 z_col: null
@@ -13,23 +14,28 @@ frame_col: 'frame'
 dim: 2
 
 # choice of which channels user wants to consider
-# if null considers all
+# [0,1,2] -> channels 0,1 and 2
+# null -> considers all channels
 channel_choice: [0]
 
-# specify string for each channel
+# specify real name for each channel
+# where we write unk for unknown
 channel_label:
-  0: unk
+  0: unk # e.g. 0: actin
 
 # whether to not drop the column containing
 # pixel
 drop_pixel_col: False
 
-# files to include: all for everyone
+# files to include
+# all -> consider all files
+# list -> these files only
+# e.g. [file_1, file_2, ...]
 include_files: all
   #- file_1
   #- file_2
 
-## Choice of input features
+## Choice of input features for the clusters
 features: []
 
 ## GT label null (not specified)

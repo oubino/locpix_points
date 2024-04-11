@@ -1,6 +1,24 @@
-# configuration for feature analysis
+# plot pca length/area vs convex hull to compare
+pca_vs_convex_hull: False
+# plot features to screen (features will be saved regardless)
+boxplots: True
+# run umap on the features
+umap: True
+# run kmeans on the features
+kmeans: True
+# run pca on the data
+pca:
+  # if implement True will run PCA
+  implement: True
+  # number of compoments to retain during PCA
+  n_components: 2
 
-# Features to analyse
+# map from real terms to the integer labels
+label_map:
+  fib: 0
+  iso: 1
+
+# Features to analyse (below are entire list that can be selected)
 features:
   - count
   - RGyration
@@ -10,22 +28,36 @@ features:
   - area_pca
   - density_pca
   - perimeter
+  #- area_convex_hull
+  #- length_convex_hull
+  #- density_convex_hull
 
-# sklearn parameters
+# if specified then logistic regression applied to features
 log_reg:
+  # penalties to evaluate
   penalty: [CHANGE]
+  # inverse of regularisation strength
   C: [CHANGE]
-dec_tree:
-  max_depth: [CHANGE]
-  max_features: [CHANGE]
-#svm:
-#  C: 1
-#  kernel: [CHANGE] "rbf"
-#  gamma: "scale"  # , 'auto']
-knn:
-  n_neighbors: [CHANGE]
-  weights: [CHANGE]
 
-label_map:
-  fib: 0
-  iso: 1
+# if specified then decision tree applied to features
+dec_tree:
+  # depth of tree
+  max_depth: [CHANGE]
+  # number features to consider
+  max_features: [CHANGE]
+
+# if specified then svm applied to features
+svm:
+  # regularisation parameter
+  C: [CHANGE]
+  #'kernel used
+  kernel: [CHANGE]
+  # kernel coefficient
+  gamma: [CHANGE]
+
+# if specified then knn applied to features
+knn:
+  # number of neighbours
+  n_neighbors: [CHANGE]
+  # weight function used during prediction
+  weights: [CHANGE]

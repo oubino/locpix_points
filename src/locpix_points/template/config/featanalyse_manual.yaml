@@ -1,11 +1,9 @@
-# configuration for feature analysis
+# map from real terms to the integer labels
+label_map:
+  fib: 0
+  iso: 1
 
-# Options for what to analyse
-pca_vs_convex_hull: True
-boxplots: True
-umap: False
-
-# Features to analyse
+# Features to analyse (below are entire list that can be selected)
 features:
   - count
   - RGyration
@@ -19,22 +17,47 @@ features:
   #- length_convex_hull
   #- density_convex_hull
 
-# sklearn parameters
-log_reg:
-  penalty: ["l1", "l2"]
-  C: [0.1, 0.5, 1]
-dec_tree:
-  max_depth: [40, 45, 50]
-  max_features: [4, 5, 6]
-svm:
-  C: [1]
-  #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
-  kernel: ["rbf"]
-  gamma: ["scale"]  # , 'auto']
-knn:
-  n_neighbors: [3,5,7,9,11]
-  weights: ["distance"]
+# plot pca length/area vs convex hull to compare
+pca_vs_convex_hull: False
+# plot features to screen (features will be saved regardless)
+boxplots: True
+# run umap on the features
+umap: True
+# run kmeans on the features
+kmeans: True
+# run pca on the data
+pca:
+  # if implement True will run PCA
+  implement: True
+  # number of compoments to retain during PCA
+  n_components: 2
 
-label_map:
-  fib: 0
-  iso: 1
+# if specified then logistic regression applied to features
+log_reg:
+  # penalties to evaluate
+  penalty: ["l1", "l2"]
+  # inverse of regularisation strength
+  C: [0.1, 0.5, 1]
+
+# if specified then decision tree applied to features
+dec_tree:
+  # depth of tree
+  max_depth: [40, 45, 50]
+  # number features to consider
+  max_features: [4, 5, 6]
+
+# if specified then svm applied to features
+svm:
+  # regularisation parameter
+  C: [1]
+  #'kernel used
+  kernel: ["rbf"]
+  # kernel coefficient
+  gamma: ["scale"]
+
+# if specified then knn applied to features
+knn:
+  # number of neighbours
+  n_neighbors: [3,5,7,9,11]
+  # weight function used during prediction
+  weights: ["distance"]

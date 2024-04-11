@@ -1,4 +1,6 @@
-# which features to extract
+# DBSCAN parameters
 clustering:
-  eps: 100 # nm
+  # eps in nanometers
+  eps: 100
+  # minimum number of points
   minpts: 5
