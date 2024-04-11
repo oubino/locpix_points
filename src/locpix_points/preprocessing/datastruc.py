@@ -16,11 +16,11 @@ import numpy as np
 import polars as pl
 import pyarrow.parquet as pq
 
-_interpolate = {
-    "log2": lambda d: np.log2(d),
-    "log10": lambda d: np.log10(d),
-    "linear": lambda d: d,
-}
+# _interpolate = {
+#    "log2": lambda d: np.log2(d),
+#    "log10": lambda d: np.log10(d),
+#    "linear": lambda d: d,
+# }
 
 
 class item:
@@ -151,21 +151,15 @@ class item:
     def coord_2_histo(
         self,
         histo_size,
-        cmap=["Greens", "Reds", "Blues", "Purples"],
-        vis_interpolation="linear",
+        # cmap=["Greens", "Reds", "Blues", "Purples"],
+        # vis_interpolation="linear",
     ):
         """Converts localisations into histogram of desired size,
         with option to plot the image (histo.T).
-        Note the interpolation is only applied for visualisation,
-        not for the actual data in the histogram!
 
         Args:
             histo_size (tuple): Tuple representing number of
-                bins/pixels in x,y,z
-            cmap (list of strings) : The colourmaps used to
-                plot the histograms
-            vis_interpolation (string): How to inerpolate
-                the image for visualisation"""
+                bins/pixels in x,y,z"""
 
         # get max and min x/y/(z) values
         df_max = self.df.max()
