@@ -10,7 +10,7 @@ import json
 import os
 import time
 
-from graphxai.explainers import SubgraphX, PGExplainer
+from graphxai.explainers import SubgraphX, PGExplainer, GuidedBP, GradCAM
 from locpix_points.data_loading import datastruc
 from locpix_points.models.cluster_nets import ClusterNetHomogeneous, parse_data
 from locpix_points.models import model_choice
@@ -672,6 +672,60 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
             visualise_cluster_explanation(
                 cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+            )
+
+        # ---- gradcam ----
+        # To implement GradCAM we need to remove all MLP layers
+        # as gradcam works by getting the weight attribute of the layer
+        # but MLP doesn't have this attribute therefore replace all MLP
+        # with the parts of it
+        # explainer = GradCAM(cluster_model,
+        #                     criterion = criterion
+        #                     )
+        #
+        # exp = explainer.get_explanation_graph(
+        #    x = cluster_dataitem.x,
+        #    edge_index = cluster_dataitem.edge_index,
+        #    label=cluster_dataitem.y,
+        #    average_variant=True,
+        #    forward_kwargs={"batch": torch.tensor([0], device=device)},
+        # )
+        # input('stop')
+        # visualise_cluster_explanation(
+        #        cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+        #    )
+
+        # ---- guided backprop ----
+        if "guided_backprop" in config.keys():
+            if config["guided_backprop"]["criterion"] == "nll":
+                criterion = torch.nn.functional.nll_loss
+            else:
+                raise NotImplementedError("This criterion is not implemented")
+
+            explainer = GuidedBP(
+                cluster_model,
+                criterion,
+            )
+
+            exp = explainer.get_explanation_graph(
+                x=cluster_dataitem.x,
+                y=cluster_dataitem.y,
+                edge_index=cluster_dataitem.edge_index,
+                aggregate_node_imp=torch.sum,
+                forward_kwargs={"batch": torch.tensor([0], device=device)},
+            )
+
+            # scale node importance to between 0 and 1
+            min_node = torch.min(exp.node_imp)
+            max_node = torch.max(exp.node_imp)
+            node_imp = (exp.node_imp - min_node) / (max_node - min_node)
+            # set edge importance all to zero as no edge importance from
+            # explanation
+            edge_index = cluster_dataitem.edge_index.cpu().numpy()
+            edge_imp = torch.zeros(edge_index.shape[1])
+
+            visualise_cluster_explanation(
+                cluster_dataitem, node_imp.cpu().numpy(), edge_imp.cpu().numpy()
             )
 
         # ---- pgexplainer ----

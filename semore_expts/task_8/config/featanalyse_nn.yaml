@@ -124,6 +124,11 @@ subgraphx:
   # maximum number of nodes to include in subgraph when generating explanation
   max_nodes: 14
 
+# if specified then run through guided backprop
+guided_backprop:
+  # loss function that was used during training
+  criterion: nll
+
 # if specified then run through pgexplainer
 pgex:
   # name of the embedding layer
