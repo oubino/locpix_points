@@ -435,26 +435,22 @@ class LocNet(torch.nn.Module):
             self.name = "locpointtransformer"
             self.pointtransformer = PointTransformerEmbedding(config)
 
-    def forward(self, x_dict, pos_dict, edge_index_dict):
+    def forward(self, x_locs, edge_index_locs, pos_locs):
         """Method called when data runs through network
+        Note the order of the arguments MUST not be changed as is required in this order
+        for explainability
 
         Args:
-            x_dict (dict): Features of the locs/clusters
-            pos_dict (dict): Positions of the locs/clusters
-            edge_index_dict (dict): Edge connections between
-                locs/clusters
+            x_locs (array): Features of the locs
+            edge_index_locs (array): Edge connections between
+                locs
+            pos_locs (array): Positions of the locs
 
         Returns:
             output.log_softmax(dim=-1): Log probabilities for the classes"""
 
-        # parse the data
-
-        # get x/pos for locs
-        x_locs = x_dict["locs"]
-        pos_locs = pos_dict["locs"]
-
         # get clusterID for each localisation
-        clusterID = edge_index_dict["locs", "in", "clusters"][1, :]
+        clusterID = edge_index_locs[1, :]
 
         # embed each localisation and aggregate into each cluster
         if not self.transformer:
@@ -503,7 +499,11 @@ class LocNetClassifyFOV(torch.nn.Module):
         cluster_batch = data["clusters"].batch
 
         # embed each localisation
-        x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
+        x_cluster = self.loc_net(
+            x_locs=x_dict["locs"],
+            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+            pos_locs=pos_dict["locs"],
+        )
 
         # aggregate over the FOV
         x_fov = global_mean_pool(x_cluster, cluster_batch)
@@ -601,7 +601,11 @@ class LocClusterNet(torch.nn.Module):
         )
 
         # embed each localisation
-        x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
+        x_cluster = self.loc_net(
+            x_locs=x_dict["locs"],
+            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+            pos_locs=pos_dict["locs"],
+        )
 
         # apply activation function to cluster embedding to constrain between 0 and 1
         x_cluster = x_cluster.sigmoid()
