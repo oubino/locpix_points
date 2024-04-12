@@ -141,7 +141,7 @@ pgex:
 # if specified then examine attention for models
 attention:
   # specify which models have attention
-  model: cluster # Options: [cluster] In future will also include [point, pointcluster]
+  scale: point # Options: [point cluster] In future will also include [pointcluster]
   # how to combine attention scores across multiple attention heads
   reduce: max
 
