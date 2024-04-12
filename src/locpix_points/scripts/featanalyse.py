@@ -12,7 +12,7 @@ import time
 
 from graphxai.explainers import SubgraphX, PGExplainer
 from locpix_points.data_loading import datastruc
-from locpix_points.models.cluster_nets import ClusterNetHomogeneous
+from locpix_points.models.cluster_nets import ClusterNetHomogeneous, parse_data
 from locpix_points.models import model_choice
 import matplotlib.colors as cl
 from matplotlib.cm import get_cmap
@@ -90,17 +90,18 @@ def visualise_cluster_explanation(dataitem, node_imp, edge_imp):
     o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
 
 
-def visualise_edge_attention(dataitem, edge_mask):
+def visualise_edge_attention(pos, edge_index, edge_mask):
     """Visualise dataitem.
-    Visualise the clusters with edges coloured by importance
+    Visualise the nodes with edges coloured by importance
 
     Args:
-        dataitem (torch geometric dataitem) : Pytorch geometric data item to visualise
+        pos (tensor) : Tensor containing node positions
+        edge_index (tensor) : Tensor containing edge index
         edge_mask (numpy array) : Numpy array denoting importance of each edge from 0 to 1
     """
 
-    pos = dataitem.pos.cpu().numpy()
-    edge_index = dataitem.edge_index.cpu().numpy()
+    pos = pos.cpu().numpy()
+    edge_index = edge_index.cpu().numpy()
 
     # convert 2d to 3d if required
     if pos.shape[1] == 2:
@@ -108,27 +109,26 @@ def visualise_edge_attention(dataitem, edge_mask):
         z = np.expand_dims(z, axis=1)
         pos = np.concatenate([pos, z], axis=1)
 
-    # cluster to cluster edges
+    # node to node edges
     lines = np.swapaxes(edge_index, 0, 1)
     colormap = get_cmap("seismic")
     rgba = colormap(edge_mask.cpu().numpy())
     colors = rgba[:, 0:3]
 
-    clusters_to_clusters = o3d.geometry.LineSet()
-    clusters_to_clusters.points = o3d.utility.Vector3dVector(pos)
-    clusters_to_clusters.lines = o3d.utility.Vector2iVector(lines)
-    clusters_to_clusters.colors = o3d.utility.Vector3dVector(colors)
+    edges = o3d.geometry.LineSet()
+    edges.points = o3d.utility.Vector3dVector(pos)
+    edges.lines = o3d.utility.Vector2iVector(lines)
+    edges.colors = o3d.utility.Vector3dVector(colors)
 
-    # cluster positions
+    # node positions
     colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
-
     point_cloud = o3d.geometry.PointCloud()
     point_cloud.points = o3d.utility.Vector3dVector(pos)
     point_cloud.colors = o3d.utility.Vector3dVector(colors)
 
     # visualise
     _ = o3d.visualization.Visualizer()
-    o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
+    o3d.visualization.draw_geometries([point_cloud, edges])
 
 
 def main(argv=None):
@@ -480,6 +480,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     Raises:
         ValueError: If device specified is neither cpu or gpu OR
             if attention to examine is not correctly specified
+        NotImplementedError: If try to run attention on Loc or
+            LocCluster instead of cluster
     """
 
     # ----------------------------
@@ -493,8 +495,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     model_type = config["model"]
 
-    # only works for locclusternet at the moment
-    # assert model_type == "locclusternet"
+    # only works for locclusternet/locclusternettransformer at the moment
+    # 1. To construct datasets we use cluster_net required in model
+    # 2. For explainability also assumes uses LocClusterNet
+    assert model_type == "locclusternet" or model_type == "locclusternettransformer"
 
     # initialise model
     model = model_choice(
@@ -628,15 +632,18 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                       3. Graph level explanation"
     )
 
-    # need to create a model that acts on the homogeneous data
+    # need to create a model that acts on the homogeneous data for cluster and locs
     cluster_model = ClusterNetHomogeneous(model.cluster_net, config[model_type])
+    loc_model = model.loc_net
     cluster_model.to(device)
+    loc_model.to(device)
 
     # get item to evaluate on
     dataitem_idx = config["dataitem"]
     for idx in dataitem_idx:
         cluster_dataitem = cluster_test_set.get(idx)
         loc_dataitem = loc_test_set.get(idx)
+        loc_dataitem.to(device)
 
         # ---- subgraphx -----
         if "subgraphx" in config.keys():
@@ -715,25 +722,31 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             )
 
         # -------- PYTORCH GEO XAI -------------
-
         # use model - logprobs or clustermodel - raw
         if "attention" in config.keys():
-            attention_model = config["attention"]["model"]
+            scale = config["attention"]["scale"]
             reduce = config["attention"]["reduce"]
 
-            if attention_model == "cluster":
+            if scale == "cluster":
                 attention_model = cluster_model
-                return_type = "raw"
-            elif attention_model == "point" or attention_model == "pointcluster":
-                attention_model = model
-                return_type = "log_probs"
+                return_type = "raw"  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+            elif scale == "loc":
+                raise NotImplementedError(
+                    "Not currently implementing attention for PointTransformer as not easy to implement 1. Edges not fixed constructed on the go by Transformer 2. Input to forward method is data not x, edge_index etc"
+                )
+                attention_model = loc_model
+                return_type = "log_probs"  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+            elif scale == "loccluster":
+                raise NotImplementedError(
+                    "LocCluster is not currently implemented as attention explainer doesn't accept hereogeneous graphs"
+                )
             else:
-                raise ValueError(
+                raise NotImplementedError(
                     "attention model must be cluster, point or pointcluster"
                 )
 
             explainer = Explainer(
-                model=cluster_model,
+                model=attention_model,
                 algorithm=AttentionExplainer(reduce=reduce),
                 explanation_type="model",
                 node_mask_type=None,
@@ -744,22 +757,35 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     return_type=return_type,
                 ),
             )
-            if attention_model == "cluster":
+
+            if scale == "cluster":
                 explanation = explainer(
                     x=cluster_dataitem.x,
                     edge_index=cluster_dataitem.edge_index,
-                    target=None,
+                    target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
                     batch=torch.tensor([0], device=device),
                 )
-                visualise_edge_attention(cluster_dataitem, explanation.edge_mask)
-            elif attention_model == "point" or attention_model == "pointcluster":
+                visualise_edge_attention(
+                    cluster_dataitem.pos,
+                    cluster_dataitem.edge_index,
+                    explanation.edge_mask,
+                )
+            elif scale == "loc":
+                loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
+                    loc_dataitem, None
+                )
                 explanation = explainer(
-                    x=loc_dataitem.x,
-                    edge_index=loc_dataitem.edge_index,
-                    target=None,
-                    batch=torch.tensor([0], device=device),
+                    x=loc_x_dict["locs"],
+                    edge_index=loc_edge_index_dict["locs", "in", "clusters"],
+                    pos_locs=loc_pos_dict["locs"],
+                    target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+                    # batch=torch.tensor([0], device=device),
                 )
-                raise ValueError("bob")
+                visualise_edge_attention(
+                    loc_pos_dict["locs"],
+                    loc_edge_index_dict["locs", "in", "clusters"],
+                    explanation.edge_mask,
+                )
 
     # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
 
