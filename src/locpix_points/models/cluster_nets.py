@@ -12,8 +12,8 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 
 import torch
 from torch.nn import Linear
-from torch_geometric.nn import MLP, HeteroConv, PointNetConv, conv
-from torch_geometric.nn.pool import global_max_pool, global_mean_pool
+from torch_geometric.nn import MLP, HeteroConv, conv
+from torch_geometric.nn.pool import global_mean_pool
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
 
@@ -119,7 +119,7 @@ class ClusterNet(torch.nn.Module):
         x_dict["clusters"] = self.cluster_encoder_2(x_dict, edge_index_dict)
 
         # pooling step so end up with one feature vector per fov
-        x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+        x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)
 
         # linear layer on each fov feature vector
         return self.linear(x_dict["clusters"])
@@ -159,7 +159,6 @@ def parse_data(data, device):
             cluster_feats_present = False
     # neither locs nor clusters have features
     except KeyError:
-        num_clusters = data.pos_dict["clusters"].shape[0]
         x_dict = {
             "locs": None,
             "clusters": None,  # torch.ones((num_clusters, 1), device=device),
@@ -304,7 +303,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
         x = self.cluster_encoder_2(x, edge_index)  # .relu()
 
         # pooling step so end up with one feature vector per fov
-        x = global_max_pool(x, batch)
+        x = global_mean_pool(x, batch)
 
         # linear layer on each fov feature vector
         return self.linear(x)

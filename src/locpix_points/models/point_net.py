@@ -16,7 +16,7 @@ from torch_geometric.nn import (
     MLP,
     PointNetConv,
     fps,
-    global_max_pool,
+    global_mean_pool,
     knn_interpolate,
     radius,
 )
@@ -76,7 +76,7 @@ class GlobalSAModule(torch.nn.Module):
         # aggregate the features for each cluster
         sorted_batch, _ = torch.sort(batch)
         assert torch.equal(batch, sorted_batch)
-        x = global_max_pool(x, batch)
+        x = global_mean_pool(x, batch)
         # this is only relevant to segmentation
         pos = pos.new_zeros((x.size(0), pos.shape[-1]))
         # this only works if batch was ordered in the first place
