@@ -527,6 +527,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         model_loc = os.path.join(model_dir, model_name)
     model.load_state_dict(torch.load(model_loc))
     model.to(device)
+    model.eval()
 
     # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
     data_folder = os.path.join(project_directory, "processed", "featanalysis")
@@ -554,6 +555,9 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # note these datastructures have been passed through
     # PointNet/PointTransformer therefore localisations
     # have been embedded into cluster
+    loc_model = model.loc_net
+    loc_model.eval()
+
     cluster_train_set = datastruc.ClusterDataset(
         input_train_folder,
         output_train_folder,
@@ -565,7 +569,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         fov_x=None,
         fov_y=None,
         from_hetero_loc_cluster=True,
-        loc_net=model.loc_net,
+        loc_net=loc_model,
         device=device,
     )
 
@@ -580,7 +584,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         fov_x=None,
         fov_y=None,
         from_hetero_loc_cluster=True,
-        loc_net=model.loc_net,
+        loc_net=loc_model,
         device=device,
     )
 
@@ -595,7 +599,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         fov_x=None,
         fov_y=None,
         from_hetero_loc_cluster=True,
-        loc_net=model.loc_net,
+        loc_net=loc_model,
         device=device,
     )
 
@@ -634,9 +638,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # need to create a model that acts on the homogeneous data for cluster and locs
     cluster_model = ClusterNetHomogeneous(model.cluster_net, config[model_type])
-    loc_model = model.loc_net
     cluster_model.to(device)
-    loc_model.to(device)
+    cluster_model.eval()
 
     # get item to evaluate on
     dataitem_idx = config["dataitem"]
