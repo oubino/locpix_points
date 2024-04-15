@@ -21,7 +21,6 @@ import wandb
 from locpix_points.data_loading import datastruc
 from locpix_points.evaluation import evaluate
 from locpix_points.models import model_choice
-from locpix_points.models.cluster_nets import ClusterNetHomogeneous
 
 # import torch
 # import torch_geometric.transforms as T
