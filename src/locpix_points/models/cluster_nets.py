@@ -47,7 +47,7 @@ class ClusterEncoder(torch.nn.Module):
         if conv_type == "gin":
             nn = MLP(channel_list, plain_last=False, dropout=dropout)
             self.conv = HeteroConv(
-                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
+                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="sum"
             )
         elif conv_type == "transformer":
             self.conv = HeteroConv(
