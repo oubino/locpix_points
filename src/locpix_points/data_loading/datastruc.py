@@ -329,6 +329,9 @@ class ClusterDataset(SMLMDataset):
         if self.from_hetero_loc_cluster:
             assert self.loc_net is not None
 
+            # make sure model is in eval mode
+            self.loc_net.eval()
+
             # work through tensors
             for raw_path in self.raw_cluster_file_names:
                 # if file not file_map.csv; pre_filter.pt; pre_transform.pt
@@ -351,7 +354,11 @@ class ClusterDataset(SMLMDataset):
                 x_dict, pos_dict, edge_index_dict, _ = parse_data(
                     hetero_data, self.device
                 )
-                x_cluster = self.loc_net(x_dict, pos_dict, edge_index_dict)
+                x_cluster = self.loc_net(
+                    x_locs=x_dict["locs"],
+                    edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+                    pos_locs=pos_dict["locs"],
+                )
                 x_cluster = x_cluster.sigmoid()
 
                 # if have manual cluster features as well
