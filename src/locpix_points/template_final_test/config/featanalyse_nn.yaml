@@ -35,9 +35,11 @@ locclusternet:
   conv_type: gin # Options: [gin, transformer]
   # number of final output channels
   OutputChannels: 2
+  # add position coordinates to each cluster
+  add_cluster_pos: True
 
   # --- if conv_type == gin ------------
-  ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
+  ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
   # ------------------------------------
 
   # --- if conv_type == transformer ----
