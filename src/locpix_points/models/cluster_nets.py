@@ -13,7 +13,7 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, conv
-from torch_geometric.nn.pool import global_mean_pool
+from torch_geometric.nn.pool import global_mean_pool, global_max_pool
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
 
@@ -47,7 +47,7 @@ class ClusterEncoder(torch.nn.Module):
         if conv_type == "gin":
             nn = MLP(channel_list, plain_last=False, dropout=dropout)
             self.conv = HeteroConv(
-                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="sum"
+                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
             )
         elif conv_type == "transformer":
             self.conv = HeteroConv(
@@ -61,7 +61,7 @@ class ClusterEncoder(torch.nn.Module):
                         dropout=dropout,
                     )
                 },
-                aggr="sum",
+                aggr="max",
             )
         else:
             raise ValueError("conv_type should be gin or transformer")
@@ -136,7 +136,7 @@ class ClusterNet(torch.nn.Module):
         )
 
         # pooling step so end up with one feature vector per fov
-        x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)
+        x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
 
         # linear layer on each fov feature vector
         return self.linear(x_dict["clusters"])
@@ -329,7 +329,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
         x = self.cluster_encoder_2(x, edge_index)
 
         # pooling step so end up with one feature vector per fov
-        x = global_mean_pool(x, batch)
+        x = global_max_pool(x, batch)
 
         # linear layer on each fov feature vector
         if logits:
@@ -449,7 +449,7 @@ class ClusterMLP(torch.nn.Module):
         except KeyError:
             raise KeyError("Clusters need to have features present")
         x = self.MLP_in(x, batch=data["clusters"].batch)
-        x = global_mean_pool(x, batch=data["clusters"].batch)
+        x = global_max_pool(x, batch=data["clusters"].batch)
         x = self.linear(x)
 
         return x.log_softmax(dim=-1)
@@ -543,7 +543,7 @@ class LocNetClassifyFOV(torch.nn.Module):
         )
 
         # aggregate over the FOV
-        x_fov = global_mean_pool(x_cluster, cluster_batch)
+        x_fov = global_max_pool(x_cluster, cluster_batch)
 
         # return log probability
         return x_fov.log_softmax(dim=-1)
