@@ -66,17 +66,24 @@ class ClusterEncoder(torch.nn.Module):
         else:
             raise ValueError("conv_type should be gin or transformer")
 
-    def forward(self, x_dict, edge_index_dict):
+    def forward(self, x_dict, pos_dict, edge_index_dict, add_cluster_pos=False):
         """The method called when the encoder is used on a data item
 
         Args:
             x_dict (dict): Features of the locs/clusters
+            pos_dict (dict): Postiions of the locs/clusters
             edge_index_dict (dict): Edge connections between
                 locs/clusters
+            add_cluster_pos (bool): Add on the cluster positions
 
         Returns:
             out["clusters"].relu() (torch.tensor): Encoded cluster features
         """
+        if add_cluster_pos:
+            x_dict["clusters"] = torch.cat(
+                (x_dict["clusters"], pos_dict["clusters"]), dim=-1
+            )
+
         out = self.conv(x_dict, edge_index_dict)
         return out["clusters"]
         # raise ValueError("Wrong axis when have batch")
@@ -100,23 +107,33 @@ class ClusterNet(torch.nn.Module):
         self.cluster_encoder_2 = cluster_encoder_2
         self.linear = linear
 
-    def forward(self, x_dict, edge_index_dict, batch):
+    def forward(self, x_dict, pos_dict, edge_index_dict, batch, add_cluster_pos):
         """The method called when ClusterNet is used on a dataitem
 
         Args:
             x_dict (dict): dictionary with the features for the
                 clusters/locs
+            pos_dict (dict): dictionary with the positions for the
+                clusters/locs
             edge_index_dict (dict): contains the edge connections
                 between the locs/clusters
+            add_cluster_pos (bool): if True add on position for each
+                cluster
             batch (torch.tensor): batch for the clusters
 
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
                 for that FOV
         """
-        x_dict["clusters"] = self.cluster_encoder_0(x_dict, edge_index_dict)
-        x_dict["clusters"] = self.cluster_encoder_1(x_dict, edge_index_dict)
-        x_dict["clusters"] = self.cluster_encoder_2(x_dict, edge_index_dict)
+        x_dict["clusters"] = self.cluster_encoder_0(
+            x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
+        )
+        x_dict["clusters"] = self.cluster_encoder_1(
+            x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
+        )
+        x_dict["clusters"] = self.cluster_encoder_2(
+            x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
+        )
 
         # pooling step so end up with one feature vector per fov
         x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)
@@ -183,6 +200,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
 
     def __init__(self, cluster_net_hetero, config):
         super().__init__()
+        self.add_cluster_pos = config["add_cluster_pos"]
 
         if config["conv_type"] == "gin":
             # first
@@ -284,7 +302,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
         else:
             raise ValueError("conv_type should be transformer or ginconv")
 
-    def forward(self, x, edge_index, batch):
+    def forward(self, x, edge_index, batch, pos, logits=True):
         """The method called when ClusterNetHomogeneous is used on a dataitem
 
         Args:
@@ -292,27 +310,40 @@ class ClusterNetHomogeneous(torch.nn.Module):
             edge_index (torch.tensor): contains the edge connections
                 between the clusters
             batch (torch.tensor): batch for the clusters
+            pos (torch.tensor): Pposition for the clusters
+            logits (bool): If true output logits, if false output log probs
 
         Returns:
             self.linear(x): Log probabilities for the classes for the
                 FOV
         """
 
-        x = self.cluster_encoder_0(x, edge_index)  # .relu()
-        x = self.cluster_encoder_1(x, edge_index)  # .relu()
-        x = self.cluster_encoder_2(x, edge_index)  # .relu()
+        if self.add_cluster_pos:
+            x = torch.cat((x, pos), dim=-1)
+        x = self.cluster_encoder_0(x, edge_index)
+        if self.add_cluster_pos:
+            x = torch.cat((x, pos), dim=-1)
+        x = self.cluster_encoder_1(x, edge_index)
+        if self.add_cluster_pos:
+            x = torch.cat((x, pos), dim=-1)
+        x = self.cluster_encoder_2(x, edge_index)
 
         # pooling step so end up with one feature vector per fov
         x = global_mean_pool(x, batch)
 
         # linear layer on each fov feature vector
-        return self.linear(x)
+        if logits:
+            return self.linear(x)
+        else:
+            logits = self.linear(x)
+            return logits.log_softmax(dim=-1)
 
 
 class ClusterNetHetero(torch.nn.Module):
     def __init__(self, config):
         super().__init__()
         self.name = "cluster_net"
+        self.add_cluster_pos = config["add_cluster_pos"]
         if config["conv_type"] == "gin":
             self.cluster_net = ClusterNet(
                 ClusterEncoder(
@@ -370,8 +401,15 @@ class ClusterNetHetero(torch.nn.Module):
     def forward(self, data):
         x_dict = data.x_dict
         edge_index_dict = data.edge_index_dict
+        pos_dict = data.pos_dict
 
-        output = self.cluster_net(x_dict, edge_index_dict, data["clusters"].batch)
+        output = self.cluster_net(
+            x_dict,
+            pos_dict,
+            edge_index_dict,
+            data["clusters"].batch,
+            self.add_cluster_pos,
+        )
 
         return output.log_softmax(dim=-1)
 
@@ -525,6 +563,7 @@ class LocClusterNet(torch.nn.Module):
         super().__init__()
         self.name = "locclusternet"
         self.device = device
+        self.add_cluster_pos = config["add_cluster_pos"]
         # wrong input channel size 2 might change if locs have features
         if not transformer:
             self.loc_net = LocNet(config, transformer=False)
@@ -615,8 +654,14 @@ class LocClusterNet(torch.nn.Module):
         else:
             x_dict["clusters"] = x_cluster
 
-        # operate graph net on clusters, finish with
-        output = self.cluster_net(x_dict, edge_index_dict, data["clusters"].batch)
+        # operate graph net on clusters
+        output = self.cluster_net(
+            x_dict,
+            pos_dict,
+            edge_index_dict,
+            data["clusters"].batch,
+            self.add_cluster_pos,
+        )
 
         return output.log_softmax(dim=-1)
 

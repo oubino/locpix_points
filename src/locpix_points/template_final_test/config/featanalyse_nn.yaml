@@ -134,16 +134,18 @@ guided_backprop:
 
 # if specified then run through pgexplainer
 pgex:
-  # name of the embedding layer
-  emb_layer_name: cluster_encoder_2
   # size regularization to constrain the explanation size
-  coeff_size: 0.00000001
+  edge_size: 0.00000001
   # entropy regularization to constrain the connectivity of explanation
-  coeff_ent: 0.00000001
+  edge_ent: 0.00000001
   # maximum number of networks to train explanation network
-  max_epochs: 50
+  max_epochs: 20
   # learning rate during training of explanation network
-  lr: 0.1
+  lr: 0.003
+  # ?
+  temp: [5.0,2.0]
+  # bias ?
+  bias: 0.0
 
 # if specified then examine attention for models
 attention:

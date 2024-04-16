@@ -10,7 +10,7 @@ import json
 import os
 import time
 
-from graphxai.explainers import SubgraphX, PGExplainer, GuidedBP, GradCAM
+from graphxai.explainers import SubgraphX, GuidedBP, GradCAM
 from locpix_points.data_loading import datastruc
 from locpix_points.models.cluster_nets import ClusterNetHomogeneous, parse_data
 from locpix_points.models import model_choice
@@ -40,7 +40,8 @@ from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 import torch
-from torch_geometric.explain import Explainer, AttentionExplainer
+import torch_geometric.loader as L
+from torch_geometric.explain import Explainer, AttentionExplainer, PGExplainer
 import warnings
 import yaml
 
@@ -90,7 +91,7 @@ def visualise_cluster_explanation(dataitem, node_imp, edge_imp):
     o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
 
 
-def visualise_edge_attention(pos, edge_index, edge_mask):
+def visualise_edge_mask(pos, edge_index, edge_mask):
     """Visualise dataitem.
     Visualise the nodes with edges coloured by importance
 
@@ -665,12 +666,17 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 ],
             )
 
+            # subgraphx requires output to be logits
             exp = explainer.get_explanation_graph(
                 x=cluster_dataitem.x,
                 edge_index=cluster_dataitem.edge_index,
                 label=cluster_dataitem.y,
                 max_nodes=config["subgraphx"]["max_nodes"],
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
+                forward_kwargs={
+                    "batch": torch.tensor([0], device=device),
+                    "pos": cluster_dataitem.pos,
+                    "logits": True,
+                },
             )
 
             visualise_cluster_explanation(
@@ -710,12 +716,18 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 criterion,
             )
 
+            # guidedbp doesn't assume logits but we need a criterion between the prediction
+            # and label therefore use nll loss and logprobs
             exp = explainer.get_explanation_graph(
                 x=cluster_dataitem.x,
                 y=cluster_dataitem.y,
                 edge_index=cluster_dataitem.edge_index,
                 aggregate_node_imp=torch.sum,
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
+                forward_kwargs={
+                    "batch": torch.tensor([0], device=device),
+                    "pos": cluster_dataitem.pos,
+                    "logits": False,
+                },
             )
 
             # scale node importance to between 0 and 1
@@ -733,60 +745,96 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- pgexplainer ----
         if "pgex" in config.keys():
-            emb_layer_name = config["pgex"]["emb_layer_name"]
-            coeff_size = config["pgex"]["coeff_size"]
-            coeff_ent = config["pgex"]["coeff_ent"]
             max_epochs = config["pgex"]["max_epochs"]
             lr = config["pgex"]["lr"]
+            edge_size = config["pgex"]["edge_size"]
+            edge_ent = config["pgex"]["edge_ent"]
+            temp = config["pgex"]["temp"]
+            bias = config["pgex"]["bias"]
 
-            mult = 2  # in pg_explainer mult is 2 unless it is per node then mult is 3
-            in_channels = config[model_type]["ClusterEncoderChannels"][-1][-1]
-            in_channels *= mult
-            #
-            ## Embedding layer name is final GNN embedding layer in the model
-            ## Note that PGExplainer expects unnormalized class score as final output
-            ## therefore final layer is linear
-            pgex = PGExplainer(
-                cluster_model,
-                emb_layer_name=emb_layer_name,
-                coeff_size=coeff_size,
-                coeff_ent=coeff_ent,
-                explain_graph=True,
-                max_epochs=max_epochs,
-                lr=lr,
-                in_channels=in_channels,
+            # PGExplainer make it return logprobs
+            explainer = Explainer(
+                model=cluster_model,
+                algorithm=PGExplainer(
+                    epochs=max_epochs,
+                    lr=lr,
+                    edge_size=edge_size,
+                    edge_ent=edge_ent,
+                    temp=temp,
+                    bias=bias,
+                ),
+                explanation_type="phenomenon",
+                edge_mask_type="object",
+                model_config=dict(
+                    mode="multiclass_classification",
+                    task_level="graph",
+                    return_type="log_probs",
+                ),
             )
+            explainer.algorithm.mlp.to(device)
 
             ## Required to first train PGExplainer on the dataset:
             pgex_train_set = torch.utils.data.ConcatDataset(
                 [cluster_train_set, cluster_val_set]
             )
 
-            pgex.train_explanation_model(
+            # initialise loader
+            train_loader = L.DataLoader(
                 pgex_train_set,
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
+                batch_size=1,
+                shuffle=True,
+                drop_last=True,
             )
 
-            exp = pgex.get_explanation_graph(
-                x=cluster_dataitem.x,
-                edge_index=cluster_dataitem.edge_index,
-                label=cluster_dataitem.y,
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
+            # train pgexplainer
+            print("Training")
+            for epoch in range(max_epochs):
+                total_loss = 0
+                items = 0
+                for index, item in enumerate(train_loader):
+                    loss = explainer.algorithm.train(
+                        epoch,
+                        cluster_model,
+                        item.x,
+                        item.edge_index,
+                        target=item.y,
+                        pos=item.pos,
+                        batch=torch.tensor([0], device=device),
+                        # return logprobs
+                        logits=False,
+                    )
+                    items += index
+                    total_loss += loss
+                print(f"Epoch: {epoch}; Loss : {total_loss/items}")
+
+            # explain cluster dataitem
+            explanation = explainer(
+                cluster_dataitem.x,
+                cluster_dataitem.edge_index,
+                target=cluster_dataitem.y,
+                pos=cluster_dataitem.pos,
+                batch=torch.tensor([0], device=device),
+                # return logprobs
+                logits=False,
             )
 
-            visualise_cluster_explanation(
-                cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+            # visualise explanation
+            visualise_edge_mask(
+                cluster_dataitem.pos,
+                cluster_dataitem.edge_index,
+                explanation.edge_mask,
             )
 
         # -------- PYTORCH GEO XAI -------------
         # use model - logprobs or clustermodel - raw
         if "attention" in config.keys():
+            print("---- Attention ----")
             scale = config["attention"]["scale"]
             reduce = config["attention"]["reduce"]
 
             if scale == "cluster":
                 attention_model = cluster_model
-                return_type = "raw"  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+                return_type = "log_probs"  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
             elif scale == "loc":
                 raise NotImplementedError(
                     "Not currently implementing attention for PointTransformer as not easy to implement 1. Edges not fixed constructed on the go by Transformer 2. Input to forward method is data not x, edge_index etc"
@@ -811,6 +859,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 model_config=dict(
                     mode="multiclass_classification",
                     task_level="graph",
+                    # return logprobs
                     return_type=return_type,
                 ),
             )
@@ -821,8 +870,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     edge_index=cluster_dataitem.edge_index,
                     target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
                     batch=torch.tensor([0], device=device),
+                    pos=cluster_dataitem.pos,
+                    # return logprobs
+                    logits=False,
                 )
-                visualise_edge_attention(
+                visualise_edge_mask(
                     cluster_dataitem.pos,
                     cluster_dataitem.edge_index,
                     explanation.edge_mask,
@@ -837,8 +889,9 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     pos_locs=loc_pos_dict["locs"],
                     target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
                     # batch=torch.tensor([0], device=device),
+                    logits=False,
                 )
-                visualise_edge_attention(
+                visualise_edge_mask(
                     loc_pos_dict["locs"],
                     loc_edge_index_dict["locs", "in", "clusters"],
                     explanation.edge_mask,
