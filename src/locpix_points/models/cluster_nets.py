@@ -350,9 +350,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_2.load_state_dict(state_dict_saved)
             self.cluster_encoder_2.aggr = "max"
             # linear
-            self.linear = Linear(
-                config["ClusterEncoderOutChannels"][2], config["OutputChannels"]
-            )
+            self.linear = Linear(config["tr_out_channels"][2], config["OutputChannels"])
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
 
@@ -365,13 +363,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     dropout=config["dropout"],
                 )
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
             }
             self.cluster_encoder_0.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_0.aggr = "max"
             # second
             self.cluster_encoder_1 = conv.PointNetConv(
@@ -381,13 +377,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     dropout=config["dropout"],
                 )
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
             }
             self.cluster_encoder_1.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_1.aggr = "max"
             # third
             self.cluster_encoder_2 = conv.PointNetConv(
@@ -397,13 +391,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     dropout=config["dropout"],
                 )
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
             }
             self.cluster_encoder_2.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_2.aggr = "max"
             # linear
             self.linear = Linear(
@@ -420,7 +412,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_dim"],
-                        config["pt_tr_pos"],
+                        config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][0],
                     ],
                     plain_last=False,
@@ -429,7 +421,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_out_channels"][0],
-                        config["pt_tr_attn"],
+                        config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][0],
                     ],
                     plain_last=False,
@@ -437,13 +429,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 ),
                 add_self_loops=False,
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
             }
             self.cluster_encoder_0.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_0.aggr = "max"
             # second
             self.cluster_encoder_1 = conv.PointTransformerConv(
@@ -452,7 +442,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_dim"],
-                        config["pt_tr_pos"],
+                        config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][1],
                     ],
                     plain_last=False,
@@ -461,7 +451,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_out_channels"][1],
-                        config["pt_tr_attn"],
+                        config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][1],
                     ],
                     plain_last=False,
@@ -469,13 +459,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 ),
                 add_self_loops=False,
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
             }
             self.cluster_encoder_1.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_1.aggr = "max"
             # third
             self.cluster_encoder_2 = conv.PointTransformerConv(
@@ -484,7 +472,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_dim"],
-                        config["pt_tr_pos"],
+                        config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][2],
                     ],
                     plain_last=False,
@@ -493,7 +481,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 MLP(
                     [
                         config["pt_tr_out_channels"][2],
-                        config["pt_tr_attn"],
+                        config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][2],
                     ],
                     plain_last=False,
@@ -501,13 +489,11 @@ class ClusterNetHomogeneous(torch.nn.Module):
                 ),
                 add_self_loops=False,
             )
-            input("check below")
             state_dict_saved = {
                 key[40:]: value
                 for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
             }
             self.cluster_encoder_2.load_state_dict(state_dict_saved)
-            input("end check")
             self.cluster_encoder_2.aggr = "max"
             # linear
             self.linear = Linear(
@@ -596,30 +582,28 @@ class ClusterNetHetero(torch.nn.Module):
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["ClusterEncoderOutChannels"][0],
-                    heads=config["heads"],
-                    concat=config["concat"],
-                    beta=config["beta"],
+                    tr_out_channels=config["tr_out_channels"][0],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["ClusterEncoderOutChannels"][1],
-                    heads=config["heads"],
-                    concat=config["concat"],
-                    beta=config["beta"],
+                    tr_out_channels=config["tr_out_channels"][1],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["ClusterEncoderOutChannels"][2],
-                    heads=config["heads"],
-                    concat=config["concat"],
-                    beta=config["beta"],
+                    tr_out_channels=config["tr_out_channels"][2],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
-                Linear(
-                    config["ClusterEncoderOutChannels"][2], config["OutputChannels"]
-                ),
+                Linear(config["tr_out_channels"][2], config["OutputChannels"]),
             )
         elif config["conv_type"] == "pointnet":
             self.cluster_net = ClusterNet(
@@ -875,26 +859,26 @@ class LocClusterNet(torch.nn.Module):
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["tr_out_channels"][0],
-                    heads=config["tr_heads"],
-                    concat=config["tr_concat"],
-                    beta=config["tr_beta"],
+                    tr_out_channels=config["tr_out_channels"][0],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["tr_out_channels"][1],
-                    heads=config["tr_heads"],
-                    concat=config["tr_concat"],
-                    beta=config["tr_beta"],
+                    tr_out_channels=config["tr_out_channels"][1],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
                     conv_type="transformer",
-                    out_channels=config["tr_out_channels"][2],
-                    heads=config["tr_heads"],
-                    concat=config["tr_concat"],
-                    beta=config["tr_beta"],
+                    tr_out_channels=config["tr_out_channels"][2],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
                 ),
                 Linear(config["tr_out_channels"][2], config["OutputChannels"]),
             )
