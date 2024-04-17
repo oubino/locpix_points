@@ -67,26 +67,40 @@ model: [CHANGE]
 #   # +++++ ClusterNet parameters +++++
 #   # Dropout for each layer
 #   dropout: 0.5
-#   conv_type: gin # Options: [gin, transformer]
+#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
 #   add_cluster_pos: True
 #
-#   # --- if conv_type == gin ------------
+#   # --- if conv_type == gin OR pointnet ------------
 #   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
-#   ClusterEncoderOutChannels: [16, 24, 32]
+#   # Out channels for each layer
+#   tr_out_channels: [16, 24, 32]
 #   # Number of multihead attention layers
-#   heads: 1
+#   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
-#   concat: True
+#   tr_concat: True
 #   # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
 #   # when beta is True
-#   beta: False
+#   tr_beta: False
 #   # ------------------------------------
+#
+#   # --- if conv_type == pointtransformer ------------
+#   # input channel size for each layer
+#   pt_tr_in_channels: [16, 32, 64]
+#   # output channel size for each layer
+#   pt_tr_out_channels: [32, 64, 32]
+#   # size of hidden channel for position NN
+#   pt_tr_pos_nn_layers: 64
+#   # size of hidden channel for attention NN
+#   pt_tr_attn_nn_layers: 64
+#   # dimensions of data: options = [2,3]
+#   pt_tr_dim: 2
+#   # -------------------------------------------------
 
 # model: locclusternettransformer
 # locclusternettransformer:
@@ -110,26 +124,40 @@ model: [CHANGE]
 #   # +++++ ClusterNet parameters +++++
 #   # Dropout for each layer
 #   dropout: 0.5
-#   conv_type: gin # Options: [gin, transformer]
+#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
 #   add_cluster_pos: True
 #
-#   # --- if conv_type == gin ------------
+#   # --- if conv_type == gin OR pointnet ------------
 #   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
-#   ClusterEncoderOutChannels: [16, 24, 32]
+#   # Out channels for each layer
+#   tr_out_channels: [16, 24, 32]
 #   # Number of multihead attention layers
-#   heads: 1
+#   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
-#   concat: True
+#   tr_concat: True
 #   # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
 #   # when beta is True
-#   beta: False
+#   tr_beta: False
 #   # ------------------------------------
+#
+#   # --- if conv_type == pointtransformer ------------
+#   # input channel size for each layer
+#   pt_tr_in_channels: [16, 32, 64]
+#   # output channel size for each layer
+#   pt_tr_out_channels: [32, 64, 32]
+#   # size of hidden channel for position NN
+#   pt_tr_pos_nn_layers: 64
+#   # size of hidden channel for attention NN
+#   pt_tr_attn_nn_layers: 64
+#   # dimensions of data: options = [2,3]
+#   pt_tr_dim: 2
+#   # -------------------------------------------------
 #
 # model: clusternet
 # clusternet:
@@ -138,26 +166,40 @@ model: [CHANGE]
 #   dropout: 0.5
 #
 #   # +++++ ClusterNet parameters +++++
-#   conv_type: gin # Options: [gin, transformer]
+#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
 #   add_cluster_pos: True
 #
-#   # --- if conv_type == gin ------------
+#   # --- if conv_type == gin OR pointnet ------------
 #   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
-#   ClusterEncoderOutChannels: [16, 24, 32]
+#   # Out channels for each layer
+#   tr_out_channels: [16, 24, 32]
 #   # Number of multihead attention layers
-#   heads: 1
+#   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
-#   concat: True
+#   tr_concat: True
 #   # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
 #   # when beta is True
-#   beta: False
+#   tr_beta: False
 #   # ------------------------------------
+#
+#   # --- if conv_type == pointtransformer ------------
+#   # input channel size for each layer
+#   pt_tr_in_channels: [16, 32, 64]
+#   # output channel size for each layer
+#   pt_tr_out_channels: [32, 64, 32]
+#   # size of hidden channel for position NN
+#   pt_tr_pos_nn_layers: 64
+#   # size of hidden channel for attention NN
+#   pt_tr_attn_nn_layers: 64
+#   # dimensions of data: options = [2,3]
+#   pt_tr_dim: 2
+#   # -------------------------------------------------
 #
 # model: clustermlp
 # clustermlp:
