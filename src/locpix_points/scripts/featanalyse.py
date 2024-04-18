@@ -47,121 +47,130 @@ import warnings
 import yaml
 
 
-def visualise_cluster_explanation(dataitem, node_imp, edge_imp):
-    """Visualise dataitem.
-    Visualise the clusters coloured by importance
-
-    Args:
-        dataitem (torch geometric dataitem) : Pytorch geometric data item to visualise
-        node_imp (numpy array) : Numpy array of 1.0 or 0.0 according to if node is important
-            or not
-        edge_imp (numpy array) : Numpy array of 1.0 or 0.0 according to if edge is important
-            or not"""
-
-    pos = dataitem.pos.cpu().numpy()
-    edge_index = dataitem.edge_index.cpu().numpy()
-
-    # convert 2d to 3d if required
-    if pos.shape[1] == 2:
-        z = np.ones(pos.shape[0])
-        z = np.expand_dims(z, axis=1)
-        pos = np.concatenate([pos, z], axis=1)
-
-    # cluster to cluster edges
-    lines = np.swapaxes(edge_index, 0, 1)
-    colors = np.full((len(lines), 3), fill_value=[0.33, 0.33, 0.33])
-    idx = edge_imp.nonzero()
-    colors[idx] = [1, 1, 0]
-
-    clusters_to_clusters = o3d.geometry.LineSet()
-    clusters_to_clusters.points = o3d.utility.Vector3dVector(pos)
-    clusters_to_clusters.lines = o3d.utility.Vector2iVector(lines)
-    clusters_to_clusters.colors = o3d.utility.Vector3dVector(colors)
-
-    # cluster positions
-    colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
-    idx = node_imp.nonzero()
-    colors[idx] = [1, 0, 0]
-
-    point_cloud = o3d.geometry.PointCloud()
-    point_cloud.points = o3d.utility.Vector3dVector(pos)
-    point_cloud.colors = o3d.utility.Vector3dVector(colors)
-
-    # visualise
-    _ = o3d.visualization.Visualizer()
-    o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
-
-
 class Present:
     """Required for visualising the positive and negative edges below"""
 
     def __init__(self):
-        self.plot_present = [True, True]
+        self.plot_present = [True, True, True, True]
 
 
-def visualise_edge_mask(pos, edge_index, edge_mask):
+def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
     """Visualise dataitem.
     Visualise the nodes with edges coloured by importance
 
     Args:
         pos (tensor) : Tensor containing node positions
         edge_index (tensor) : Tensor containing edge index
-        edge_mask (numpy array) : Numpy array denoting importance of each edge from 0 to 1
+        node_imp (tensor) : Tensor denoting importance of each node from 0 to 1
+        edge_imp (tensor) : Tensor denoting importance of each edge from 0 to 1
     """
 
-    # edge_index and edge_mask to undirected
+    # edge_index and edge_imp to undirected
     warnings.warn(
         "The edge mask is directional, meaning an edge from node 0 to 1 may "
         "be significant while an edge from 1 to 0 may not be. "
         "For visualisation we make the graph undirected and we take the maximum"
         " of two edges that connect two nodes"
     )
-    edge_index, edge_mask = to_undirected(edge_index, edge_mask, reduce="max")
 
-    ind_nonzero = torch.squeeze(edge_mask.nonzero()).cpu().numpy()
-    ind_zero = torch.squeeze((edge_mask == 0.0).nonzero()).cpu().numpy()
+    # if 1 or fewer important edges don't plot importance
+    if edge_imp is not None and edge_imp.nonzero().shape[0] in [0, 1]:
+        edge_imp = None
+    if node_imp is not None and node_imp.nonzero().shape[0] in [0, 1]:
+        node_imp = None
 
-    pos = pos.cpu().numpy()
-    edge_index = edge_index.cpu().numpy()
+    plots = []
 
-    # convert 2d to 3d if required
-    if pos.shape[1] == 2:
-        z = np.ones(pos.shape[0])
-        z = np.expand_dims(z, axis=1)
-        pos = np.concatenate([pos, z], axis=1)
+    # edge importance
+    if edge_imp is not None:
+        # make edges between nodes maximum of nodes connecting them
+        edge_index, edge_imp = to_undirected(edge_index, edge_imp, reduce="max")
+        # find nonzero/zero edges
+        ind_nonzero = torch.squeeze(edge_imp.nonzero()).cpu().numpy()
+        ind_zero = torch.squeeze((edge_imp == 0.0).nonzero()).cpu().numpy()
 
-    # colors for edges
-    lines = np.swapaxes(edge_index, 0, 1)
-    colormap = get_cmap("seismic")
-    rgba = colormap(edge_mask.cpu().numpy())
-    colors = rgba[:, 0:3]
+        pos = pos.cpu().numpy()
+        edge_index = edge_index.cpu().numpy()
+        # convert 2d to 3d if required
+        if pos.shape[1] == 2:
+            z = np.ones(pos.shape[0])
+            z = np.expand_dims(z, axis=1)
+            pos = np.concatenate([pos, z], axis=1)
 
-    # positive edges
-    pos_edges = o3d.geometry.LineSet()
-    pos_edges.points = o3d.utility.Vector3dVector(pos)
-    pos_edges.lines = o3d.utility.Vector2iVector(lines[ind_nonzero, :])
-    pos_edges.colors = o3d.utility.Vector3dVector(colors[ind_nonzero])
+        # color edges by importance
+        lines = np.swapaxes(edge_index, 0, 1)
+        colormap = get_cmap("seismic")
+        rgba = colormap(edge_imp.cpu().numpy())
+        colors = rgba[:, 0:3]
 
-    # negative edges
-    neg_edges = o3d.geometry.LineSet()
-    neg_edges.points = o3d.utility.Vector3dVector(pos)
-    neg_edges.lines = o3d.utility.Vector2iVector(lines[ind_zero, :])
-    neg_edges.colors = o3d.utility.Vector3dVector(colors[ind_zero])
+        # positive edges
+        pos_edges = o3d.geometry.LineSet()
+        pos_edges.points = o3d.utility.Vector3dVector(pos)
+        pos_edges.lines = o3d.utility.Vector2iVector(lines[ind_nonzero, :])
+        pos_edges.colors = o3d.utility.Vector3dVector(colors[ind_nonzero])
 
-    # node positions
-    colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
-    point_cloud = o3d.geometry.PointCloud()
-    point_cloud.points = o3d.utility.Vector3dVector(pos)
-    point_cloud.colors = o3d.utility.Vector3dVector(colors)
+        # negative edges
+        neg_edges = o3d.geometry.LineSet()
+        neg_edges.points = o3d.utility.Vector3dVector(pos)
+        neg_edges.lines = o3d.utility.Vector2iVector(lines[ind_zero, :])
+        neg_edges.colors = o3d.utility.Vector3dVector(colors[ind_zero])
 
-    # plots
-    plots = [pos_edges, neg_edges, point_cloud]
+        plots.extend([pos_edges, neg_edges])
+
+    else:
+        pos = pos.cpu().numpy()
+        edge_index = edge_index.cpu().numpy()
+        # convert 2d to 3d if required
+        if pos.shape[1] == 2:
+            z = np.ones(pos.shape[0])
+            z = np.expand_dims(z, axis=1)
+            pos = np.concatenate([pos, z], axis=1)
+
+        lines = np.swapaxes(edge_index, 0, 1)
+        colors = np.full((len(lines), 3), fill_value=[0.33, 0.33, 0.33])
+        edges = o3d.geometry.LineSet()
+        edges.points = o3d.utility.Vector3dVector(pos)
+        edges.lines = o3d.utility.Vector2iVector(lines)
+        edges.colors = o3d.utility.Vector3dVector(colors)
+
+        plots.append(edges)
+
+    # node importance
+    if node_imp is not None:
+        # colors for nodes
+        colormap = get_cmap("seismic")
+        rgba = colormap(node_imp.cpu().numpy())
+        colors = rgba[:, 0:3]
+
+        # find nonzero/zero nodes
+        ind_nonzero = torch.squeeze(node_imp.nonzero()).cpu().numpy()
+        ind_zero = torch.squeeze((node_imp == 0.0).nonzero()).cpu().numpy()
+
+        # positive nodes
+        pos_nodes = o3d.geometry.PointCloud()
+        pos_nodes.points = o3d.utility.Vector3dVector(pos[ind_nonzero])
+        pos_nodes.colors = o3d.utility.Vector3dVector(colors[ind_nonzero])
+
+        # negative nodes
+        neg_nodes = o3d.geometry.PointCloud()
+        neg_nodes.points = o3d.utility.Vector3dVector(pos[ind_zero])
+        neg_nodes.colors = o3d.utility.Vector3dVector(colors[ind_zero])
+
+        plots.extend([pos_nodes, neg_nodes])
+
+    else:
+        colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
+        nodes = o3d.geometry.PointCloud()
+        nodes.points = o3d.utility.Vector3dVector(pos)
+        nodes.colors = o3d.utility.Vector3dVector(colors)
+
+        plots.append(nodes)
 
     # add key callbacks
     present = Present()
 
-    def visualise_pos_edges(vis):
-        """Function needed for key binding to visualise pos edges
+    def visualise_plot_zero(vis):
+        """Function needed for key binding to visualise first plot
 
         Args:
             vis (o3d.Visualizer): Visualizer to load/remove data from"""
@@ -172,8 +181,8 @@ def visualise_edge_mask(pos, edge_index, edge_mask):
             vis.add_geometry(plots[0], False)
             present.plot_present[0] = True
 
-    def visualise_neg_edges(vis):
-        """Function needed for key binding to visualise channel 1
+    def visualise_plot_one(vis):
+        """Function needed for key binding to visualise second plot
 
         Args:
             vis (o3d.Visualizer): Visualizer to load/remove data from"""
@@ -184,12 +193,63 @@ def visualise_edge_mask(pos, edge_index, edge_mask):
             vis.add_geometry(plots[1], False)
             present.plot_present[1] = True
 
-    key_to_callback = {}
-    key_to_callback[ord("R")] = visualise_pos_edges
-    key_to_callback[ord("K")] = visualise_neg_edges
+    def visualise_plot_two(vis):
+        """Function needed for key binding to visualise third plot
 
-    print("Add/Remove positive edges using R button")
-    print("Add/Remove negatives edges using K button")
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
+        if present.plot_present[2]:
+            vis.remove_geometry(plots[2], False)
+            present.plot_present[2] = False
+        else:
+            vis.add_geometry(plots[2], False)
+            present.plot_present[2] = True
+
+    def visualise_plot_three(vis):
+        """Function needed for key binding to visualise fourth plot
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
+        if present.plot_present[3]:
+            vis.remove_geometry(plots[3], False)
+            present.plot_present[3] = False
+        else:
+            vis.add_geometry(plots[3], False)
+            present.plot_present[3] = True
+
+    key_to_callback = {}
+
+    if edge_imp is None and node_imp is None:
+        key_to_callback[ord("R")] = visualise_plot_zero
+        key_to_callback[ord("K")] = visualise_plot_one
+        print("Add/Remove edges using R button")
+        print("Add/Remove nodes using K button")
+
+    elif edge_imp is not None and node_imp is None:
+        key_to_callback[ord("R")] = visualise_plot_zero
+        key_to_callback[ord("K")] = visualise_plot_one
+        key_to_callback[ord("T")] = visualise_plot_two
+        print("Add/Remove positive edges using R button")
+        print("Add/Remove negative edges using K button")
+        print("Add/Remove nodes using T button")
+
+    elif edge_imp is None and node_imp is not None:
+        key_to_callback[ord("R")] = visualise_plot_zero
+        key_to_callback[ord("T")] = visualise_plot_one
+        key_to_callback[ord("Y")] = visualise_plot_two
+        print("Add/Remove edges using R button")
+        print("Add/Remove positive nodes using T button")
+        print("Add/Remove negative nodes using Y button")
+
+    elif edge_imp is not None and node_imp is not None:
+        key_to_callback[ord("R")] = visualise_plot_zero
+        key_to_callback[ord("K")] = visualise_plot_one
+        key_to_callback[ord("T")] = visualise_plot_two
+        key_to_callback[ord("Y")] = visualise_plot_three
+        print("Add/Remove positive edges using R button")
+        print("Add/Remove negative edges using K button")
+        print("Add/Remove positive nodes using T button")
+        print("Add/Remove negative nodes using Y button")
 
     _ = o3d.visualization.Visualizer()
     o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
@@ -743,8 +803,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             )
 
             # evaluate explanation
-            visualise_cluster_explanation(
-                cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
+            visualise_explanation(
+                cluster_dataitem.pos,
+                cluster_dataitem.edge_index,
+                node_imp=exp.node_imp.to(device),
+                edge_imp=exp.edge_imp.to(device),
             )
 
         # ---- gradcam ----
@@ -803,8 +866,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             edge_index = cluster_dataitem.edge_index.cpu().numpy()
             edge_imp = torch.zeros(edge_index.shape[1])
 
-            visualise_cluster_explanation(
-                cluster_dataitem, node_imp.cpu().numpy(), edge_imp.cpu().numpy()
+            visualise_explanation(
+                cluster_dataitem.pos,
+                cluster_dataitem.edge_index,
+                node_imp=exp.node_imp.to(device),
+                edge_imp=exp.edge_imp.to(device),
             )
 
         # ---- pgexplainer ----
@@ -900,10 +966,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print(f"Unfaithfulness, closer to 0 better {unf}")
 
             # visualise explanation
-            visualise_edge_mask(
+            visualise_explanation(
                 cluster_dataitem.pos,
                 cluster_dataitem.edge_index,
-                explanation.edge_mask,
+                node_imp=None,
+                edge_imp=explanation.edge_mask.to(device),
             )
 
         # -------- PYTORCH GEO XAI -------------
@@ -972,10 +1039,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 print(f"Negative fidelity closer to 0 better: {neg_fid})")
                 unf = metric.unfaithfulness(explainer, explanation)
                 print(f"Unfaithfulness, closer to 0 better {unf}")
-                visualise_edge_mask(
+                visualise_explanation(
                     cluster_dataitem.pos,
                     cluster_dataitem.edge_index,
-                    explanation.edge_mask,
+                    node_imp=None,
+                    edge_imp=explanation.edge_mask.to(device),
                 )
             elif scale == "loc":
                 loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
@@ -1006,10 +1074,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 print(f"Negative fidelity closer to 0 better: {neg_fid})")
                 unf = metric.unfaithfulness(explainer, explanation)
                 print(f"Unfaithfulness, closer to 0 better {unf}")
-                visualise_edge_mask(
+                visualise_explanation(
                     loc_pos_dict["locs"],
                     loc_edge_index_dict["locs", "in", "clusters"],
-                    explanation.edge_mask,
+                    node_imp=None,
+                    edge_imp=explanation.edge_mask.to(device),
                 )
 
     # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
