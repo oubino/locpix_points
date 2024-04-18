@@ -42,6 +42,7 @@ from sklearn.tree import DecisionTreeClassifier
 import torch
 import torch_geometric.loader as L
 from torch_geometric.explain import Explainer, AttentionExplainer, PGExplainer, metric
+from torch_geometric.utils import to_undirected
 import warnings
 import yaml
 
@@ -91,6 +92,13 @@ def visualise_cluster_explanation(dataitem, node_imp, edge_imp):
     o3d.visualization.draw_geometries([point_cloud, clusters_to_clusters])
 
 
+class Present:
+    """Required for visualising the positive and negative edges below"""
+
+    def __init__(self):
+        self.plot_present = [True, True]
+
+
 def visualise_edge_mask(pos, edge_index, edge_mask):
     """Visualise dataitem.
     Visualise the nodes with edges coloured by importance
@@ -101,6 +109,18 @@ def visualise_edge_mask(pos, edge_index, edge_mask):
         edge_mask (numpy array) : Numpy array denoting importance of each edge from 0 to 1
     """
 
+    # edge_index and edge_mask to undirected
+    warnings.warn(
+        "The edge mask is directional, meaning an edge from node 0 to 1 may "
+        "be significant while an edge from 1 to 0 may not be. "
+        "For visualisation we make the graph undirected and we take the maximum"
+        " of two edges that connect two nodes"
+    )
+    edge_index, edge_mask = to_undirected(edge_index, edge_mask, reduce="max")
+
+    ind_nonzero = torch.squeeze(edge_mask.nonzero()).cpu().numpy()
+    ind_zero = torch.squeeze((edge_mask == 0.0).nonzero()).cpu().numpy()
+
     pos = pos.cpu().numpy()
     edge_index = edge_index.cpu().numpy()
 
@@ -110,16 +130,23 @@ def visualise_edge_mask(pos, edge_index, edge_mask):
         z = np.expand_dims(z, axis=1)
         pos = np.concatenate([pos, z], axis=1)
 
-    # node to node edges
+    # colors for edges
     lines = np.swapaxes(edge_index, 0, 1)
     colormap = get_cmap("seismic")
     rgba = colormap(edge_mask.cpu().numpy())
     colors = rgba[:, 0:3]
 
-    edges = o3d.geometry.LineSet()
-    edges.points = o3d.utility.Vector3dVector(pos)
-    edges.lines = o3d.utility.Vector2iVector(lines)
-    edges.colors = o3d.utility.Vector3dVector(colors)
+    # positive edges
+    pos_edges = o3d.geometry.LineSet()
+    pos_edges.points = o3d.utility.Vector3dVector(pos)
+    pos_edges.lines = o3d.utility.Vector2iVector(lines[ind_nonzero, :])
+    pos_edges.colors = o3d.utility.Vector3dVector(colors[ind_nonzero])
+
+    # negative edges
+    neg_edges = o3d.geometry.LineSet()
+    neg_edges.points = o3d.utility.Vector3dVector(pos)
+    neg_edges.lines = o3d.utility.Vector2iVector(lines[ind_zero, :])
+    neg_edges.colors = o3d.utility.Vector3dVector(colors[ind_zero])
 
     # node positions
     colors = np.full((len(pos), 3), fill_value=[0.33, 0.33, 0.33])
@@ -127,9 +154,45 @@ def visualise_edge_mask(pos, edge_index, edge_mask):
     point_cloud.points = o3d.utility.Vector3dVector(pos)
     point_cloud.colors = o3d.utility.Vector3dVector(colors)
 
-    # visualise
+    # plots
+    plots = [pos_edges, neg_edges, point_cloud]
+
+    # add key callbacks
+    present = Present()
+
+    def visualise_pos_edges(vis):
+        """Function needed for key binding to visualise pos edges
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
+        if present.plot_present[0]:
+            vis.remove_geometry(plots[0], False)
+            present.plot_present[0] = False
+        else:
+            vis.add_geometry(plots[0], False)
+            present.plot_present[0] = True
+
+    def visualise_neg_edges(vis):
+        """Function needed for key binding to visualise channel 1
+
+        Args:
+            vis (o3d.Visualizer): Visualizer to load/remove data from"""
+        if present.plot_present[1]:
+            vis.remove_geometry(plots[1], False)
+            present.plot_present[1] = False
+        else:
+            vis.add_geometry(plots[1], False)
+            present.plot_present[1] = True
+
+    key_to_callback = {}
+    key_to_callback[ord("R")] = visualise_pos_edges
+    key_to_callback[ord("K")] = visualise_neg_edges
+
+    print("Add/Remove positive edges using R button")
+    print("Add/Remove negatives edges using K button")
+
     _ = o3d.visualization.Visualizer()
-    o3d.visualization.draw_geometries([point_cloud, edges])
+    o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
 
 
 def main(argv=None):
