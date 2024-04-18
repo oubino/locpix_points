@@ -118,6 +118,9 @@ knn:
 # any integers starting from 0 up to number of test dataitems
 dataitem: [0]
 
+# threshold to apply to edge mask for pyg explain
+edge_mask_threshold: 0.5
+
 # if specified then run through subgraphx
 subgraphx:
   # number of iterations to get prediction

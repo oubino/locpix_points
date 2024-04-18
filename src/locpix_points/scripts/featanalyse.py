@@ -41,7 +41,7 @@ from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
 import torch
 import torch_geometric.loader as L
-from torch_geometric.explain import Explainer, AttentionExplainer, PGExplainer
+from torch_geometric.explain import Explainer, AttentionExplainer, PGExplainer, metric
 import warnings
 import yaml
 
@@ -679,6 +679,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 },
             )
 
+            # evaluate explanation
             visualise_cluster_explanation(
                 cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
             )
@@ -817,6 +818,23 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 # return logprobs
                 logits=False,
             )
+            # metrics
+            print(
+                f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+            )
+            explanation.edge_mask = torch.where(
+                explanation.edge_mask > config["edge_mask_threshold"],
+                explanation.edge_mask,
+                0.0,
+            )
+            print(
+                f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+            )
+            pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+            print(f"Positive fidelity closer to 1 better: {pos_fid})")
+            print(f"Negative fidelity closer to 0 better: {neg_fid})")
+            unf = metric.unfaithfulness(explainer, explanation)
+            print(f"Unfaithfulness, closer to 0 better {unf}")
 
             # visualise explanation
             visualise_edge_mask(
@@ -874,6 +892,23 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     # return logprobs
                     logits=False,
                 )
+                # metrics
+                print(
+                    f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+                )
+                explanation.edge_mask = torch.where(
+                    explanation.edge_mask > config["edge_mask_threshold"],
+                    explanation.edge_mask,
+                    0.0,
+                )
+                print(
+                    f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+                )
+                pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+                print(f"Positive fidelity closer to 1 better: {pos_fid})")
+                print(f"Negative fidelity closer to 0 better: {neg_fid})")
+                unf = metric.unfaithfulness(explainer, explanation)
+                print(f"Unfaithfulness, closer to 0 better {unf}")
                 visualise_edge_mask(
                     cluster_dataitem.pos,
                     cluster_dataitem.edge_index,
@@ -891,6 +926,23 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     # batch=torch.tensor([0], device=device),
                     logits=False,
                 )
+                # metrics
+                print(
+                    f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+                )
+                explanation.edge_mask = torch.where(
+                    explanation.edge_mask > config["edge_mask_threshold"],
+                    explanation.edge_mask,
+                    0.0,
+                )
+                print(
+                    f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+                )
+                pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+                print(f"Positive fidelity closer to 1 better: {pos_fid})")
+                print(f"Negative fidelity closer to 0 better: {neg_fid})")
+                unf = metric.unfaithfulness(explainer, explanation)
+                print(f"Unfaithfulness, closer to 0 better {unf}")
                 visualise_edge_mask(
                     loc_pos_dict["locs"],
                     loc_edge_index_dict["locs", "in", "clusters"],
