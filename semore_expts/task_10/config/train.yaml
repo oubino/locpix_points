@@ -3,25 +3,27 @@ train_on_gpu: True
 load_data_from_gpu: False
 
 # model parameters
-model: locclusternettransformer
+model: locclusternet
 
 # parameters for the network
-locclusternettransformer:
-  # locnet
-  k: 4
-  in_channels: 0
-  out_channels: 8
-  dim_model: [16, 32, 64]
-  output_mlp_layers: 128
+locclusternet:
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  dropout: 0.0 # was 0.5
   ratio: 1.0
-  pos_nn_layers: 64
-  attn_nn_layers: 64
-  conv_type: gin
+  radius: 1.0
+  k: 4
   add_cluster_pos: False
-  # clusterencoder
-  ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
+  conv_type: pointtransformer
+  pt_dim_model: [16, 32, 64, 32]
+  pt_pos_nn_layers: 64
+  pt_attn_nn_layers: 64
+  ClusterEncoderChannels: [[18, 16, 16],[18,20,24],[26,28,32]]
   OutputChannels: 2
   dropout: 0.0
+  pt_dim: 2
 
 # optimiser parameters
 optimiser: adam
@@ -29,10 +31,10 @@ lr: 0.001
 weight_decay: 0.0001
 
 # whether to sample imbalanced i.e. oversample from minority class/undersample from majority
-imbalanced_sampler: False
+imbalanced_sampler: True
 
 # training parameters
-epochs: 100
+epochs: 20
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
@@ -46,10 +48,9 @@ transforms:
   # fov_x/fov_y is defined in process.yaml
   # here 1 unit = 20,000nm
   # therefore 15nm = 0.00075 units
-  # therefore 30nm = 0.00150 units
   jitter: 0.00075 # number of nm
   randscale: [0.95,1.05]
-  shear: 0.05 # 05
+  shear: 0.05
   x_flip: null
   y_flip: null
   z_rotate: null

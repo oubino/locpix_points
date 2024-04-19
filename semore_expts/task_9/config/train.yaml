@@ -15,7 +15,8 @@ locclusternet:
   ratio: 1.0
   radius: 1.0
   k: 4
-  conv_type: transformer
+  add_cluster_pos: False
+  conv_type: gin
   ClusterEncoderOutChannels: [16, 24, 32]
   heads: 1
   concat: True
@@ -32,7 +33,7 @@ weight_decay: 0.0001
 imbalanced_sampler: True
 
 # training parameters
-epochs: 10
+epochs: 20
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll

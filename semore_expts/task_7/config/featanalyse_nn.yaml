@@ -6,51 +6,30 @@ label_map:
 # whether to run on gpu or cpu
 device: gpu # Options: [cpu, gpu]
 
-# choice of model
-model: locclusternettransformer # Options: see train.yaml
-
 # fold for which we load the model from
 fold: 0
 # if automatic flag not specified then load in specific model name
 # the name of the model can be found from weights&bias for the corresponding fold
 model_name: INSERTMODELNAME.pt
 
+# model parameters
+model: locclusternet
+
 # parameters for the network
-locclusternettransformer:
-
-  # +++++ PointTransformer parameters +++++
-  k: 4
-  in_channels: 0
-  out_channels: 8
-  dim_model: [16, 32, 64]
-  output_mlp_layers: 128
-  ratio: 1.0
-  pos_nn_layers: 64
-  attn_nn_layers: 64
-
-  # +++++ ClusterNet parameters +++++
-  # Dropout for each layer
+locclusternet:
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
   dropout: 0.0
-  conv_type: gin # Options: [gin, transformer]
-  # number of final output channels
+  ratio: 1.0
+  radius: 1.0
+  k: 4
+  conv_type: gin
+  add_cluster_pos: True
+  ClusterEncoderChannels: [[18, 16, 16],[18,20,24],[26,28,32]]
   OutputChannels: 2
-  # add position coordinates to each cluster
-  add_cluster_pos: False
-
-  # --- if conv_type == gin ------------
-  ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
-  # ------------------------------------
-
-  # --- if conv_type == transformer ----
-  ClusterEncoderOutChannels: [16, 24, 32]
-  # Number of multihead attention layers
-  heads: 1
-  # If False multi-head attentions are averaged rather than being concatenated
-  concat: True
-  # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
-  # when beta is True
-  beta: False
-  # ------------------------------------
+  dropout: 0.0
 
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False

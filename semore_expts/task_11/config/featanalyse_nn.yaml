@@ -7,7 +7,7 @@ label_map:
 device: gpu # Options: [cpu, gpu]
 
 # choice of model
-model: locclusternettransformer # Options: see train.yaml
+model: locclusternet # Options: see train.yaml
 
 # fold for which we load the model from
 fold: 0
@@ -16,41 +16,56 @@ fold: 0
 model_name: INSERTMODELNAME.pt
 
 # parameters for the network
-locclusternettransformer:
+locclusternet:
 
-  # +++++ PointTransformer parameters +++++
-  k: 4
-  in_channels: 0
-  out_channels: 8
-  dim_model: [16, 32, 64]
-  output_mlp_layers: 128
+  # +++++ PointNet parameters +++++
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  # Ratio of points to sample from the point cloud
   ratio: 1.0
-  pos_nn_layers: 64
-  attn_nn_layers: 64
+  # For each point we sample nearest neighbours up to radius and nearest neighbours (k)
+  radius: 1.0
+  k: 4
 
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
   dropout: 0.0
-  conv_type: gin # Options: [gin, transformer]
+  conv_type: pointtransformer # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
   OutputChannels: 2
   # add position coordinates to each cluster
   add_cluster_pos: False
 
-  # --- if conv_type == gin ------------
+  # --- if conv_type == gin OR pointnet ------------
   ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
   # ------------------------------------
 
   # --- if conv_type == transformer ----
-  ClusterEncoderOutChannels: [16, 24, 32]
+  # Out channels for each layer
+  tr_out_channels: [16, 24, 32]
   # Number of multihead attention layers
-  heads: 1
+  tr_heads: 1
   # If False multi-head attentions are averaged rather than being concatenated
-  concat: True
+  tr_concat: True
   # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
   # when beta is True
-  beta: False
+  tr_beta: False
   # ------------------------------------
+
+  # --- if conv_type == pointtransformer ------------
+  # input channel size for each layer
+  pt_tr_in_channels: [16, 32, 64]
+  # output channel size for each layer
+  pt_tr_out_channels: [32, 64, 32]
+  # size of hidden channel for position NN
+  pt_tr_pos_nn_layers: 64
+  # size of hidden channel for attention NN
+  pt_tr_attn_nn_layers: 64
+  # dimensions of data: options = [2,3]
+  pt_tr_dim: 2
+  # -------------------------------------------------
 
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False
@@ -101,9 +116,12 @@ knn:
 
 # list of files to run through XAI
 # any integers starting from 0 up to number of test dataitems
-dataitem: [0]
+dataitem: [0,1,25,26]
 
-# if specified then run through subgraphx
+# threshold to apply to edge mask for pyg explain
+edge_mask_threshold: 0.5
+
+# # if specified then run through subgraphx
 subgraphx:
   # number of iterations to get prediction
   rollout: 1
@@ -125,24 +143,26 @@ subgraphx:
   subgraph_building_method: "zero_filling"
   # maximum number of nodes to include in subgraph when generating explanation
   max_nodes: 14
-
-# if specified then run through guided backprop
-guided_backprop:
-  # loss function that was used during training
-  criterion: nll
-
-# if specified then run through pgexplainer
-pgex:
-  # name of the embedding layer
-  emb_layer_name: cluster_encoder_2
-  # size regularization to constrain the explanation size
-  coeff_size: 0.00000001
-  # entropy regularization to constrain the connectivity of explanation
-  coeff_ent: 0.00000001
-  # maximum number of networks to train explanation network
-  max_epochs: 50
-  # learning rate during training of explanation network
-  lr: 0.1
+# 
+# # if specified then run through guided backprop
+# guided_backprop:
+#   # loss function that was used during training
+#   criterion: nll
+# 
+# # if specified then run through pgexplainer
+# pgex:
+#   # size regularization to constrain the explanation size
+#   edge_size: 0.0001
+#   # entropy regularization to constrain the connectivity of explanation
+#   edge_ent: 0.0001
+#   # maximum number of networks to train explanation network
+#   max_epochs: 10
+#   # learning rate during training of explanation network
+#   lr: 0.003
+#   # ?
+#   temp: [5.0,2.0]
+#   # bias ?
+#   bias: 0.0
 
 # if specified then examine attention for models
 attention:
