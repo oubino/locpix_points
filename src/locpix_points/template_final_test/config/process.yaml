@@ -2,6 +2,9 @@
 train_ratio: 0.8
 val_ratio: 0.2
 
+# this argument is redundant but has to be specified for the moment
+save_on_gpu: False
+
 # what dimensions to load into position data
 pos: xy # Options: [xy, xyz]
 

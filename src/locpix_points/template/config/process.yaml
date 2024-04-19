@@ -3,6 +3,9 @@
 # val_ratio: 0.15
 # test_ratio: 0.15
 
+# this argument is redundant but has to be specified for the moment
+save_on_gpu: False
+
 # what dimensions to load into position data
 pos: xy # Options: [xy, xyz]
 

@@ -91,7 +91,7 @@ pca:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  penalty: ["l1", "l2"]
+  penalty: ["l2"]
   # inverse of regularisation strength
   C: [0.1, 0.5, 1]
 

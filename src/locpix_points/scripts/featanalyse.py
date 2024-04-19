@@ -1438,7 +1438,7 @@ def plot_pca(data_feats_scaled, df, label_map, n_components=2):
     for cls in range(n_classes):
         idx = np.argwhere(df.type.map(label_map) == cls)
         colors[idx] = sns.color_palette()[cls]
-        print(f"Class {cls} is {sns.color_palette()[cls]}")
+        print(f"Class {cls} is RGB colour: {sns.color_palette()[cls]}")
 
     # plot clusters in o3d
     point_cloud = o3d.geometry.PointCloud()
