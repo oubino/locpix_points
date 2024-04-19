@@ -437,6 +437,7 @@ def analyse_manual_feats(
 
     # 1. Plot PCA length/area calculation vs convex hull to compare
     if config["pca_vs_convex_hull"]:
+        print("PCA vs convex hull... ")
         ax = sns.lineplot(data=df, x="length_pca", y="length_convex_hull")
         ax.set(xlabel="Length (PCA)", ylabel="Length (Convex hull)")
         plt.show()
@@ -479,6 +480,7 @@ def analyse_manual_feats(
     fov_output.to_csv(fov_save_path, index=True)
 
     if config["boxplots"]:
+        print("Boxplots...")
         plot_boxplots(features, df)
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
@@ -486,13 +488,15 @@ def analyse_manual_feats(
     )
 
     # Plot UMAP
-    if config["umap"]:
+    if config["umap"]["implement"]:
+        print("UMAP....")
         scaler = StandardScaler().fit(X)
         X_umap = scaler.transform(X)
-        plot_umap(X_umap, df, config["label_map"])
+        plot_umap(X_umap, df, config["label_map"], config["umap"])
 
     # PCA
     if config["pca"]["implement"]:
+        print("PCA...")
         scaler = StandardScaler().fit(X)
         X_pca = scaler.transform(X)
         reduced_data = plot_pca(
@@ -501,6 +505,7 @@ def analyse_manual_feats(
 
     # k-means
     if config["kmeans"]:
+        print("K means...")
         scaler = StandardScaler().fit(X)
         X_kmeans = scaler.transform(X)
         kmeans(X_kmeans, df, config["label_map"])
@@ -511,6 +516,7 @@ def analyse_manual_feats(
 
     # Logistic regression
     if "log_reg" in config.keys():
+        print("Log reg...")
         parameters = config["log_reg"]
         save_dir = os.path.join(project_directory, "output/log_reg")
         if not os.path.exists(save_dir):
@@ -532,6 +538,7 @@ def analyse_manual_feats(
 
     # Decision tree
     if "dec_tree" in config.keys():
+        print("Dec tree...")
         parameters = config["dec_tree"]
         save_dir = os.path.join(project_directory, "output/dec_tree")
         if not os.path.exists(save_dir):
@@ -553,6 +560,7 @@ def analyse_manual_feats(
 
     # K-NN
     if "knn" in config.keys():
+        print("KNN...")
         parameters = config["knn"]
         save_dir = os.path.join(project_directory, "output/knn")
         if not os.path.exists(save_dir):
@@ -573,6 +581,7 @@ def analyse_manual_feats(
 
     # SVM
     if "svm" in config.keys():
+        print("SVM...")
         parameters = config["svm"]
         save_dir = os.path.join(project_directory, "output/svm")
         if not os.path.exists(save_dir):
@@ -774,6 +783,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- subgraphx -----
         if "subgraphx" in config.keys():
+            print("Subgraphx...")
             explainer = SubgraphX(
                 cluster_model,
                 rollout=config["subgraphx"]["rollout"],
@@ -833,6 +843,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- guided backprop ----
         if "guided_backprop" in config.keys():
+            print("Guided backprop...")
             if config["guided_backprop"]["criterion"] == "nll":
                 criterion = torch.nn.functional.nll_loss
             else:
@@ -875,6 +886,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- pgexplainer ----
         if "pgex" in config.keys():
+            print("PGEX...")
             max_epochs = config["pgex"]["max_epochs"]
             lr = config["pgex"]["lr"]
             edge_size = config["pgex"]["edge_size"]
@@ -1156,10 +1168,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # --------------- UMAP --------------------------
     # Plot UMAP
-    if config["umap"]:
+    if config["umap"]["implement"]:
         scaler = StandardScaler().fit(X)
         X = scaler.transform(X)
-        plot_umap(X, df, config["label_map"])
+        plot_umap(X, df, config["label_map"], config["umap"])
 
     # ---------------- PCA --------------------------
     # PCA
@@ -1363,16 +1375,20 @@ def plot_boxplots(features, df):
         plt.show()
 
 
-def plot_umap(data_feats_scaled, df, label_map):
+def plot_umap(data_feats_scaled, df, label_map, config):
     """Plot UMAP for the features
 
     Args:
         data_feats_scaled (array): Features scaled between 0 and 1
         df (pl.DataFrame): Dataframe with the localisation data
         label_map (dict): Keys are real concepts and values are integers
+        config (dict): Configuration file
     """
 
-    reducer = umap.UMAP()
+    reducer = umap.UMAP(
+        min_dist=config["min_dist"],
+        n_neighbors=config["n_neighbors"],
+    )
     embedding = reducer.fit_transform(data_feats_scaled)
 
     # Plot UMAP - per cluster
