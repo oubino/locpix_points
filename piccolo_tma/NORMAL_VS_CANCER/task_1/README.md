@@ -47,3 +47,9 @@ Run k-fold training
 ```
 bash scripts/k_fold.sh
 ```
+
+Adjust featanalyse_nn.yaml
+
+```
+bash scripts/featanalyse_nn.sh
+```

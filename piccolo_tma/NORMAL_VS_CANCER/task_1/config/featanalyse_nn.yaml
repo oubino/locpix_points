@@ -1,0 +1,175 @@
+# map from real terms to the integer labels
+label_map:
+  fib: 0
+  iso: 1
+
+# whether to run on gpu or cpu
+device: gpu # Options: [cpu, gpu]
+
+# choice of model
+model: locclusternet # Options: see train.yaml
+
+# fold for which we load the model from
+fold: 0
+# if automatic flag not specified then load in specific model name
+# the name of the model can be found from weights&bias for the corresponding fold
+model_name: INSERTMODELNAME.pt
+
+# parameters for the network
+locclusternet:
+
+  # +++++ PointNet parameters +++++
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  # Ratio of points to sample from the point cloud
+  ratio: 1.0
+  # For each point we sample nearest neighbours up to radius and nearest neighbours (k)
+  radius: 1.0
+  k: 4
+
+  # +++++ ClusterNet parameters +++++
+  # Dropout for each layer
+  dropout: 0.0
+  conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
+  # number of final output channels
+  OutputChannels: 2
+  # add position coordinates to each cluster
+  add_cluster_pos: False
+
+  # --- if conv_type == gin OR pointnet ------------
+  ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+  # ------------------------------------
+
+  # --- if conv_type == transformer ----
+  # Out channels for each layer
+  tr_out_channels: [16, 24, 32]
+  # Number of multihead attention layers
+  tr_heads: 1
+  # If False multi-head attentions are averaged rather than being concatenated
+  tr_concat: True
+  # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
+  # when beta is True
+  tr_beta: False
+  # ------------------------------------
+
+  # --- if conv_type == pointtransformer ------------
+  # input channel size for each layer
+  pt_tr_in_channels: [16, 32, 64]
+  # output channel size for each layer
+  pt_tr_out_channels: [32, 64, 32]
+  # size of hidden channel for position NN
+  pt_tr_pos_nn_layers: 64
+  # size of hidden channel for attention NN
+  pt_tr_attn_nn_layers: 64
+  # dimensions of data: options = [2,3]
+  pt_tr_dim: 2
+  # -------------------------------------------------
+
+# plot pca length/area vs convex hull to compare
+pca_vs_convex_hull: False
+# plot features to screen (features will be saved regardless)
+boxplots: True
+# run umap on the features
+umap: True
+# run kmeans on the features
+kmeans: True
+# run pca on the data
+pca:
+  # if implement True will run PCA
+  implement: True
+  # number of compoments to retain during PCA
+  n_components: 2
+
+# if specified then logistic regression applied to features
+log_reg:
+  # penalties to evaluate
+  penalty: ["l1", "l2"]
+  # inverse of regularisation strength
+  C: [0.1, 0.5, 1]
+
+# if specified then decision tree applied to features
+dec_tree:
+  # depth of tree
+  max_depth: [40, 45, 50]
+  # number features to consider
+  max_features: [4, 5, 6]
+
+# if specified then svm applied to features
+#svm:
+#  # regularisation parameter
+#  C: [1]
+#  #'kernel used
+#  kernel: ["rbf"]
+#  # kernel coefficient
+#  gamma: ["scale"]
+
+# if specified then knn applied to features
+knn:
+  # number of neighbours
+  n_neighbors: [3,5,7,9,11]
+  # weight function used during prediction
+  weights: ["distance"]
+
+# ---- Explainable AI arguments -----
+
+# list of files to run through XAI
+# any integers starting from 0 up to number of test dataitems
+dataitem: [0]
+
+# threshold to apply to edge mask for pyg explain
+edge_mask_threshold: 0.5
+
+# if specified then run through subgraphx
+subgraphx:
+  # number of iterations to get prediction
+  rollout: 1
+  # number of atoms of leaf node in search tree
+  min_atoms: 1
+  # hyperparameter that encourages exploration
+  c_puct: 1.0
+  # number of atoms to expand when extend the child nodes in the search tree
+  expand_atoms: 1
+  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
+  high2low: False
+  # number of local radius to caclulate
+  local_radius: 1
+  # sampling time of montecarlo approxim
+  sample_num: 1
+  # reward method
+  reward_method: "mc_l_shapley"
+  # subgrpah building method
+  subgraph_building_method: "zero_filling"
+  # maximum number of nodes to include in subgraph when generating explanation
+  max_nodes: 14
+
+# if specified then run through guided backprop
+guided_backprop:
+  # loss function that was used during training
+  criterion: nll
+
+# if specified then run through pgexplainer
+pgex:
+  # size regularization to constrain the explanation size
+  edge_size: 0.00000001
+  # entropy regularization to constrain the connectivity of explanation
+  edge_ent: 0.00000001
+  # maximum number of networks to train explanation network
+  max_epochs: 20
+  # learning rate during training of explanation network
+  lr: 0.003
+  # ?
+  temp: [5.0,2.0]
+  # bias ?
+  bias: 0.0
+
+# if specified then examine attention for models
+attention:
+  # specify which models have attention
+  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
+  # how to combine attention scores across multiple attention heads
+  reduce: max
+
+# ----- Archived arguments ----------
+dim: 2

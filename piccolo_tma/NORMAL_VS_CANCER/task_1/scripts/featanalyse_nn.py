@@ -10,7 +10,7 @@ def main():
             "-i",
             ".",
             "-c",
-            "./config/featanalyse.yaml",
+            "./config/featanalyse_nn.yaml",
             "-n",
             "-a",
         ]
