@@ -9,3 +9,4 @@ All 181 FOVs with 38 Normal, 143 Cancer.
 | Task ID  | Manual features used | Deep features used | Model | Loc embedding | Cluster embedding |
 | ------------- | ------------- | ------------- | ------------- |------------- |------------- |
 | Task 1  | No  | Yes | LocClusterNet | PointNetConv | PointNetConv |
+| Task 2  | No  | Yes | LocClusterNetTransformer | PointTransformer | PointTransformer |

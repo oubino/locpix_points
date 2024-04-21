@@ -53,3 +53,8 @@ Adjust featanalyse_nn.yaml
 ```
 bash scripts/featanalyse_nn.sh
 ```
+
+# Notes
+
+1. UMAP takes a long time to run
+2. UMAP/K-MEAN/PCA don't differentiate the cluster classes
