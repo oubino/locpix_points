@@ -1,14 +1,46 @@
-# whether to load the data directly from the gpu
+# device to train on (True: gpu False: cpu)
+train_on_gpu: True
+
+# load data directly from the gpu
 load_data_from_gpu: False
+
+# optimiser parameters
+optimiser: adam # Options: [adam]
+lr: 0.001 # Learning rate
+weight_decay: 0.0001
+
+# training parameters
+epochs: 100
+batch_size: 2
+num_workers: 1 # generall higher -> faster
+loss_fn: nll # Options: [nll]
+
+# whether to sample imbalanced i.e. oversample from minority class/undersample from majority
+imbalanced_sampler: True
 
 # whether making node or whole graph predictions
 label_level: graph # Options: [node, graph]
 
-# number of classes in the dataset
-num_classes: 2
+# train/val transforms
+transforms:
+  # how much to jitter points
+  # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
+  # fov_x/fov_y is defined in process.yaml
+  # here 1 unit = 40,000nm
+  # therefore 15nm = 0.000375 units
+  #jitter: 0.000375
+  ## how much to scale the points
+  #randscale: [0.95,1.05]
+  ## how much to shear the points
+  #shear: 0.05
+  ## if key specified then randomly flipped in x/y axis
+  ## (note value is irrelevant therefore have put as null)
+  #x_flip: null
+  #y_flip: null
+  ## if key specified then randomly rotated around z axis
+  ## (note value is irrelevant therefore have put as null)
+  #z_rotate: null
 
-# whether to evaluate on the gpu
-eval_on_gpu: True
 
 model: locclusternettransformer
 locclusternettransformer:
@@ -66,8 +98,8 @@ locclusternettransformer:
 # model: clusternet
 # clusternet:
 #
-#   # Dropout for each layer during evaluate should be 0.0
-#   dropout: 0.0 # CAREFUL CHANGING!
+#   # Dropout for each layer
+#   dropout: 0.5
 #
 #   # +++++ ClusterNet parameters +++++
 #   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
@@ -107,8 +139,8 @@ locclusternettransformer:
 #
 # model: clustermlp
 # clustermlp:
-#   # Dropout for each layer during evaluate should be 0.0
-#   dropout: 0.0 # CAREFUL CHANGING!
+#   # Dropout for each layer
+#   dropout: 0.5
 #
 #   # Channels for MLP applied to clusters
 #   channels: [8, 16, 24, 32, 2]

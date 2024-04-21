@@ -28,18 +28,18 @@ transforms:
   # fov_x/fov_y is defined in process.yaml
   # here 1 unit = 40,000nm
   # therefore 15nm = 0.000375 units
-  jitter: 0.000375
+  # jitter: 0.000375
   # how much to scale the points
-  randscale: [0.95,1.05]
+  # randscale: [0.95,1.05]
   # how much to shear the points
-  shear: 0.05
+  # shear: 0.05
   # if key specified then randomly flipped in x/y axis
   # (note value is irrelevant therefore have put as null)
   x_flip: null
   y_flip: null
   # if key specified then randomly rotated around z axis
   # (note value is irrelevant therefore have put as null)
-  z_rotate: null
+  # z_rotate: null
 
 # choice of model
 model: locclusternet # Options: see below
@@ -56,7 +56,7 @@ locclusternet:
   ratio: 1.0
   # For each point we sample nearest neighbours up to radius and nearest neighbours (k)
   radius: 1.0
-  k: 4
+  k: 5
 
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
@@ -65,10 +65,10 @@ locclusternet:
   # number of final output channels
   OutputChannels: 2
   # add position coordinates to each cluster
-  add_cluster_pos: False
+  add_cluster_pos: True
 
   # --- if conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+  ClusterEncoderChannels: [[12, 32, 64],[68,128,128],[132,256,256]]
   # ------------------------------------
 
   # --- if conv_type == transformer ----
