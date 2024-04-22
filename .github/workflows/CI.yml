@@ -65,8 +65,8 @@ jobs:
           micromamba activate locpix-points
           pip install -e .
           pip install -r requirements.txt
-          git clone https://github.com/mims-harvard/GraphXAI.git
-          cd GraphXAI
+          git clone https://github.com/oubino/DIG
+          cd DIG
           pip install -e .
           cd ..
       - name: Test 3

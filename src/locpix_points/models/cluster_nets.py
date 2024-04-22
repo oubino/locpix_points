@@ -250,6 +250,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
 
     def __init__(self, cluster_net_hetero, config):
         super().__init__()
+        self.name = "ClusterNetHomogeneous"
         self.add_cluster_pos = config["add_cluster_pos"]
         self.conv_type = config["conv_type"]
 
