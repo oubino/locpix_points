@@ -62,7 +62,7 @@ Install other requirements
 
     pip install -r requirements.txt
 
-Also need to install https://github.com/mims-harvard/GraphXAI
+Also need to install DIG
 
 To do this clone the repository to your desired location
 
@@ -70,7 +70,7 @@ However, we also need a custom version of this repo fixing some bugs therefore w
 
 .. code-block:: python 
 
-    git clone https://github.com/oubino/GraphXAI.git 
+    git clone https://github.com/oubino/DIG
 
 Then navigate to the directory and install using 
 

@@ -10,7 +10,9 @@ import json
 import os
 import time
 
-from graphxai.explainers import SubgraphX, GuidedBP, GradCAM
+from dig.xgraph.method import SubgraphX
+from dig.xgraph.method.subgraphx import find_closest_node_result
+from dig.xgraph.evaluation import XCollector
 from locpix_points.data_loading import datastruc
 from locpix_points.models.cluster_nets import ClusterNetHomogeneous, parse_data
 from locpix_points.models import model_choice
@@ -786,6 +788,9 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print("Subgraphx...")
             explainer = SubgraphX(
                 cluster_model,
+                num_classes=config["subgraphx"]["num_classes"],
+                device=device,
+                explain_graph=True,
                 rollout=config["subgraphx"]["rollout"],
                 min_atoms=config["subgraphx"]["min_atoms"],
                 c_puct=config["subgraphx"]["c_puct"],
@@ -797,27 +802,62 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 subgraph_building_method=config["subgraphx"][
                     "subgraph_building_method"
                 ],
+                vis=False,
             )
 
-            # subgraphx requires output to be logits
-            exp = explainer.get_explanation_graph(
-                x=cluster_dataitem.x,
-                edge_index=cluster_dataitem.edge_index,
-                label=cluster_dataitem.y,
-                max_nodes=config["subgraphx"]["max_nodes"],
+            # generate explanation for the graph
+            _, explanation_results, related_preds = explainer(
+                cluster_dataitem.x,
+                cluster_dataitem.edge_index,
                 forward_kwargs={
                     "batch": torch.tensor([0], device=device),
                     "pos": cluster_dataitem.pos,
-                    "logits": True,
+                    "logits": True,  # has to be True
                 },
+                max_nodes=config["subgraphx"]["max_nodes"],
             )
+
+            # generate prediction for the graph
+            logits = cluster_model(
+                cluster_dataitem.x,
+                cluster_dataitem.edge_index,
+                torch.tensor([0], device=device),
+                cluster_dataitem.pos,
+                logits=True,
+            )
+            prediction = logits.argmax(-1).item()
+
+            # process explanation results
+            explanation_results = explanation_results[prediction]
+            explanation_results = explainer.read_from_MCTSInfo_list(explanation_results)
+            tree_node_x = find_closest_node_result(
+                explanation_results, max_nodes=config["subgraphx"]["max_nodes"]
+            )
+
+            # generate metrics for explanation
+            nodelist = tree_node_x.coalition
+            node_imp = torch.zeros(len(cluster_dataitem.pos))
+            node_imp[nodelist] = 1.0
+            x_collector = XCollector()
+            x_collector.collect_data(
+                tree_node_x.coalition, related_preds, label=prediction
+            )
+
+            # print metrics for explanation
+            print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
+            print(
+                f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})"
+            )
+            print(f"Sparsity: {x_collector.sparsity:.4f}")
+            print(f"Accuracy: {x_collector.accuracy:.4f}")
+            print(f"Stability: {x_collector.stability:.4f}")
 
             # evaluate explanation
             visualise_explanation(
                 cluster_dataitem.pos,
                 cluster_dataitem.edge_index,
-                node_imp=exp.node_imp.to(device),
-                edge_imp=exp.edge_imp.to(device),
+                node_imp=node_imp.to(device),
+                edge_imp=None,
             )
 
         # ---- gradcam ----
@@ -842,6 +882,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         #    )
 
         # ---- guided backprop ----
+        FOO
         if "guided_backprop" in config.keys():
             print("Guided backprop...")
             if config["guided_backprop"]["criterion"] == "nll":
