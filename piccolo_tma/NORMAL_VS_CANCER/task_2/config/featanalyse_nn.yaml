@@ -13,7 +13,7 @@ model: locclusternettransformer # Options: see train.yaml
 fold: 0
 # if automatic flag not specified then load in specific model name
 # the name of the model can be found from weights&bias for the corresponding fold
-model_name: INSERTMODELNAME.pt
+model_name: task_2_piccolo_normal_vs_cancer_9:1_21:4:2024_.pt
 
 locclusternettransformer:
   # +++++ PointTransformer parameters +++++
@@ -149,11 +149,15 @@ subgraphx:
   subgraph_building_method: "zero_filling"
   # maximum number of nodes to include in subgraph when generating explanation
   max_nodes: 14
+  # number of classes
+  num_classes: 2
 
-# if specified then run through guided backprop
-guided_backprop:
-  # loss function that was used during training
-  criterion: nll
+# if specified then run through gradcam
+gradcam:
+  # number of classes
+  num_classes: 2
+  # sparsity we need to control to transform a soft mask to a hard mask
+  sparsity: 0.7
 
 # if specified then run through pgexplainer
 pgex:
