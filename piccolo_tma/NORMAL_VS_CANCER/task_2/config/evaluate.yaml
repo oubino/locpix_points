@@ -53,7 +53,7 @@ locclusternettransformer:
   # ------------------------------------
   # --- if conv_type == pointtransformer ------------
   # input channel size for each layer
-  pt_tr_in_channels: [16, 32, 64]
+  pt_tr_in_channels: [10, 34, 66]
   # output channel size for each layer
   pt_tr_out_channels: [32, 64, 32]
   # size of hidden channel for position NN

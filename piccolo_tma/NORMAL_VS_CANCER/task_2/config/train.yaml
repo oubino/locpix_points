@@ -10,7 +10,7 @@ lr: 0.001 # Learning rate
 weight_decay: 0.0001
 
 # training parameters
-epochs: 100
+epochs: 10
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll # Options: [nll]
@@ -48,7 +48,7 @@ locclusternettransformer:
   # Ratio of points to sample from the point cloud
   ratio: 1.0
   # For each point we sample nearest neighbours up to nearest neighbours (k)
-  k: 4
+  k: 5
   # Number of channels input to first MLP
   in_channels: 0
   # Number of channels out of the final layer
@@ -67,7 +67,7 @@ locclusternettransformer:
   # number of final output channels
   OutputChannels: 2
   # add position coordinates to each cluster
-  add_cluster_pos: False
+  add_cluster_pos: True
   # --- if conv_type == gin OR pointnet ------------
   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
   # ------------------------------------
@@ -84,7 +84,7 @@ locclusternettransformer:
   # ------------------------------------
   # --- if conv_type == pointtransformer ------------
   # input channel size for each layer
-  pt_tr_in_channels: [8, 32, 64]
+  pt_tr_in_channels: [10, 34, 66]
   # output channel size for each layer
   pt_tr_out_channels: [32, 64, 32]
   # size of hidden channel for position NN
