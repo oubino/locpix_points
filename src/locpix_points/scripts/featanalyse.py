@@ -10,7 +10,7 @@ import json
 import os
 import time
 
-from dig.xgraph.method import SubgraphX
+from dig.xgraph.method import SubgraphX, GradCAM
 from dig.xgraph.method.subgraphx import find_closest_node_result
 from dig.xgraph.evaluation import XCollector
 from locpix_points.data_loading import datastruc
@@ -861,68 +861,53 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             )
 
         # ---- gradcam ----
-        # To implement GradCAM we need to remove all MLP layers
-        # as gradcam works by getting the weight attribute of the layer
-        # but MLP doesn't have this attribute therefore replace all MLP
-        # with the parts of it
-        # explainer = GradCAM(cluster_model,
-        #                     criterion = criterion
-        #                     )
-        #
-        # exp = explainer.get_explanation_graph(
-        #    x = cluster_dataitem.x,
-        #    edge_index = cluster_dataitem.edge_index,
-        #    label=cluster_dataitem.y,
-        #    average_variant=True,
-        #    forward_kwargs={"batch": torch.tensor([0], device=device)},
-        # )
-        # input('stop')
-        # visualise_cluster_explanation(
-        #        cluster_dataitem, exp.node_imp.cpu().numpy(), exp.edge_imp.cpu().numpy()
-        #    )
-
-        # ---- guided backprop ----
-        FOO
-        if "guided_backprop" in config.keys():
-            print("Guided backprop...")
-            if config["guided_backprop"]["criterion"] == "nll":
-                criterion = torch.nn.functional.nll_loss
-            else:
-                raise NotImplementedError("This criterion is not implemented")
-
-            explainer = GuidedBP(
+        if "gradcam" in config.keys():
+            raise NotImplementedError("GradCAM not implemented yet")
+            print("GradCAM...")
+            # To implement GradCAM we need to remove all MLP layers
+            # as gradcam works by getting the weight attribute of the layer
+            # but MLP doesn't have this attribute therefore replace all MLP
+            # with the parts of it
+            explainer = GradCAM(
                 cluster_model,
-                criterion,
+                explain_graph=True,
             )
 
-            # guidedbp doesn't assume logits but we need a criterion between the prediction
-            # and label therefore use nll loss and logprobs
-            exp = explainer.get_explanation_graph(
-                x=cluster_dataitem.x,
-                y=cluster_dataitem.y,
-                edge_index=cluster_dataitem.edge_index,
-                aggregate_node_imp=torch.sum,
+            # generate explanation for the graph
+            edge_masks, hard_edge_masks, related_preds = explainer(
+                cluster_dataitem.x,
+                cluster_dataitem.edge_index,
                 forward_kwargs={
                     "batch": torch.tensor([0], device=device),
                     "pos": cluster_dataitem.pos,
-                    "logits": False,
+                    "logits": True,  # has to be True
                 },
+                # max_nodes=config["gradcam"]["max_nodes"],
+                num_classes=config["gradcam"]["num_classes"],
+                sparsity=config["gradcam"]["sparsity"],
             )
 
-            # scale node importance to between 0 and 1
-            min_node = torch.min(exp.node_imp)
-            max_node = torch.max(exp.node_imp)
-            node_imp = (exp.node_imp - min_node) / (max_node - min_node)
-            # set edge importance all to zero as no edge importance from
-            # explanation
-            edge_index = cluster_dataitem.edge_index.cpu().numpy()
-            edge_imp = torch.zeros(edge_index.shape[1])
+            # generate metrics for explanation
+            x_collector = XCollector()
+            x_collector.collect_data(
+                hard_edge_masks, related_preds, label=cluster_dataitem.y
+            )
 
+            # print metrics for explanation
+            print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
+            print(
+                f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})"
+            )
+            print(f"Sparsity: {x_collector.sparsity:.4f}")
+            print(f"Accuracy: {x_collector.accuracy:.4f}")
+            print(f"Stability: {x_collector.stability:.4f}")
+
+            # evaluate explanation
             visualise_explanation(
                 cluster_dataitem.pos,
                 cluster_dataitem.edge_index,
-                node_imp=exp.node_imp.to(device),
-                edge_imp=exp.edge_imp.to(device),
+                node_imp=node_imp.to(device),
+                edge_imp=None,
             )
 
         # ---- pgexplainer ----
