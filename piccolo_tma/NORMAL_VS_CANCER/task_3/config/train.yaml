@@ -35,11 +35,11 @@ transforms:
   #shear: 0.05
   ## if key specified then randomly flipped in x/y axis
   ## (note value is irrelevant therefore have put as null)
-  #x_flip: null
-  #y_flip: null
+  x_flip: null
+  y_flip: null
   ## if key specified then randomly rotated around z axis
   ## (note value is irrelevant therefore have put as null)
-  #z_rotate: null
+  z_rotate: null
 
 # choice of model
 model: locclusternet # Options: see below
@@ -60,7 +60,7 @@ locclusternet:
 
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
-  dropout: 0.0
+  dropout: 0.1
   conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
   OutputChannels: 2
