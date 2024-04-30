@@ -8,21 +8,25 @@ import dask
 import dask.array as da
 import numpy as np
 import polars as pl
-from cuml.cluster import DBSCAN
+from cuml.cluster import DBSCAN, KMeans
 from dask_ml.decomposition import PCA
 from scipy.spatial import ConvexHull
 from sklearn.neighbors import NearestNeighbors
 
 
-def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
-    """Cluster the data using DBSCAN
+def cluster_data(
+    df, eps=50.0, minpts=10, n_clusters=8, x_col="x", y_col="y", method="dbscan"
+):
+    """Cluster the data using DBSCAN or KMeans
 
     Args:
         df (polars df) : Input dataframe
         eps (float) : eps for DBSCAN
         minpts (int) : min samples for DBSCAN
+        n_clusters (int) : num samples for KMeans
         x_col (string) : Name for the x column
         y_col (string) : Name for the y column
+        method (string) : Choice of clustering method
 
     Returns:
         df (polars df) : Dataframe with additional column for cluster"""
@@ -30,12 +34,21 @@ def cluster_data(df, eps=50.0, minpts=10, x_col="x", y_col="y"):
     dataframe = cudf.DataFrame()
     dataframe["x"] = df[x_col].to_numpy()
     dataframe["y"] = df[y_col].to_numpy()
-    dbscan = DBSCAN(eps=eps, min_samples=minpts)
-    dbscan.fit(dataframe)
 
-    df = df.with_columns(
-        pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
-    )
+    if method == "dbscan":
+        dbscan = DBSCAN(eps=eps, min_samples=minpts)
+        dbscan.fit(dataframe)
+
+        df = df.with_columns(
+            pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
+        )
+    elif method == "kmeans":
+        kmeans = KMeans(n_clusters=n_clusters)
+        kmeans.fit(dataframe)
+        df = df.with_columns(
+            pl.lit(kmeans.labels_.to_numpy().astype("int32")).alias("clusterID")
+        )
+
     # return the original df with cluster id for each loc
     return df
 

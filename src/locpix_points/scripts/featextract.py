@@ -23,7 +23,8 @@ def main(argv=None):
         argv : Custom arguments to run script with
 
     Raises:
-        ValueError: If no files present to open"""
+        ValueError: If no files present to open OR
+            unsupported clustering method"""
 
     # parse arugments
     parser = argparse.ArgumentParser(description="Extract features")
@@ -115,13 +116,25 @@ def main(argv=None):
         item.load_from_parquet(os.path.join(preprocessed_folder, f"gt_label/{file}"))
 
         # clustering (clusterID)
-        df = featextract.cluster_data(
-            item.df,
-            eps=config["clustering"]["eps"],
-            minpts=config["clustering"]["minpts"],
-            x_col="x",
-            y_col="y",
-        )
+        if "dbscan" in config.keys():
+            df = featextract.cluster_data(
+                item.df,
+                eps=config["dbscan"]["eps"],
+                minpts=config["dbscan"]["minpts"],
+                x_col="x",
+                y_col="y",
+                method="dbscan",
+            )
+        elif "kmeans" in config.keys():
+            df = featextract.cluster_data(
+                item.df,
+                n_clusters=config["kmeans"]["n_clusters"],
+                x_col="x",
+                y_col="y",
+                method="kmeans",
+            )
+        else:
+            raise ValueError("Only support dbscan or kmeans clustering")
 
         # drop locs not clustered
         # warnings.warn("Drop all unclustered points")
@@ -155,6 +168,11 @@ def main(argv=None):
         cluster_df = cluster_df.join(
             convex_hull_cluster_df, on="clusterID", how="inner"
         )
+
+        # don't allow fewer than 3 clusters
+        num_clusters = cluster_df["clusterID"].max()
+        if num_clusters < 3:
+            raise ValueError("2 or fewer clusters")
 
         # cluster density do this here
         cluster_df = cluster_df.with_columns(
