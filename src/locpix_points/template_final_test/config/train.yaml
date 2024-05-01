@@ -62,24 +62,24 @@ model: [CHANGE]
 #   ratio: 1.0
 #   # For each point we sample nearest neighbours up to radius and nearest neighbours (k)
 #   radius: 1.0
-#   k: 4
+#   k: 3
 #
 #   # +++++ ClusterNet parameters +++++
 #   # Dropout for each layer
-#   dropout: 0.5
-#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
+#   dropout: 0.0
+#   conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
-#   add_cluster_pos: True
+#   add_cluster_pos: False
 #
 #   # --- if conv_type == gin OR pointnet ------------
-#   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+#   ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
 #   # Out channels for each layer
-#   tr_out_channels: [16, 24, 32]
+#   tr_out_channels: [16, 24, 32, 40]
 #   # Number of multihead attention layers
 #   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
@@ -91,13 +91,13 @@ model: [CHANGE]
 #
 #   # --- if conv_type == pointtransformer ------------
 #   # input channel size for each layer
-#   pt_tr_in_channels: [16, 32, 64]
+#   pt_tr_in_channels: [8, 16, 24, 32]
 #   # output channel size for each layer
-#   pt_tr_out_channels: [32, 64, 32]
+#   pt_tr_out_channels: [16, 24, 32, 40]
 #   # size of hidden channel for position NN
-#   pt_tr_pos_nn_layers: 64
+#   pt_tr_pos_nn_layers: 32
 #   # size of hidden channel for attention NN
-#   pt_tr_attn_nn_layers: 64
+#   pt_tr_attn_nn_layers: 32
 #   # dimensions of data: options = [2,3]
 #   pt_tr_dim: 2
 #   # -------------------------------------------------
@@ -109,7 +109,7 @@ model: [CHANGE]
 #   # Ratio of points to sample from the point cloud
 #   ratio: 1.0
 #   # For each point we sample nearest neighbours up to nearest neighbours (k)
-#   k: 4
+#   k: 3
 #   # Number of channels input to first MLP
 #   in_channels: 0
 #   # Number of channels out of the final layer
@@ -123,20 +123,20 @@ model: [CHANGE]
 #
 #   # +++++ ClusterNet parameters +++++
 #   # Dropout for each layer
-#   dropout: 0.5
-#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
+#   dropout: 0.0
+#   conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
-#   add_cluster_pos: True
+#   add_cluster_pos: False
 #
 #   # --- if conv_type == gin OR pointnet ------------
-#   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+#   ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
 #   # Out channels for each layer
-#   tr_out_channels: [16, 24, 32]
+#   tr_out_channels: [16, 24, 32, 40]
 #   # Number of multihead attention layers
 #   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
@@ -148,13 +148,13 @@ model: [CHANGE]
 #
 #   # --- if conv_type == pointtransformer ------------
 #   # input channel size for each layer
-#   pt_tr_in_channels: [16, 32, 64]
+#   pt_tr_in_channels: [8, 16, 24, 32]
 #   # output channel size for each layer
-#   pt_tr_out_channels: [32, 64, 32]
+#   pt_tr_out_channels: [16, 24, 32, 40]
 #   # size of hidden channel for position NN
-#   pt_tr_pos_nn_layers: 64
+#   pt_tr_pos_nn_layers: 32
 #   # size of hidden channel for attention NN
-#   pt_tr_attn_nn_layers: 64
+#   pt_tr_attn_nn_layers: 32
 #   # dimensions of data: options = [2,3]
 #   pt_tr_dim: 2
 #   # -------------------------------------------------
@@ -163,22 +163,22 @@ model: [CHANGE]
 # clusternet:
 #
 #   # Dropout for each layer
-#   dropout: 0.5
+#   dropout: 0.0
 #
 #   # +++++ ClusterNet parameters +++++
-#   conv_type: gin # Options: [gin, transformer, pointnet, pointtransformer]
+#   conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
 #   # number of final output channels
 #   OutputChannels: 2
 #   # add position coordinates to each cluster
-#   add_cluster_pos: True
+#   add_cluster_pos: False
 #
 #   # --- if conv_type == gin OR pointnet ------------
-#   ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+#   ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
 #   # ------------------------------------
 #
 #   # --- if conv_type == transformer ----
 #   # Out channels for each layer
-#   tr_out_channels: [16, 24, 32]
+#   tr_out_channels: [16, 24, 32, 40]
 #   # Number of multihead attention layers
 #   tr_heads: 1
 #   # If False multi-head attentions are averaged rather than being concatenated
@@ -190,13 +190,13 @@ model: [CHANGE]
 #
 #   # --- if conv_type == pointtransformer ------------
 #   # input channel size for each layer
-#   pt_tr_in_channels: [16, 32, 64]
+#   pt_tr_in_channels: [8, 16, 24, 32]
 #   # output channel size for each layer
-#   pt_tr_out_channels: [32, 64, 32]
+#   pt_tr_out_channels: [16, 24, 32, 40]
 #   # size of hidden channel for position NN
-#   pt_tr_pos_nn_layers: 64
+#   pt_tr_pos_nn_layers: 32
 #   # size of hidden channel for attention NN
-#   pt_tr_attn_nn_layers: 64
+#   pt_tr_attn_nn_layers: 32
 #   # dimensions of data: options = [2,3]
 #   pt_tr_dim: 2
 #   # -------------------------------------------------

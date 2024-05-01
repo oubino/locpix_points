@@ -146,15 +146,24 @@ class ClusterNet(torch.nn.Module):
         cluster_encoder_0 (torch.nn.module): First encoder for the clusters
         cluster_encoder_1 (torch.nn.module): Second encoder for the clusters
         cluster_encoder_2 (torch.nn.module): Third encoder for the clusters
+        cluster_encoder_3 (torch.nn.module): Fourth encoder for the clusters
         linear (torch.nn.module): Linear layer that operates on cluster embeddings
             and returns a classification
     """
 
-    def __init__(self, cluster_encoder_0, cluster_encoder_1, cluster_encoder_2, linear):
+    def __init__(
+        self,
+        cluster_encoder_0,
+        cluster_encoder_1,
+        cluster_encoder_2,
+        cluster_encoder_3,
+        linear,
+    ):
         super().__init__()
         self.cluster_encoder_0 = cluster_encoder_0
         self.cluster_encoder_1 = cluster_encoder_1
         self.cluster_encoder_2 = cluster_encoder_2
+        self.cluster_encoder_3 = cluster_encoder_3
         self.linear = linear
 
     def forward(self, x_dict, pos_dict, edge_index_dict, batch, add_cluster_pos):
@@ -182,6 +191,9 @@ class ClusterNet(torch.nn.Module):
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
         )
         x_dict["clusters"] = self.cluster_encoder_2(
+            x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
+        )
+        x_dict["clusters"] = self.cluster_encoder_3(
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
         )
 
@@ -851,6 +863,11 @@ class LocClusterNet(torch.nn.Module):
                     conv_type="gin",
                     channel_list=config["ClusterEncoderChannels"][2],
                 ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][3],
+                ),
                 Linear(
                     config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
                 ),
@@ -881,7 +898,15 @@ class LocClusterNet(torch.nn.Module):
                     tr_concat=config["tr_concat"],
                     tr_beta=config["tr_beta"],
                 ),
-                Linear(config["tr_out_channels"][2], config["OutputChannels"]),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][3],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
             )
         elif config["conv_type"] == "pointnet":
             self.cluster_net = ClusterNet(
@@ -899,6 +924,11 @@ class LocClusterNet(torch.nn.Module):
                     dropout=config["dropout"],
                     conv_type="pointnet",
                     channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][3],
                 ),
                 Linear(
                     config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
@@ -933,7 +963,16 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
-                Linear(config["pt_tr_out_channels"][2], config["OutputChannels"]),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][3],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][3],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
             )
         else:
             raise ValueError("conv_type should be gin or transformer")
