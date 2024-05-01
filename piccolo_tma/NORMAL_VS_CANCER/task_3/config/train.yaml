@@ -48,9 +48,9 @@ model: locclusternet # Options: see below
 locclusternet:
 
   # +++++ PointNet parameters +++++
-  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
-  global_channels: [[64, 128, 128],[128, 256, 256]]
-  global_sa_channels: [258, 128, 128, 128]
+  local_channels: [[2, 8, 16],[34, 64, 64], [130,256,256]]
+  global_channels: [[16, 32, 32],[64, 128, 128], [256,512,512]]
+  global_sa_channels: [514, 256, 128, 128]
   final_channels: [128, 64, 32, 8]
   # Ratio of points to sample from the point cloud
   ratio: 1.0
@@ -68,7 +68,7 @@ locclusternet:
   add_cluster_pos: True
 
   # --- if conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[20, 32, 64],[68,128,128],[132,256,256]]
+  ClusterEncoderChannels: [[20, 32, 32],[36,64,64],[68,128,128],[132, 256, 256]]
   # ------------------------------------
 
   # --- if conv_type == transformer ----
