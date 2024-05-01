@@ -122,3 +122,14 @@ piccolo_tma/NORMAL_VS_CANCER/task_*/*
 
 # ignore temp
 test_explain/*
+
+# ignore digits letters
+digits_letters/task_*/*
+digits_letters/final_test/*
+!digits_letters/task_*/config/
+!digits_letters/task_*/scripts/
+!digits_letters/task_*/README.md
+!digits_letters/final_test/config/
+!digits_letters/final_test/scripts/
+!digits_letters/final_test/README.md
+
