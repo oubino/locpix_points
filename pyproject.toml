@@ -41,13 +41,7 @@ dependencies = [
     "importlib_resources",
     "scikit-learn",
     "open3d",
-    # "umap",
-    # need to install https://github.com/mims-harvard/GraphXAI
-
-    # "torchvision",  check actually need this
-    # conda install pyg -c pyg
-    # pip install pyarrow
-
+    "umap",
 ]
 
 [project.scripts]

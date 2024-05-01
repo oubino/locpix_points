@@ -1,0 +1,108 @@
+# device to train on (gpu or cpu)
+train_on_gpu: True
+load_data_from_gpu: False
+
+# model parameters
+model: locclusternet
+
+# parameters for the network
+locclusternet:
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  dropout: 0.0 # was 0.5
+  ratio: 1.0
+  radius: 1.0
+  k: 4
+  add_cluster_pos: False
+  conv_type: pointtransformer
+  pt_dim_model: [16, 32, 64, 32]
+  pt_pos_nn_layers: 64
+  pt_attn_nn_layers: 64
+  ClusterEncoderChannels: [[18, 16, 16],[18,20,24],[26,28,32]]
+  OutputChannels: 2
+  dropout: 0.0
+  pt_dim: 2
+
+# optimiser parameters
+optimiser: adam
+lr: 0.001
+weight_decay: 0.0001
+
+# whether to sample imbalanced i.e. oversample from minority class/undersample from majority
+imbalanced_sampler: True
+
+# training parameters
+epochs: 20
+batch_size: 2
+num_workers: 1 # generall higher -> faster
+loss_fn: nll
+
+# what trying to predict
+label_level: graph # node
+
+# train/val transforms
+transforms:
+  # 1 unit in new space ~= max(fov_x, fov_y)/2 - it will differ slightly as data itself might not cover full fov range
+  # fov_x/fov_y is defined in process.yaml
+  # here 1 unit = 20,000nm
+  # therefore 15nm = 0.00075 units
+  jitter: 0.00075 # number of nm
+  randscale: [0.95,1.05]
+  shear: 0.05
+  x_flip: null
+  y_flip: null
+  z_rotate: null
+
+# pointnetclass:
+#   ratio : [0.5,0.25]
+#   radius : [0.2,0.4]
+#   # 130 = 128 + dim (2) + dim of feature (0)
+#   # 258 = 256 + dim (2) + dim of feature (0)
+#   # num classes = 2
+#   channels : [[3, 64, 64, 128], [130, 128, 128, 256], [258, 256, 512, 1024], [1024, 512, 256, 2]]
+#   dropout : 0.5
+#   norm : null
+#
+# pointnetseg:
+#   ratio : [0.2,0.25]
+#   radius : [0.2, 0.4]
+#   # 2 = dim (2) + dim of feature (0)
+#   # 130 = 128 + dim (2) + dim of feature (0)
+#   # 258 = 256 + dim (2) + dim of feature (0)
+#   sa_channels : [[2, 64, 64, 128], [130, 128, 128, 256], [258, 256, 512, 1024]]
+#   k : [1,3,3]
+#   # 1080 = 1024 + 256
+#   # 384 = 256 + 128
+#   # 130 = 128 + dim (2) + dim of feature (0)
+#   fp_channels : [[1080, 256, 256], [384, 256, 128], [130, 128, 128, 128]]
+#   # num classes = 2
+#   output_channels : [128, 128, 128, 2]
+#   dropout : 0.5
+#   norm : null
+#
+# pointtransformerclass:
+#   # used in both transition down and for considreing how many neighbours point transformer should consider
+#   k: 16
+#   in_channels: 2
+#   out_channels: 2
+#   dim_model: [32, 64, 128, 256, 512]
+#   output_mlp_layers: 64
+#   # ratio of points to sample when transition down
+#   ratio: 0.25
+#   pos_nn_layers: 64
+#   attn_nn_layers: 64
+#
+# pointtransformerseg:
+#   # used in both transition down and for considreing how many neighbours point transformer should consider
+#   k: 16
+#   in_channels: 2
+#   out_channels: 2
+#   dim_model: [32, 64, 128, 256, 512]
+#   k_up: 3 # trilinear interpolation
+#   output_mlp_layers: 64
+#   # ratio of points to sample when transition down
+#   ratio: 0.25
+#   pos_nn_layers: 64
+#   attn_nn_layers: 64

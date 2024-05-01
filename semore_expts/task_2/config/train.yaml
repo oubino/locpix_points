@@ -2,14 +2,20 @@
 train_on_gpu: True
 load_data_from_gpu: False
 
-# model parameters
 model: clusternet
-
-# parameters for the network
 clusternet:
-  ClusterEncoderChannels: [[8, 16, 16],[16,20,24],[24,28,32]]
-  OutputChannels: 2
+  # Dropout for each layer
   dropout: 0.0
+  # +++++ ClusterNet parameters +++++
+  conv_type: gin # Options: [gin, transformer]
+  # number of final output channels
+  OutputChannels: 2
+  # add position coordinates to each cluster
+  add_cluster_pos: True
+  # --- if conv_type == gin ------------
+  ClusterEncoderChannels: [[10, 16, 16],[18,20,24],[26,28,32]]
+  # ------------------------------------
+
 
 # optimiser parameters
 optimiser: adam
@@ -17,10 +23,12 @@ lr: 0.001
 weight_decay: 0.0001
 
 # training parameters
-epochs: 100
+epochs: 2
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll
+
+imbalanced_sampler: False
 
 # what trying to predict
 label_level: graph # node

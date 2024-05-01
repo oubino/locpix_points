@@ -1,0 +1,87 @@
+# configuration for feature analysis
+
+boxplots: False
+umap: False
+kmeans: True
+pca: 
+  implement: True
+  n_components: 3
+
+# sklearn parameters
+log_reg:
+  penalty: ["l1", "l2"]
+  C: [0.1, 0.5, 1]
+dec_tree:
+  max_depth: [40, 45, 50]
+  max_features: [4, 5, 6]
+svm:
+  C: [1]
+  #'kernel':['linear', 'poly', 'rbf', 'sigmoid', 'precomputed'],
+  kernel: ["rbf"]
+  gamma: ["scale"]  # , 'auto']
+knn:
+  n_neighbors: [3]
+  weights": ["distance"]
+
+label_map:
+  fib: 0
+  iso: 1
+
+dim: 2
+
+model: locclusternet
+fold: 0
+# find the model name from weights&bias for the corresponding fold
+model_name: semore_task1_semore_10:14_22:12:2023_.pt
+device: gpu
+
+locclusternet:
+  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
+  global_channels: [[64, 128, 128],[128, 256, 256]]
+  global_sa_channels: [258, 128, 128, 128]
+  final_channels: [128, 64, 32, 8]
+  dropout: 0.0 # was 0.5
+  ratio: 1.0
+  radius: 1.0
+  k: 4
+  conv_type: transformer
+  add_cluster_pos: True
+  ClusterEncoderOutChannels: [16, 24, 32]
+  heads: 1
+  concat: True
+  beta: False
+  OutputChannels: 2
+  dropout: 0.0
+
+dataitem: [0]
+
+#subgraphx:
+#  rollout: 1
+#  min_atoms: 1
+#  c_puct: 1.0
+#  expand_atoms: 1
+#  high2low: False
+#  local_radius: 1
+#  sample_num: 1
+#  reward_method: "mc_l_shapley"
+#  subgraph_building_method: "zero_filling"
+#  max_nodes: 14
+#
+pgex:
+  # size regularization to constrain the explanation size
+  edge_size: 0.0 # 0.00000001
+  # entropy regularization to constrain the connectivity of explanation
+  edge_ent: 0.0 #0.00000001
+  # maximum number of networks to train explanation network
+  max_epochs: 10
+  # learning rate during training of explanation network
+  lr: 0.003
+  # ?
+  temp: [5.0,2.0]
+  # bias ?
+  bias: 0.0
+
+attention:
+  reduce: max
+  scale: cluster
+  

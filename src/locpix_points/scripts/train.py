@@ -38,7 +38,8 @@ def main(argv=None):
         model_path: Path to the saved model
 
     Raises:
-        ValueError: If GPU argument incorrectly specified"""
+        ValueError: If GPU argument incorrectly specified
+        NotImplementedError: If unsupported optimiser/loss function used"""
 
     # parse arugments
     parser = argparse.ArgumentParser(description="Training")
@@ -327,10 +328,14 @@ def main(argv=None):
         optimiser = torch.optim.Adam(
             model.parameters(), lr=lr, weight_decay=weight_decay
         )
+    else:
+        raise NotImplementedError(f"{optimiser} optimiser is not implemented")
 
     # initialise loss function
     if loss_fn == "nll":  # CHANGE
         loss_fn = torch.nn.functional.nll_loss
+    else:
+        raise NotImplementedError(f"{loss_fn} loss function is not implemented")
 
     if not args.wandbstarted:
         wandb.login()

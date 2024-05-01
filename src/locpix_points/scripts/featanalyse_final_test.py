@@ -86,6 +86,12 @@ def main(argv=None):
         "which we load in",
     )
 
+    raise ValueError(
+        "Have changed featanalyse so this should be updated to reflect that"
+        "However rather than just updating this script rewrite so final test is an argument of featanalyse"
+        "To prevent rewriting all of this sript as well so it will just match feat analyse"
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -386,7 +392,9 @@ def class_report_fn(df):
         acc (float): Accuracy score"""
 
     # take mode prediction across all the clusters for each fov
+    df = df.to_pandas()
     df = df.groupby("name").agg(lambda x: pd.Series.mode(x)[0])
+    df = pl.from_pandas(df)
 
     # calculate classification report
     y_true = df["target"].to_list()
@@ -454,10 +462,10 @@ def gen_fn(
     test_predict = model.predict(test_X)
 
     # prediction by the best model
-    train_df_output = pd.DataFrame(
+    train_df_output = pl.DataFrame(
         {"name": train_names, "output": train_predict, "target": train_Y}
     )
-    test_df_output = pd.DataFrame(
+    test_df_output = pl.DataFrame(
         {"name": test_names, "output": test_predict, "target": test_Y}
     )
 

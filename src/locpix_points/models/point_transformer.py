@@ -19,6 +19,7 @@ from torch_geometric.nn import (
     PointTransformerConv,
     fps,
     global_mean_pool,
+    global_max_pool,
     knn,
     knn_graph,
     knn_interpolate,
@@ -101,8 +102,9 @@ class TransitionDown(torch.nn.Module):
         # a cluster despite being just points in the first layer) t
         # he k nearest points & beware of self loop
         sub_batch = batch[id_clusters] if batch is not None else None
+        # add one to nearest neighs as nearest neighs includes itself
         id_k_neighbor = knn(
-            pos, pos[id_clusters], k=self.k, batch_x=batch, batch_y=sub_batch
+            pos, pos[id_clusters], k=self.k + 1, batch_x=batch, batch_y=sub_batch
         )
 
         # transformation of features through a simple MLP
@@ -198,7 +200,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling
-        x = global_mean_pool(x, batch)
+        x = global_max_pool(x, batch)
 
         # Class score
         out = self.mlp_output(x)

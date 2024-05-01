@@ -10,20 +10,17 @@ import argparse
 import json
 import os
 import time
-import warnings
 
 import pandas as pd
 import torch
 import torch_geometric.loader as L
 import yaml
-from graphxai.explainers import PGExplainer
 from torchsummary import summary
 
 import wandb
 from locpix_points.data_loading import datastruc
 from locpix_points.evaluation import evaluate
 from locpix_points.models import model_choice
-from locpix_points.models.cluster_nets import ClusterNetHomogeneous
 
 # import torch
 # import torch_geometric.transforms as T
@@ -36,8 +33,7 @@ def main(argv=None):
         argv : Custom arguments to run script with
 
     Raises:
-        ValueError: If GPU/CPU argument incorrectly specified
-        NotImplementedError: If model/explainer not implemented"""
+        ValueError: If GPU/CPU argument incorrectly specified"""
 
     # parse arugments
     parser = argparse.ArgumentParser(description="Evaluating")
@@ -86,8 +82,6 @@ def main(argv=None):
         action="store_true",
         help="if specified then wandb has already been initialised",
     )
-
-    parser.add_argument("-e", "--explain", action="store_true")
 
     parser.add_argument(
         "-n",
@@ -249,137 +243,19 @@ def main(argv=None):
     else:
         wandb.config["model"] = args.model_loc
 
-    # explain
-    if args.explain:
-        warnings.warn(
-            "Assumes\
-                      1. Using a ClusterNet \
-                      2. Embedding is in a final cluster encoder layer\
-                      3. Graph level explanation"
-        )
+    print("\n")
+    print("---- Predict on test set... ----")
+    print("\n")
+    metrics, roc_metrics = evaluate.make_prediction_test(
+        model,
+        test_loader,
+        device,
+        num_classes,
+        explain=False,
+    )
 
-        # load in explain params
-        mult = 2  # in pg_explainer mult is 2 unless it is per node then mult is 3
-        in_channels = config[config["model"]]["ClusterEncoderChannels"][-1][-1]
-        in_channels *= mult
-
-        # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
-        explain_folder = os.path.join(processed_directory, "explain")
-        if not os.path.exists(explain_folder):
-            os.makedirs(explain_folder)
-        explain_dataset = datastruc.ClusterDataset(
-            test_folder,
-            explain_folder,
-            label_level=None,
-            pre_filter=None,
-            save_on_gpu=None,
-            transform=None,
-            pre_transform=None,
-            fov_x=None,
-            fov_y=None,
-            from_hetero_loc_cluster=True,
-            loc_net=model.loc_net,
-            device=device,
-        )
-
-        # need to create a model that acts on the homogeneous data
-        if config["model"] == "locclusternet":
-            model = ClusterNetHomogeneous(model.cluster_net, config["locclusternet"])
-        else:
-            raise NotImplementedError
-
-        print("\n")
-        print("---- Predict on test set (in explain)... ----")
-        explain_loader = L.DataLoader(
-            explain_dataset,
-            batch_size=1,
-            shuffle=False,
-            pin_memory=False,
-            num_workers=0,
-        )
-        print("\n")
-        metrics, roc_metrics = evaluate.make_prediction_test(
-            model,
-            explain_loader,
-            device,
-            num_classes,
-            explain=True,
-        )
-
-        for key, value in metrics.items():
-            print(f"{key} : {value.item()}")
-
-        if "pgex" in config.keys():
-            emb_layer_name = config["pgex"]["emb_layer_name"]
-            coeff_size = config["pgex"]["coeff_size"]
-            coeff_ent = config["pgex"]["coeff_ent"]
-            explain_graph = config["pgex"]["explain_graph"]
-            max_epochs = config["pgex"]["max_epochs"]
-            lr = config["pgex"]["lr"]
-
-            # Embedding layer name is final GNN embedding layer in the model
-            # Note that PGExplainer expects unnormalized class score as final output
-            # therefore final layer is linear
-            pgex = PGExplainer(
-                model,
-                emb_layer_name=emb_layer_name,
-                coeff_size=coeff_size,
-                coeff_ent=coeff_ent,
-                explain_graph=explain_graph,
-                max_epochs=max_epochs,
-                lr=lr,
-                in_channels=in_channels,
-            )
-
-            # Required to first train PGExplainer on the dataset:
-            pgex.train_explanation_model(
-                explain_dataset,
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
-            )
-
-            # Get explanations from both IG and PGEx:
-            for index, data in enumerate(explain_dataset):
-                last_item = data
-
-            pgex_exp = pgex.get_explanation_graph(
-                x=last_item.x,
-                edge_index=last_item.edge_index,
-                label=last_item.y,
-                forward_kwargs={"batch": torch.tensor([0], device=device)},
-            )
-
-            print("Feature importance")
-            print(pgex_exp.feature_imp)
-            print("Node importance")
-            imp = pgex_exp.node_imp
-            print(imp)
-            print("Edge importance")
-            imp = pgex_exp.edge_imp
-            print(imp)
-
-            # fig, ax = plt.subplots(1,3, figsize = (10, 8))
-
-            # Ground-truth explanations always provided as a list. In ShapeGGen, we use the first
-            #   element since it produces unique explanations.
-            # pgex_exp.visualize_graph(ax = ax[1],
-            #                         show=True)
-
-        else:
-            raise NotImplementedError
-    else:
-        print("\n")
-        print("---- Predict on test set... ----")
-        print("\n")
-        metrics, roc_metrics = evaluate.make_prediction_test(
-            model,
-            test_loader,
-            device,
-            num_classes,
-            explain=False,
-        )
-
-        for key, value in metrics.items():
-            print(f"{key} : {value.item()}")
+    for key, value in metrics.items():
+        print(f"{key} : {value.item()}")
 
     # log metrics
     wandb.log(metrics)

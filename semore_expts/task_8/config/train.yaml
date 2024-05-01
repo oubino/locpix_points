@@ -16,6 +16,8 @@ locclusternettransformer:
   ratio: 1.0
   pos_nn_layers: 64
   attn_nn_layers: 64
+  conv_type: gin
+  add_cluster_pos: False
   # clusterencoder
   ClusterEncoderChannels: [[16, 16, 16],[16,20,24],[24,28,32]]
   OutputChannels: 2

@@ -28,7 +28,7 @@ for i in range(7):
         for f in test_files:
             assert f.endswith('.pt')
 
-        for file in train_files:
+        #for file in train_files:
            os.remove(file)
         for file in val_files:
            os.remove(file)

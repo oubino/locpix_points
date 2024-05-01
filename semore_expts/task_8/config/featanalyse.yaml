@@ -20,6 +20,16 @@ knn:
   n_neighbors: [3]
   weights": ["distance"]
 
+# Features to analyse
+features:
+  - count
+  - RGyration
+  - linearity
+  - planarity
+  - length_pca
+  - area_pca
+  - density_pca
+  - perimeter
 
 label_map:
   fib: 0

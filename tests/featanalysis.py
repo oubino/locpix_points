@@ -10,7 +10,7 @@ def test_pipeline():
             "-i",
             "tests/output",
             "-c",
-            "tests/config/featanalyse.yaml",
+            "tests/config/featanalyse_nn.yaml",
             "-n",
             "-t"
         ]
