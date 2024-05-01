@@ -49,7 +49,13 @@ class SAModule(torch.nn.Module):
     def forward(self, x, pos, batch):
         idx = fps(pos, batch, ratio=self.ratio)
         row, col = radius(
-            pos, pos[idx], self.r, batch, batch[idx], max_num_neighbors=self.k
+            # add one to nearest neighs as nearest neighs includes itself
+            pos,
+            pos[idx],
+            self.r,
+            batch,
+            batch[idx],
+            max_num_neighbors=self.k + 1,
         )
         edge_index = torch.stack([col, row], dim=0)
         # remove duplicate edges
@@ -125,7 +131,14 @@ class PointNetEmbedding(torch.nn.Module):
             MLP(local_channels[1]),
             MLP(global_channels[1]),
         )
-        self.sa3_module = GlobalSAModule(MLP(global_sa_channels))
+        self.sa3_module = SAModule(
+            ratio,
+            radius,
+            k,
+            MLP(local_channels[2]),
+            MLP(global_channels[2]),
+        )
+        self.sa4_module = GlobalSAModule(MLP(global_sa_channels))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
         self.mlp = MLP(final_channels, dropout=dropout, norm=None)
@@ -135,8 +148,9 @@ class PointNetEmbedding(torch.nn.Module):
     def forward(self, x, pos, batch):
         x = self.sa1_module(x, pos, batch)
         x = self.sa2_module(*x)
-        sa3_out = self.sa3_module(*x)
-        x, pos, batch = sa3_out
+        x = self.sa3_module(*x)
+        sa4_out = self.sa4_module(*x)
+        x, pos, batch = sa4_out
 
         return self.mlp(x)
 
