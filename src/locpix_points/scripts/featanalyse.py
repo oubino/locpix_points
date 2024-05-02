@@ -38,6 +38,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
+from sklearn.pipeline import make_pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -1734,8 +1735,8 @@ def log_reg(
     """
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    model = LogisticRegression(max_iter=1000)
-    clf = GridSearchCV(model, parameters, cv=cv)
+    pipeline = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+    clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Log reg.-------")
     print("--------------------")
@@ -1824,9 +1825,8 @@ def dec_tree(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    model = DecisionTreeClassifier()
-
-    clf = GridSearchCV(model, parameters, cv=cv)
+    pipeline = make_pipeline(StandardScaler(), DecisionTreeClassifier())
+    clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Dec tree.------")
     print("--------------------")
@@ -1913,9 +1913,8 @@ def svm(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    model = SVC()
-
-    clf = GridSearchCV(model, parameters, cv=cv, verbose=4)
+    pipeline = make_pipeline(StandardScaler(), SVC())
+    clf = GridSearchCV(pipeline, parameters, cv=cv, verbose=4)
 
     print("--------SVM---------")
     print("--------------------")
@@ -1996,9 +1995,8 @@ def knn(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    model = KNeighborsClassifier()
-
-    clf = GridSearchCV(model, parameters, cv=cv)
+    pipeline = make_pipeline(StandardScaler(), KNeighborsClassifier())
+    clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("--------KNN---------")
     print("--------------------")
