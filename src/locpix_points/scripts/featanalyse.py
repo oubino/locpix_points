@@ -631,10 +631,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     model_type = config["model"]
 
-    # only works for locclusternet/locclusternettransformer at the moment
+    # only works for locclusternet at the moment
     # 1. To construct datasets we use cluster_net required in model
     # 2. For explainability also assumes uses LocClusterNet
-    assert model_type == "locclusternet" or model_type == "locclusternettransformer"
+    assert model_type == "locclusternet"
 
     # initialise model
     model = model_choice(
