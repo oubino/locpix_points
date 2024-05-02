@@ -16,6 +16,7 @@ Labels are:
     3: "T",
     4: "O",
     5: "L",
+    6: "grid",
 
 Below is an overview of the details for each task 
 
