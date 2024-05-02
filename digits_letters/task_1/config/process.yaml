@@ -39,6 +39,7 @@ kneighboursclusters: 5
 # number of nearest neighbours to connect locs to in graph
 # note localisations are only connected to other localisations in the same cluster
 # if null then connects all locs within each cluster
+# note if using PointNet or PointTransformer - these connections are not used!
 kneighbourslocs: 5
 
 # size of fov in x/y in original units e.g. nm
