@@ -12,12 +12,37 @@ from torchmetrics import (
     Recall,
     ROC,
     AUROC,
+    AveragePrecision,
 )
 from torchmetrics.classification import (
     MulticlassConfusionMatrix,
     MulticlassJaccardIndex,
+    MulticlassStatScores,
 )
 import warnings
+
+
+def normalise_ap(tp, fp, tn, fn, auc):
+    """Normalise the average precision == area under precision
+    recall curve.
+    From PMID: 24350304
+
+    Args:
+        tp (float): True positives
+        fp (float): False positives
+        tn (float): True negatives
+        fn (float): False negatives
+        auc (float): This the area under the curve or equivalently
+            the average precision
+
+    Returns:
+        auc_norm (float): Normalised area under the curve"""
+
+    ones = tp + fn
+    zeros = fp + tn
+    skew = ones / (zeros + ones)
+    aucprmin = 1 + ((1 - skew) * torch.log(1 - skew)) / skew
+    return (auc - aucprmin) / (1 - aucprmin)
 
 
 def make_prediction(model, optimiser, train_loader, val_loader, device, num_classes):
@@ -46,11 +71,13 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         F1Score(task="multiclass", num_classes=num_classes, average="none"),
         MulticlassJaccardIndex(num_classes=num_classes, average="none"),
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassStatScores(num_classes=num_classes, average="none"),
     ).to(device)
 
     train_metrics_roc = MetricCollection(
         ROC(task="multiclass", num_classes=num_classes),
         AUROC(task="multiclass", num_classes=num_classes, average="none"),
+        AveragePrecision(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     val_metrics = MetricCollection(
@@ -60,11 +87,13 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         F1Score(task="multiclass", num_classes=num_classes, average="none"),
         MulticlassJaccardIndex(num_classes=num_classes, average="none"),
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassStatScores(num_classes=num_classes, average="none"),
     ).to(device)
 
     val_metrics_roc = MetricCollection(
         ROC(task="multiclass", num_classes=num_classes),
         AUROC(task="multiclass", num_classes=num_classes, average="none"),
+        AveragePrecision(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     warnings.warn(
@@ -135,6 +164,32 @@ def make_prediction(model, optimiser, train_loader, val_loader, device, num_clas
         metrics[f"TrainAccuracy_{i}"] = train_metrics["MulticlassAccuracy"][i]
         metrics[f"ValAccuracy_{i}"] = val_metrics["MulticlassAccuracy"][i]
 
+        # Probability based metrics
+        metrics[f"TrainAveragePrecision_{i}"] = train_metrics_roc[
+            "MulticlassAveragePrecision"
+        ][i]
+        metrics[f"ValAveragePrecision_{i}"] = val_metrics_roc[
+            "MulticlassAveragePrecision"
+        ][i]
+
+        # normalised average precision
+        train_tp = train_metrics["MulticlassStatScores"][i][0]
+        train_fp = train_metrics["MulticlassStatScores"][i][1]
+        train_tn = train_metrics["MulticlassStatScores"][i][2]
+        train_fn = train_metrics["MulticlassStatScores"][i][3]
+        train_auc = train_metrics_roc["MulticlassAveragePrecision"][i]
+        metrics[f"TrainAveragePrecisionNorm_{i}"] = normalise_ap(
+            train_tp, train_fp, train_tn, train_fn, train_auc
+        )
+        val_tp = val_metrics["MulticlassStatScores"][i][0]
+        val_fp = val_metrics["MulticlassStatScores"][i][1]
+        val_tn = val_metrics["MulticlassStatScores"][i][2]
+        val_fn = val_metrics["MulticlassStatScores"][i][3]
+        val_auc = val_metrics_roc["MulticlassAveragePrecision"][i]
+        metrics[f"ValAveragePrecisionNorm_{i}"] = normalise_ap(
+            val_tp, val_fp, val_tn, val_fn, val_auc
+        )
+
         roc_metrics[f"TrainFPR_{i}"] = train_metrics_roc["MulticlassROC"][0][i]
         roc_metrics[f"ValFPR_{i}"] = val_metrics_roc["MulticlassROC"][0][i]
         roc_metrics[f"TrainTPR_{i}"] = train_metrics_roc["MulticlassROC"][1][i]
@@ -199,11 +254,13 @@ def make_prediction_test(
         F1Score(task="multiclass", num_classes=num_classes, average="none"),
         MulticlassJaccardIndex(num_classes=num_classes, average="none"),
         Accuracy(task="multiclass", num_classes=num_classes, average="none"),
+        MulticlassStatScores(num_classes=num_classes, average="none"),
     ).to(device)
 
     test_metrics_roc = MetricCollection(
         ROC(task="multiclass", num_classes=num_classes),
         AUROC(task="multiclass", num_classes=num_classes, average="none"),
+        AveragePrecision(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     # test data
@@ -250,6 +307,21 @@ def make_prediction_test(
         metrics[f"TestF1Score_{i}"] = test_metrics["MulticlassF1Score"][i]
         metrics[f"TestJaccardIndex_{i}"] = test_metrics["MulticlassJaccardIndex"][i]
         metrics[f"TestAccuracy_{i}"] = test_metrics["MulticlassAccuracy"][i]
+
+        # Probability based metrics
+        metrics[f"TestAveragePrecision_{i}"] = test_metrics_roc[
+            "MulticlassAveragePrecision"
+        ][i]
+        # normalise average precision
+        test_tp = test_metrics["MulticlassStatScores"][i][0]
+        test_fp = test_metrics["MulticlassStatScores"][i][1]
+        test_tn = test_metrics["MulticlassStatScores"][i][2]
+        test_fn = test_metrics["MulticlassStatScores"][i][3]
+        test_auc = test_metrics_roc["MulticlassAveragePrecision"][i]
+        metrics[f"TestAveragePrecisionNorm_{i}"] = normalise_ap(
+            test_tp, test_fp, test_tn, test_fn, test_auc
+        )
+
         for j in range(num_classes):
             metrics[f"Test_actual_{i}_pred_{j}"] = test_metrics[
                 "MulticlassConfusionMatrix"
