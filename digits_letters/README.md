@@ -20,10 +20,10 @@ Labels are:
 
 Below is an overview of the details for each task 
 
-| Task ID  | Manual features used | Deep features used | Model |
+| Task ID  | Manual features used | Model | Loc conv type | Cluster conv type |
 | ------------- | ------------- | ------------- | ------------- |
-| Task 1  | No  | Yes | LocClusterNet | PointNetConv | PointNetConv |
-| Task 2  | No  | Yes | LocClusterNetTransformer | PointTransformer | PointTransformer |
+| Task 1  | No  | LocClusterNet | PointNetConv | PointNetConv |
+| Task 2  | No  | LocClusterNet | PointTransformer | PointTransformer |
 
 
 ## Note
