@@ -121,27 +121,27 @@ class PointNetEmbedding(torch.nn.Module):
             ratio,
             radius,
             k,
-            MLP(local_channels[0]),
-            MLP(global_channels[0]),
+            MLP(local_channels[0], plain_last=True),
+            MLP(global_channels[0], plain_last=True),
         )
         self.sa2_module = SAModule(
             ratio,
             radius,
             k,
-            MLP(local_channels[1]),
-            MLP(global_channels[1]),
+            MLP(local_channels[1], plain_last=True),
+            MLP(global_channels[1], plain_last=True),
         )
         self.sa3_module = SAModule(
             ratio,
             radius,
             k,
-            MLP(local_channels[2]),
-            MLP(global_channels[2]),
+            MLP(local_channels[2], plain_last=True),
+            MLP(global_channels[2], plain_last=True),
         )
-        self.sa4_module = GlobalSAModule(MLP(global_sa_channels))
+        self.sa4_module = GlobalSAModule(MLP(global_sa_channels, plain_last=True))
 
         # don't worry, has a plain last layer where no non linearity, norm or dropout
-        self.mlp = MLP(final_channels, dropout=dropout, norm=None)
+        self.mlp = MLP(final_channels, dropout=dropout, norm=None, plain_last=True)
 
         warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
