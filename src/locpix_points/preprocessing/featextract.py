@@ -6,6 +6,7 @@ This module contains functions to extract features from the data
 import cudf
 import dask
 import dask.array as da
+import math
 import numpy as np
 import polars as pl
 from cuml.cluster import DBSCAN, KMeans
@@ -105,16 +106,14 @@ def pca_fn(X):
     # eigenvalues in order of size: variance[0], variance[1]
     variance = pca.explained_variance_
     # from 10.5194/isprsarchives-XXXVIII-5-W12-97-2011
-    linearity = (variance[0] - variance[1]) / variance[0]
-    planarity = variance[1] / variance[0]
-    # components = pca.components_
-    # variance_ratio = pca.explained_variance_ratio
-    # singular_values = pca.singular_values_
-    # trial pca length: 99.7% data falls within 3x S.D of
-    # mean and x2 to get both sides of distribution
-    # = 6 * vairance[0]
-    length_pca = 6 * variance[0]
-    width_pca = 6 * variance[1]
+    sigma_0 = math.sqrt(variance[0])
+    sigma_1 = math.sqrt(variance[1])
+    linearity = (sigma_0 - sigma_1) / sigma_0
+    planarity = sigma_1 / sigma_0
+    # as in 10.1073/pnas.0908971106
+    # ratio between fwhm and s.d. is 2.35 therefore multiply sd by 2.35
+    length_pca = 2.35 * sigma_0
+    width_pca = 2.35 * sigma_1
 
     area_pca = length_pca * width_pca
     return linearity, planarity, length_pca, area_pca
