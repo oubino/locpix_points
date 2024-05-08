@@ -1,6 +1,0 @@
-# DBSCAN parameters
-clustering:
-  # eps in nanometers
-  eps: 100
-  # minimum number of points
-  minpts: 5
