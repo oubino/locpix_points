@@ -45,6 +45,7 @@ Then install this repository
     git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
     pip install -e .
+    cd ..
 
 Before installing the remaining requirements, making sure you have activated the environment first
 
@@ -55,6 +56,7 @@ We need to install our version of pytorch geometric which we do by
     git clone https://github.com/oubino/pytorch_geometric.git
     cd pytorch_geometric
     pip install -e .
+    cd ..
 
 Install other requirements
 
@@ -76,7 +78,9 @@ Then navigate to the directory and install using
 
 .. code-block:: python 
 
+    cd DIG
     pip install -e .
+    cd ..
 
 
 Environment 2 (feat_extract)
@@ -94,9 +98,9 @@ Then install this repository
 
 .. code-block:: python
 
-    git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
     pip install -e .
+    cd ..
 
 Then install pytorch geometric
 
