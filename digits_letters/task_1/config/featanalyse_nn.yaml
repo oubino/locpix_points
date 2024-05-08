@@ -85,6 +85,9 @@ locclusternet:
   pt_tr_dim: 2
   # -------------------------------------------------
 
+# if want to look at cluster features after having just gone through locnet: loc
+# if want to look at cluster features having gone through cluster net as well: cluster
+encoder: loc
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False
 # plot features to screen (features will be saved regardless)
