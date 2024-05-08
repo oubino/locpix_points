@@ -10,7 +10,7 @@ lr: 0.001 # Learning rate
 weight_decay: 0.0001
 
 # training parameters
-epochs: 100
+epochs: 50
 batch_size: 2
 num_workers: 1 # generall higher -> faster
 loss_fn: nll # Options: [nll]
@@ -35,11 +35,11 @@ transforms:
   # shear: 0.05
   # if key specified then randomly flipped in x/y axis
   # (note value is irrelevant therefore have put as null)
-  x_flip: null
-  y_flip: null
+  #x_flip: null
+  #y_flip: null
   # if key specified then randomly rotated around z axis
   # (note value is irrelevant therefore have put as null)
-  # z_rotate: null
+  z_rotate: null
 
 # choice of model
 model: locclusternet # Options: see below
@@ -47,33 +47,51 @@ model: locclusternet # Options: see below
 # parameters for the network
 locclusternet:
 
-  # +++++ PointNet parameters +++++
-  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
-  global_channels: [[64, 128, 128],[128, 256, 256]]
-  global_sa_channels: [258, 128, 128, 128]
-  final_channels: [128, 64, 32, 8]
+  # +++ LocNet parameters +++
+  loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 1.0
-  # For each point we sample nearest neighbours up to radius and nearest neighbours (k)
+  ratio: 0.5
+  # For each point we sample nearest neighbours up to nearest neighbours (k)
+  k: 10
+
+  # +++++ PointNet parameters +++++
+  local_channels: [[2, 4, 6],[12, 14, 16], [22,24,26]]
+  global_channels: [[6, 8, 10],[16, 18, 20], [26,28,30]]
+  global_sa_channels: [32, 30, 28, 26]
+  final_channels: [26, 24, 22, 8]
+  # For each point we sample nearest neighbours up to radius
   radius: 1.0
-  k: 5
+
+  # +++++ PointTransformer parameters +++++
+  # Number of channels input to first MLP
+  in_channels: 0
+  # Number of channels out of the final layer
+  out_channels: 8
+  # Channels for the transformer/transition down blocks
+  dim_model: [16, 32, 64]
+  pos_nn_layers: 64
+  attn_nn_layers: 64
+  # Hidden channels for final MLP
+  output_mlp_layers: 128
+
+  # ++++++++++++++++++++++++++++++++++++++++
 
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
   dropout: 0.0
-  conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
+  cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
   OutputChannels: 2
   # add position coordinates to each cluster
-  add_cluster_pos: True
+  add_cluster_pos: False
 
-  # --- if conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[12, 32, 64],[68,128,128],[132,256,256]]
+  # --- if cluster_conv_type == gin OR pointnet ------------
+  ClusterEncoderChannels: [[10, 12, 16],[18, 20, 24],[26, 28, 32],[34, 36, 40]]
   # ------------------------------------
 
-  # --- if conv_type == transformer ----
+  # --- if cluster_conv_type == transformer ----
   # Out channels for each layer
-  tr_out_channels: [16, 24, 32]
+  tr_out_channels: [16, 24, 32, 40]
   # Number of multihead attention layers
   tr_heads: 1
   # If False multi-head attentions are averaged rather than being concatenated
@@ -83,15 +101,15 @@ locclusternet:
   tr_beta: False
   # ------------------------------------
 
-  # --- if conv_type == pointtransformer ------------
+  # --- if cluster_conv_type == pointtransformer ------------
   # input channel size for each layer
-  pt_tr_in_channels: [16, 32, 64]
+  pt_tr_in_channels: [8, 16, 24, 32]
   # output channel size for each layer
-  pt_tr_out_channels: [32, 64, 32]
+  pt_tr_out_channels: [16, 24, 32, 40]
   # size of hidden channel for position NN
-  pt_tr_pos_nn_layers: 64
+  pt_tr_pos_nn_layers: 32
   # size of hidden channel for attention NN
-  pt_tr_attn_nn_layers: 64
+  pt_tr_attn_nn_layers: 32
   # dimensions of data: options = [2,3]
   pt_tr_dim: 2
   # -------------------------------------------------
