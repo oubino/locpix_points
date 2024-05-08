@@ -62,7 +62,9 @@ Install other requirements
 
 .. code-block:: python
 
+    cd locpix_points
     pip install -r requirements.txt
+    cd ..
 
 Also need to install DIG
 
@@ -94,7 +96,7 @@ Install external packages
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
 
-Then install this repository
+Then install this repository, its additional requirements and pytorch geometric as above 
 
 .. code-block:: python
 
@@ -102,14 +104,31 @@ Then install this repository
     pip install -e .
     cd ..
 
-Then install pytorch geometric
+.. code-block:: python
+
+    cd pytorch_geometric
+    pip install -e .
+    cd ..
 
 .. code-block:: python
 
-    pip install torch-geometric
+    cd locpix_points
+    pip install -r requirements.txt
+    cd ..
 
+Problems
+--------
 
-Note need to install locpix points as well
+You may have difficulty installing the following: open3d, torch-scatter, torch-sparse, torch-cluster
+
+To navigate this we can 
+
+1. Remove open3d, torch-scatter, torch-sparse and torch-cluster from requirements.txt
+2. For the moment no fix for open3d
+3. For torch-scatter, torch-sparse and torch-cluster - where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page
+    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
 
 Quickstart (Linux)
 ==================
