@@ -151,27 +151,27 @@ edge_mask_threshold: 0.5
 # if specified then run through subgraphx
 subgraphx:
   # number of iterations to get prediction
-  rollout: 1
+  rollout: 20
   # number of atoms of leaf node in search tree
-  min_atoms: 1
+  min_atoms: 5
   # hyperparameter that encourages exploration
-  c_puct: 1.0
+  c_puct: 10.0
   # number of atoms to expand when extend the child nodes in the search tree
-  expand_atoms: 1
+  expand_atoms: 14
   # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
   high2low: False
   # number of local radius to caclulate
-  local_radius: 1
+  local_radius: 4
   # sampling time of montecarlo approxim
-  sample_num: 1
+  sample_num: 100
   # reward method
   reward_method: "mc_l_shapley"
   # subgrpah building method
-  subgraph_building_method: "zero_filling"
+  subgraph_building_method: "split"
   # maximum number of nodes to include in subgraph when generating explanation
-  max_nodes: 14
+  max_nodes: 8
   # number of classes
-  num_classes: 2
+  num_classes: 7
 
 # if specified then run through gradcam
 gradcam:
