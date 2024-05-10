@@ -125,10 +125,7 @@ def main(argv=None):
 
     # define device
     if eval_on_gpu is True and not torch.cuda.is_available():
-        raise ValueError(
-            "No gpu available, can run on cpu\
-                         instead"
-        )
+        raise ValueError("No gpu available, you should run on cpu instead")
     elif eval_on_gpu is True and torch.cuda.is_available():
         device = torch.device("cuda")
     elif eval_on_gpu is False:
