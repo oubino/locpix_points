@@ -181,7 +181,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             )
 
         # class score computation
-        # this has plain last = True
+        # this has plain last = True by default
         self.mlp_output = MLP(
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
