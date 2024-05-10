@@ -13,6 +13,7 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, conv
+from torch_geometric.nn.aggr import MaxAggregation
 from torch_geometric.nn.pool import global_mean_pool, global_max_pool
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
@@ -91,12 +92,12 @@ class ClusterEncoder(torch.nn.Module):
         elif conv_type == "pointtransformer":
             pos_nn = MLP(
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
-                plain_last=False,
+                plain_last=True,
                 dropout=dropout,
             )
             attn_nn = MLP(
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
-                plain_last=False,
+                plain_last=True,
                 dropout=dropout,
             )
             self.conv = HeteroConv(
@@ -591,6 +592,9 @@ class ClusterNetHomogeneous(torch.nn.Module):
         else:
             raise ValueError("conv_type should be transformer or ginconv")
 
+        # define pool as part of model so can access
+        self.pool = MaxAggregation()
+
     def forward(self, x, edge_index, batch, pos, logits=True):
         """The method called when ClusterNetHomogeneous is used on a dataitem
 
@@ -633,7 +637,10 @@ class ClusterNetHomogeneous(torch.nn.Module):
             x = self.cluster_encoder_3(x, pos, edge_index)
 
         # pooling step so end up with one feature vector per fov
-        x = global_max_pool(x, batch)
+        test = global_max_pool(x, batch)
+        test_1 = self.pool(x, index=batch)
+        assert torch.equals(test, test_1)
+        input("stop and check")
 
         # linear layer on each fov feature vector
         if logits:

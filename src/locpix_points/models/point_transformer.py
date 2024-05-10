@@ -37,16 +37,20 @@ class TransformerBlock(torch.nn.Module):
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
         self.pos_nn = MLP(
-            [dim, pos_nn_layers, out_channels], norm=None, plain_last=False
+            [dim, pos_nn_layers, out_channels], norm=None, plain_last=True
         )
 
         # HARDCODE
         self.attn_nn = MLP(
-            [out_channels, attn_nn_layers, out_channels], norm=None, plain_last=False
+            [out_channels, attn_nn_layers, out_channels], norm=None, plain_last=True
         )
 
         self.transformer = PointTransformerConv(
-            in_channels, out_channels, pos_nn=self.pos_nn, attn_nn=self.attn_nn
+            in_channels,
+            out_channels,
+            pos_nn=self.pos_nn,
+            attn_nn=self.attn_nn,
+            aggr="max",
         )
 
     def forward(self, x, pos, edge_index):
@@ -64,8 +68,8 @@ class TransitionUp(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels, k):
         super().__init__()
-        self.mlp_sub = MLP([in_channels, out_channels], plain_last=False)
-        self.mlp = MLP([out_channels, out_channels], plain_last=False)
+        self.mlp_sub = MLP([in_channels, out_channels], plain_last=True)
+        self.mlp = MLP([out_channels, out_channels], plain_last=True)
         self.k = k
 
     def forward(self, x, x_sub, pos, pos_sub, batch=None, batch_sub=None):
@@ -92,7 +96,7 @@ class TransitionDown(torch.nn.Module):
         super().__init__()
         self.k = k
         self.ratio = ratio
-        self.mlp = MLP([in_channels, out_channels], plain_last=False)
+        self.mlp = MLP([in_channels, out_channels], plain_last=True)
 
     def forward(self, x, pos, batch):
         # FPS sampling
@@ -142,7 +146,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         in_channels = max(in_channels, 1)
 
         # first block
-        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)
+        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=True)
 
         self.transformer_input = TransformerBlock(
             in_channels=dim_model[0],
@@ -177,6 +181,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             )
 
         # class score computation
+        # this has plain last = True
         self.mlp_output = MLP(
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,

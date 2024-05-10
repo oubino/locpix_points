@@ -615,7 +615,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     Raises:
         ValueError: If device specified is neither cpu or gpu OR
-            if attention to examine is not correctly specified
+            if attention to examine is not correctly specified OR
+            if encoder not loc or cluster or fov
         NotImplementedError: If try to run attention on Loc or
             LocCluster instead of cluster
     """
@@ -932,7 +933,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                     temp=temp,
                     bias=bias,
                 ),
-                explanation_type="phenomenon",
+                explanation_type="model",
                 edge_mask_type="object",
                 model_config=dict(
                     mode="multiclass_classification",
@@ -1140,6 +1141,24 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     gt_label_map = {int(key): val for key, val in gt_label_map.items()}
 
+    # a dict to store the activations
+    activation = {}
+
+    def getActivation(name):
+        # the hook signature
+        def hook(model, input, output):
+            activation[name] = output.detach()
+
+        return hook
+
+    # register forward hook
+    h_0 = cluster_model.cluster_encoder_3.register_forward_hook(
+        getActivation("clusterencoder")
+    )
+    h_1 = cluster_model.cluster_encoder_3.register_forward_hook(
+        getActivation("globalpool")
+    )
+
     for _, data in enumerate(dataset):
         # gt label
         gt_label = int(data.y)
@@ -1149,11 +1168,26 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         file_name = data.name + ".parquet"
 
         # convert to polars
-        data = data.x.detach().cpu().numpy()
+        if config["encoder"] == "loc":
+            data = data.x.detach().cpu().numpy()
+        elif config["encoder"] == "cluster":
+            data = activation["clusterencoder"].cpu().numpy()
+            print(data)
+            input("stop")
+        elif config["encoder"] == "fov":
+            data = activation["globalpool"].cpu().numpy()
+            print(data)
+            input("stop")
+        else:
+            raise ValueError("encoder should be loc or cluster")
         cluster_df = pl.DataFrame(data)
         cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
         cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
         dfs.append(cluster_df)
+
+    # remove foward hook
+    h_0.remove()
+    h_1.remove()
 
     # aggregate dfs into one big df
     df = pl.concat(dfs)
@@ -1489,14 +1523,23 @@ def kmeans(data_feats_scaled, df, label_map):
     """
 
     n_clusters = len(label_map.keys())
-    reduced_data = PCA(n_components=2).fit_transform(data_feats_scaled)
-    kmeans = KMeans(init="k-means++", n_clusters=n_clusters, n_init=4)
-    kmeans.fit(reduced_data)
-
     y_true = df.type.map(label_map).to_numpy()
+
+    # with PCA reduction
+    reduced_data = PCA(n_components=2).fit_transform(data_feats_scaled)
+    kmeans = KMeans(init="k-means++", n_clusters=n_clusters)
+    kmeans.fit(reduced_data)
     y_pred = kmeans.labels_
 
-    print("--- K means report ---")
+    print("--- K means report (with PCA reduction to 2D) ---")
+    print(classification_report(y_true, y_pred))
+
+    # without PCA reduction
+    kmeans = KMeans(init="k-means++", n_clusters=n_clusters)
+    kmeans.fit(data_feats_scaled)
+    y_pred = kmeans.labels_
+
+    print("--- K means report (NO PCA reduction) ---")
     print(classification_report(y_true, y_pred))
 
 
