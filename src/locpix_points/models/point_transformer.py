@@ -96,7 +96,9 @@ class TransitionDown(torch.nn.Module):
         super().__init__()
         self.k = k
         self.ratio = ratio
-        self.mlp = MLP([in_channels, out_channels], plain_last=False, norm=None)  # BN
+        self.mlp = MLP(
+            [in_channels, out_channels], plain_last=False, norm="instance_norm"
+        )  # BN
 
     def forward(self, x, pos, batch):
         # FPS sampling
@@ -112,7 +114,7 @@ class TransitionDown(torch.nn.Module):
         )
 
         # transformation of features through a simple MLP
-        x = self.mlp(x)
+        x = self.mlp(x, batch=batch)
 
         # Max pool onto each cluster the features from knn in points
         x_out = scatter(
