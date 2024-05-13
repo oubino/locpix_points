@@ -36,12 +36,12 @@ class TransformerBlock(torch.nn.Module):
         # !TODO: Below needs to depend on the dimensions and in paper it says
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
-        self.pos_nn = MLP(
+        self.pos_nn = MLP(  # BN
             [dim, pos_nn_layers, out_channels], norm=None, plain_last=True
         )
 
         # HARDCODE
-        self.attn_nn = MLP(
+        self.attn_nn = MLP(  # BN
             [out_channels, attn_nn_layers, out_channels], norm=None, plain_last=True
         )
 
@@ -96,7 +96,7 @@ class TransitionDown(torch.nn.Module):
         super().__init__()
         self.k = k
         self.ratio = ratio
-        self.mlp = MLP([in_channels, out_channels], plain_last=True)
+        self.mlp = MLP([in_channels, out_channels], plain_last=False, norm=None)  # BN
 
     def forward(self, x, pos, batch):
         # FPS sampling
@@ -112,7 +112,7 @@ class TransitionDown(torch.nn.Module):
         )
 
         # transformation of features through a simple MLP
-        x = self.mlp(x, batch=batch)
+        x = self.mlp(x)
 
         # Max pool onto each cluster the features from knn in points
         x_out = scatter(
@@ -146,7 +146,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         in_channels = max(in_channels, 1)
 
         # first block
-        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=True)
+        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=True)  # BN
 
         self.transformer_input = TransformerBlock(
             in_channels=dim_model[0],
@@ -182,7 +182,7 @@ class PointTransformerEmbedding(torch.nn.Module):
 
         # class score computation
         # this has plain last = True by default
-        self.mlp_output = MLP(
+        self.mlp_output = MLP(  # BN
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
         )
@@ -193,7 +193,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
         # first block
-        x = self.mlp_input(x, batch=batch)
+        x = self.mlp_input(x)
         edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
