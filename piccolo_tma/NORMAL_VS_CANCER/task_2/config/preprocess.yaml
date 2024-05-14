@@ -1,0 +1,56 @@
+# The following are the names of the
+# x column, y column, z column if present, channel, frame,
+# in the parquet files being processed
+# note here quotation marks can be important so ensure they are present
+x_col: 'x'
+y_col: 'y'
+z_col: null
+channel_col: 'channel'
+frame_col: 'frame'
+
+# The number of dimensions to consider
+# If 2 only deals with x and y
+# If 3 will read in and deal with z as well (currently not fully supported)
+dim: 2
+
+# choice of which channels user wants to consider
+# [0,1,2] -> channels 0,1 and 2
+# null -> considers all channels
+channel_choice: [0]
+
+# specify real name for each channel
+# where we write unk for unknown
+channel_label:
+  0: unk # e.g. 0: actin
+
+# whether to not drop the column containing
+# pixel
+drop_pixel_col: False
+
+# files to include
+# all -> consider all files
+# list -> these files only
+# e.g. [file_1, file_2, ...]
+include_files: all
+  #- file_1
+  #- file_2
+
+# Choice of input features for the clusters
+features: []
+
+# GT label
+# either per localisation or per fov
+gt_label_scope: fov # Options: [loc, fov]
+
+# if gt_label_scope is 'loc' then the following applies
+gt_label_loc:
+  # map from the integer labels to real terms for each localisation
+  gt_label_map:
+    0 : null # e.g. 0: background
+    1 : null # e.g. 1: membrane
+  # which column is the gt label in
+  gt_label_col : null
+
+# if gt_label_scope is 'fov' then we assume
+# but will check that gt_label and gt_label_map are both
+# in the metadata
