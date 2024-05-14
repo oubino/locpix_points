@@ -35,29 +35,29 @@ features:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  penalty: [CHANGE]
+  logistic__penalty: [CHANGE]
   # inverse of regularisation strength
-  C: [CHANGE]
+  logistic__C: [CHANGE]
 
 # if specified then decision tree applied to features
 dec_tree:
   # depth of tree
-  max_depth: [CHANGE]
+  tree__max_depth: [CHANGE]
   # number features to consider
-  max_features: [CHANGE]
+  tree__max_features: [CHANGE]
 
 # if specified then svm applied to features
 svm:
   # regularisation parameter
-  C: [CHANGE]
+  svm__C: [CHANGE]
   #'kernel used
-  kernel: [CHANGE]
+  svm__kernel: [CHANGE]
   # kernel coefficient
-  gamma: [CHANGE]
+  svm__gamma: [CHANGE]
 
 # if specified then knn applied to features
 knn:
   # number of neighbours
-  n_neighbors: [CHANGE]
+  knn__n_neighbors: [CHANGE]
   # weight function used during prediction
-  weights: [CHANGE]
+  knn__weights: [CHANGE]

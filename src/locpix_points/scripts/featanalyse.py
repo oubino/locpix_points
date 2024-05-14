@@ -38,7 +38,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -1778,7 +1778,12 @@ def log_reg(
     """
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+    pipeline = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("logistic", LogisticRegression(max_iter=1000)),
+        ]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Log reg.-------")
@@ -1788,8 +1793,8 @@ def log_reg(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_C",
-            "param_penalty",
+            "param_logistic__C",
+            "param_logistic__penalty",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1802,7 +1807,9 @@ def log_reg(
     df.to_csv(save_df_path, index=False)
 
     best_model = clf.best_estimator_
-    best_feats = dict(zip(features, best_model.coef_[0].tolist()))
+    best_feats = dict(
+        zip(features, best_model.named_steps["logistic"].coef_[0].tolist())
+    )
     print("------ Coefficients --------")
     coeffs = sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
     print(coeffs)
@@ -1810,7 +1817,11 @@ def log_reg(
     save_df_path = os.path.join(save_dir, "best_coeffs.csv")
     coeff_df.to_csv(save_df_path, index=False)
 
-    model = LogisticRegression(max_iter=1000, **clf.best_params_)
+    model = LogisticRegression(
+        max_iter=1000,
+        C=clf.best_params_["logistic__C"],
+        penalty=clf.best_params_["logistic__penalty"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -1868,7 +1879,9 @@ def dec_tree(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), DecisionTreeClassifier())
+    pipeline = Pipeline(
+        steps=[("scaler", StandardScaler()), ("tree", DecisionTreeClassifier())]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Dec tree.------")
@@ -1878,8 +1891,8 @@ def dec_tree(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_max_depth",
-            "param_max_features",
+            "param_tree__max_depth",
+            "param_tree__max_features",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1892,7 +1905,9 @@ def dec_tree(
     df.to_csv(save_df_path, index=False)
 
     best_model = clf.best_estimator_
-    best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
+    best_feats = dict(
+        zip(features, best_model.named_steps["tree"].feature_importances_.tolist())
+    )
     print("------ Coefficients --------")
     coeffs = sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
     print(coeffs)
@@ -1900,7 +1915,10 @@ def dec_tree(
     save_df_path = os.path.join(save_dir, "best_coeffs.csv")
     coeff_df.to_csv(save_df_path, index=False)
 
-    model = DecisionTreeClassifier(**clf.best_params_)
+    model = DecisionTreeClassifier(
+        max_depth=clf.best_params_["tree__max_depth"],
+        max_features=clf.best_params_["tree__max_features"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -1956,7 +1974,7 @@ def svm(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), SVC())
+    pipeline = Pipeline(steps=[("scaler", StandardScaler()), ("svm", SVC())])
     clf = GridSearchCV(pipeline, parameters, cv=cv, verbose=4)
 
     print("--------SVM---------")
@@ -1966,9 +1984,9 @@ def svm(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_C",
-            "param_kernel",
-            "param_gamma",
+            "param_svm__C",
+            "param_svm__kernel",
+            "param_svm__gamma",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1982,7 +2000,11 @@ def svm(
 
     best_model = clf.best_estimator_
 
-    model = SVC(**clf.best_params_)
+    model = SVC(
+        C=clf.best_params_["svm__C"],
+        kernel=clf.best_params_["svm__kernel"],
+        gamma=clf.best_params_["svm__gamma"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -2038,7 +2060,9 @@ def knn(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), KNeighborsClassifier())
+    pipeline = Pipeline(
+        steps=[("scaler", StandardScaler()), ("knn", KNeighborsClassifier())]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("--------KNN---------")
@@ -2048,7 +2072,7 @@ def knn(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_n_neighbors",
+            "param_knn__n_neighbors",
             # "param_weights",
             "mean_test_score",
             "std_test_score",
@@ -2063,7 +2087,10 @@ def knn(
 
     best_model = clf.best_estimator_
 
-    model = KNeighborsClassifier(**clf.best_params_)
+    model = KNeighborsClassifier(
+        n_neighbors=clf.best_params_["knn__n_neighbors"],
+        weights=clf.best_params_["knn__weights"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
