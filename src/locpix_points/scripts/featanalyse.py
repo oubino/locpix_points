@@ -156,8 +156,14 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
         # negative nodes
         neg_nodes = o3d.geometry.PointCloud()
-        neg_nodes.points = o3d.utility.Vector3dVector(pos[ind_zero])
-        neg_nodes.colors = o3d.utility.Vector3dVector(colors[ind_zero])
+        if type(ind_zero) == list:
+            pos = pos[ind_zero]
+            colors = colors[ind_zero]
+        else:
+            pos = [pos[ind_zero]]
+            colors = [colors[ind_zero]]
+        neg_nodes.points = o3d.utility.Vector3dVector(pos)
+        neg_nodes.colors = o3d.utility.Vector3dVector(colors)
 
         plots.extend([pos_nodes, neg_nodes])
 
@@ -305,6 +311,13 @@ def main(argv=None):
         "which we load in",
     )
 
+    parser.add_argument(
+        "-f",
+        "--final_test",
+        action="store_true",
+        help="if specified then running final test",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -331,16 +344,30 @@ def main(argv=None):
 
     # list items
     try:
-        loc_files = os.listdir(
-            os.path.join(project_directory, "preprocessed/featextract/locs")
-        )
+        if not args.final_test:
+            loc_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/featextract/locs")
+            )
+        else:
+            print("Running only on final test files")
+            loc_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/test/featextract/locs")
+            )
     except FileNotFoundError:
         raise ValueError("There should be some loc files to open")
 
     try:
-        cluster_files = os.listdir(
-            os.path.join(project_directory, "preprocessed/featextract/clusters")
-        )
+        if not args.final_test:
+            cluster_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/featextract/clusters")
+            )
+        else:
+            print("Running only on final test files")
+            cluster_files = os.listdir(
+                os.path.join(
+                    project_directory, "preprocessed/test/featextract/clusters"
+                )
+            )
     except FileNotFoundError:
         raise ValueError("There should be some cluster files to open")
 
@@ -385,12 +412,14 @@ def analyse_manual_feats(
     dfs = []
 
     for index, file in enumerate(loc_files):
-        # loc_path = os.path.join(
-        #   project_directory, f"preprocessed/featextract/locs/{file}"
-        # )
-        cluster_path = os.path.join(
-            project_directory, f"preprocessed/featextract/clusters/{file}"
-        )
+        if not args.final_test:
+            cluster_path = os.path.join(
+                project_directory, f"preprocessed/featextract/clusters/{file}"
+            )
+        else:
+            cluster_path = os.path.join(
+                project_directory, f"preprocessed/test/featextract/clusters/{file}"
+            )
 
         cluster_df = pq.read_table(cluster_path)
 
@@ -487,7 +516,11 @@ def analyse_manual_feats(
         plot_boxplots(features, df)
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
+        data_feats,
+        data_labels,
+        names,
+        args,
+        final_test=args.final_test,
     )
 
     # Plot UMAP
@@ -516,92 +549,94 @@ def analyse_manual_feats(
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
+    # if final test skip this section as not currently implemented and would require changing -
+    # e.g. how to split into folds
+    if not args.final_test:
+        # Logistic regression
+        if "log_reg" in config.keys():
+            print("Log reg...")
+            parameters = config["log_reg"]
+            save_dir = os.path.join(project_directory, "output/log_reg")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            log_reg(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # Logistic regression
-    if "log_reg" in config.keys():
-        print("Log reg...")
-        parameters = config["log_reg"]
-        save_dir = os.path.join(project_directory, "output/log_reg")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        log_reg(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # Decision tree
+        if "dec_tree" in config.keys():
+            print("Dec tree...")
+            parameters = config["dec_tree"]
+            save_dir = os.path.join(project_directory, "output/dec_tree")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            dec_tree(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # Decision tree
-    if "dec_tree" in config.keys():
-        print("Dec tree...")
-        parameters = config["dec_tree"]
-        save_dir = os.path.join(project_directory, "output/dec_tree")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        dec_tree(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # K-NN
+        if "knn" in config.keys():
+            print("KNN...")
+            parameters = config["knn"]
+            save_dir = os.path.join(project_directory, "output/knn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            knn(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # K-NN
-    if "knn" in config.keys():
-        print("KNN...")
-        parameters = config["knn"]
-        save_dir = os.path.join(project_directory, "output/knn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        knn(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
-
-    # SVM
-    if "svm" in config.keys():
-        print("SVM...")
-        parameters = config["svm"]
-        save_dir = os.path.join(project_directory, "output/svm")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        svm(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # SVM
+        if "svm" in config.keys():
+            print("SVM...")
+            parameters = config["svm"]
+            save_dir = os.path.join(project_directory, "output/svm")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            svm(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
 
 def analyse_nn_feats(project_directory, label_map, config, args):
@@ -660,15 +695,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     print("\n")
     print("Loading in best model")
     print("\n")
-    # needs to be from same fold as below
-    fold = config["fold"]
+    if not args.final_test:
+        # needs to be from same fold as below
+        fold = config["fold"]
     model_name = config["model_name"]
     if not args.automatic:
-        model_loc = os.path.join(
-            project_directory, "models", f"fold_{fold}", model_name
-        )
+        if not args.final_test:
+            model_loc = os.path.join(
+                project_directory, "models", f"fold_{fold}", model_name
+            )
+        else:
+            model_loc = os.path.join(project_directory, "models", model_name)
     elif args.automatic:
-        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+        if not args.final_test:
+            model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+        else:
+            model_dir = os.path.join(project_directory, "models")
         model_list = os.listdir(model_dir)
         assert len(model_list) == 1
         model_name = model_list[0]
@@ -680,17 +722,26 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
     data_folder = os.path.join(project_directory, "processed", "featanalysis")
 
-    input_train_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "train"
-    )
+    if not args.final_test:
+        input_train_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "train"
+        )
+    else:
+        input_train_folder = os.path.join(project_directory, "processed", "train")
     output_train_folder = os.path.join(data_folder, "train")
-    input_val_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "val"
-    )
+    if not args.final_test:
+        input_val_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "val"
+        )
+    else:
+        input_val_folder = os.path.join(project_directory, "processed", "val")
     output_val_folder = os.path.join(data_folder, "val")
-    input_test_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "test"
-    )
+    if not args.final_test:
+        input_test_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "test"
+        )
+    else:
+        input_test_folder = os.path.join(project_directory, "processed", "test")
     output_test_folder = os.path.join(data_folder, "test")
 
     output_folders = [output_train_folder, output_val_folder, output_test_folder]
@@ -1152,9 +1203,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     print("Feature analysis...")
 
     # aggregate cluster features into collated df
-    dataset = torch.utils.data.ConcatDataset(
-        [cluster_train_set, cluster_val_set, cluster_test_set]
-    )
+    if not args.final_test:
+        dataset = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set, cluster_test_set]
+        )
+    else:
+        print("Evaluation is only on the test set")
+        dataset = cluster_test_set
 
     dfs = []
 
@@ -1238,7 +1293,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         plot_boxplots(features, df)
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
+        data_feats,
+        data_labels,
+        names,
+        args,
+        final_test=args.final_test,
     )
 
     # need to ensure no manual features being analysed
@@ -1274,94 +1333,97 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         kmeans(X_kmeans, df, config["label_map"])
 
     # ------ Prediction methods taking in the folds (sklearn) ----- #
-    print("Prediction methods using deep features...")
-    # train/test indices are list of lists
-    # with one list for each fold
-    train_indices_main = [train_indices_main[fold]]
-    val_indices_main = [val_indices_main[fold]]
-    test_indices_main = [test_indices_main[fold]]
+    # if final test skip this section as not currently implemented and would require changing -
+    # e.g. how to split into folds
+    if not args.final_test:
+        print("Prediction methods using deep features...")
+        # train/test indices are list of lists
+        # with one list for each fold
+        train_indices_main = [train_indices_main[fold]]
+        val_indices_main = [val_indices_main[fold]]
+        test_indices_main = [test_indices_main[fold]]
 
-    # Logistic regression
-    if "log_reg" in config.keys():
-        parameters = config["log_reg"]
-        save_dir = os.path.join(project_directory, "output/log_reg_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        log_reg(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # Logistic regression
+        if "log_reg" in config.keys():
+            parameters = config["log_reg"]
+            save_dir = os.path.join(project_directory, "output/log_reg_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            log_reg(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # Decision tree
-    if "dec_tree" in config.keys():
-        parameters = config["dec_tree"]
-        save_dir = os.path.join(project_directory, "output/dec_tree_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        dec_tree(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # Decision tree
+        if "dec_tree" in config.keys():
+            parameters = config["dec_tree"]
+            save_dir = os.path.join(project_directory, "output/dec_tree_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            dec_tree(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # K-NN
-    if "knn" in config.keys():
-        parameters = config["knn"]
-        save_dir = os.path.join(project_directory, "output/knn_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        knn(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # K-NN
+        if "knn" in config.keys():
+            parameters = config["knn"]
+            save_dir = os.path.join(project_directory, "output/knn_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            knn(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # SVM
-    if "svm" in config.keys():
-        parameters = config["svm"]
-        save_dir = os.path.join(project_directory, "output/svm_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        svm(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # SVM
+        if "svm" in config.keys():
+            parameters = config["svm"]
+            save_dir = os.path.join(project_directory, "output/svm_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            svm(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
 
 def class_report_fn(df, indices):
@@ -1567,7 +1629,7 @@ def kmeans(data_feats_scaled, df, label_map):
     print(classification_report(y_true, y_pred))
 
 
-def prep_for_sklearn(data_feats, data_labels, names, args):
+def prep_for_sklearn(data_feats, data_labels, names, args, final_test=False):
     """Get data ready for sklearn analysis
 
     Args:
@@ -1575,6 +1637,7 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
         data_labels (array): Label for each data item
         names (array): Names for each data item
         args (dict): Arguments passed to the script
+        final_test (bool): If we are running final test
 
     Raises:
         ValueError: If overlap between train and test indices
@@ -1587,20 +1650,6 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
         test_indices_main (list): List of indices of test data
     """
 
-    warnings.warn(
-        "There must be a config file for k_fold.yaml in the directory for this to work"
-    )
-
-    # load config
-    config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
-    with open(config_path, "r") as ymlfile:
-        k_fold_config = yaml.safe_load(ymlfile)
-
-    splits = k_fold_config["splits"]
-    train_folds = splits["train"]
-    val_folds = splits["val"]
-    test_folds = splits["test"]
-
     df = pl.DataFrame(
         {
             "X": data_feats,
@@ -1608,34 +1657,6 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
             "name": names,
         }
     )
-
-    # get indices of train/test for CV
-    train_indices_main = []
-    val_indices_main = []
-    test_indices_main = []
-
-    for index, train_fold in enumerate(train_folds):
-        val_fold = val_folds[index]
-        test_fold = test_folds[index]
-
-        train_bool = df["name"].is_in(train_fold).to_list()
-        val_bool = df["name"].is_in(val_fold).to_list()
-        test_bool = df["name"].is_in(test_fold).to_list()
-
-        train_indices = np.where(train_bool)[0]
-        val_indices = np.where(val_bool)[0]
-        test_indices = np.where(test_bool)[0]
-
-        train_indices_main.append(train_indices)
-        val_indices_main.append(val_indices)
-        test_indices_main.append(test_indices)
-
-        if any(i in train_indices for i in test_indices):
-            raise ValueError("Should not share common values")
-        if any(i in train_indices for i in val_indices):
-            raise ValueError("Should not share common values")
-        if any(i in test_indices for i in val_indices):
-            raise ValueError("Should not share common values")
 
     num_features = len(df["X"][0])
     print("Num features: ", num_features)
@@ -1648,7 +1669,55 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
     X = df["X"].to_list()
     Y = df["Y"].to_list()
 
-    return X, Y, train_indices_main, val_indices_main, test_indices_main
+    if not final_test:
+        warnings.warn(
+            "There must be a config file for k_fold.yaml in the directory for this to work"
+        )
+
+        # load config
+        config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
+        with open(config_path, "r") as ymlfile:
+            k_fold_config = yaml.safe_load(ymlfile)
+
+        splits = k_fold_config["splits"]
+        train_folds = splits["train"]
+        val_folds = splits["val"]
+        test_folds = splits["test"]
+
+        # get indices of train/test for CV
+        train_indices_main = []
+        val_indices_main = []
+        test_indices_main = []
+
+        for index, train_fold in enumerate(train_folds):
+            val_fold = val_folds[index]
+            test_fold = test_folds[index]
+
+            train_bool = df["name"].is_in(train_fold).to_list()
+            val_bool = df["name"].is_in(val_fold).to_list()
+            test_bool = df["name"].is_in(test_fold).to_list()
+
+            train_indices = np.where(train_bool)[0]
+            val_indices = np.where(val_bool)[0]
+            test_indices = np.where(test_bool)[0]
+
+            train_indices_main.append(train_indices)
+            val_indices_main.append(val_indices)
+            test_indices_main.append(test_indices)
+
+            if any(i in train_indices for i in test_indices):
+                raise ValueError("Should not share common values")
+            if any(i in train_indices for i in val_indices):
+                raise ValueError("Should not share common values")
+            if any(i in test_indices for i in val_indices):
+                raise ValueError("Should not share common values")
+
+        return X, Y, train_indices_main, val_indices_main, test_indices_main
+
+    else:
+        # This needs to be changed to return valid indices if
+        # implement sklearn for final test
+        return X, Y, None, None, None
 
 
 def fold_results(

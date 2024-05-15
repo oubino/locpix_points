@@ -631,6 +631,10 @@ This is different to initialise as we now ASSUME that your input data is located
     └── test
         ├── file_0.parquet
         └── ...
+
+*Description*
+
+If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files
     
 *Warning*
 
@@ -639,6 +643,101 @@ Currently data has to have gt_labels already loaded in
 AND
 
 There is only feature analysis of manual features
+
+Running final test
+==================
+
+1. Initialise a project directory 
+
+.. code-block:: python
+
+    final_test
+
+*Notes*
+This will create a project directory, if copy already preprocessed files then will ASSUME these are train files and place these in folder preprocessed/train
+
+2. Navigate to the project directory
+
+3. Amend all config files
+
+4. Preprocess the data
+
+.. code-block:: shell
+
+    bash scripts/preprocess.sh
+
+*Notes*
+If the train files already copied acrossed will skip this otherwise will preprocess the train files into preprocessed/train
+Will preprocess the test files into preprocessed/test
+
+5. Annotate the data (Optional)
+
+.. code-block:: shell
+
+    bash scripts/annotate.sh
+
+6. Extract features
+
+.. code-block:: shell
+
+    bash scripts/featextract.sh
+
+*Notes*
+Will extract features from train and test folders - similarly will skip preprocessed/train if files copied across from another folder
+
+7. Process the data
+
+.. code-block:: shell
+
+    bash scripts/process.sh
+
+8. Run training 
+
+.. code-block:: shell
+
+    bash scripts/train.sh
+
+
+*Notes*
+Trains of all the training data
+
+9. Run evaluation
+
+.. code-block:: shell
+
+    bash scripts/evaluate.sh
+
+*Notes*
+Evaluate on the test set
+
+10. Analyse manual features
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_manual.sh
+
+*Notes*
+Analyse the manual features just for the TEST set
+No sklearn prediction models as this requires further changes
+
+10. Analyse neural network features for one fold
+
+Adjust config file to choose fold
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_nn.sh
+
+*Notes*
+For XAI algos that need training will train of train dataset but all evaluation and 
+results are on the test set
+No sklearn prediction models as this requires further changes
+
+11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+
+.. code-block:: shell
+
+    visualise [ARGS] 
 
 Generate figures using OriginPro
 ================================
