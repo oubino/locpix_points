@@ -630,6 +630,17 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     else:
         raise ValueError("Device should be cpu or gpu")
 
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
     model_type = config["model"]
 
     # only works for locclusternet at the moment
@@ -778,12 +789,95 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     cluster_model.to(device)
     cluster_model.eval()
 
+    # train pgexplainer
+    if "pgex" in config.keys():
+        print("Training PGEX...")
+        max_epochs = config["pgex"]["max_epochs"]
+        lr = config["pgex"]["lr"]
+        edge_size = config["pgex"]["edge_size"]
+        edge_ent = config["pgex"]["edge_ent"]
+        temp = config["pgex"]["temp"]
+        bias = config["pgex"]["bias"]
+
+        # PGExplainer make it return logprobs
+        pg_explainer = Explainer(
+            model=cluster_model,
+            algorithm=PGExplainer(
+                epochs=max_epochs,
+                lr=lr,
+                edge_size=edge_size,
+                edge_ent=edge_ent,
+                temp=temp,
+                bias=bias,
+            ),
+            explanation_type="phenomenon",
+            edge_mask_type="object",
+            model_config=dict(
+                mode="multiclass_classification",
+                task_level="graph",
+                return_type="log_probs",
+            ),
+        )
+        pg_explainer.algorithm.mlp.to(device)
+
+        ## Required to first train PGExplainer on the dataset:
+        pgex_train_set = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set]
+        )
+
+        batch_size = config["pgex"]["batch_size"]
+
+        # initialise loader
+        train_loader = L.DataLoader(
+            pgex_train_set,
+            batch_size=batch_size,  # change in config
+            shuffle=True,
+            drop_last=True,
+        )
+
+        # train pgexplainer
+        print("Training")
+        for epoch in range(max_epochs):
+            total_loss = 0
+            items = 0
+            for index, item in enumerate(train_loader):
+                loss = pg_explainer.algorithm.train(
+                    epoch,
+                    cluster_model,
+                    item.x,
+                    item.edge_index,
+                    target=item.y,
+                    pos=item.pos,
+                    batch=item.batch,
+                    # return logprobs
+                    logits=False,
+                )
+                items += index * batch_size
+                total_loss += loss
+            print(f"Epoch: {epoch}; Loss : {total_loss/items}")
+
     # get item to evaluate on
     dataitem_idx = config["dataitem"]
     for idx in dataitem_idx:
         cluster_dataitem = cluster_test_set.get(idx)
         loc_dataitem = loc_test_set.get(idx)
         loc_dataitem.to(device)
+
+        # generate prediction for the graph
+        logits = cluster_model(
+            cluster_dataitem.x,
+            cluster_dataitem.edge_index,
+            torch.tensor([0], device=device),
+            cluster_dataitem.pos,
+            logits=True,
+        )
+        prediction = logits.argmax(-1).item()
+
+        # print out prediction & gt label
+        print("-----")
+        print(f"Item {idx}")
+        print("Predicted label: ", gt_label_map[prediction])
+        print("GT label: ", gt_label_map[cluster_dataitem.y.cpu().item()])
 
         # ---- subgraphx -----
         if "subgraphx" in config.keys():
@@ -819,16 +913,6 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 max_nodes=config["subgraphx"]["max_nodes"],
             )
 
-            # generate prediction for the graph
-            logits = cluster_model(
-                cluster_dataitem.x,
-                cluster_dataitem.edge_index,
-                torch.tensor([0], device=device),
-                cluster_dataitem.pos,
-                logits=True,
-            )
-            prediction = logits.argmax(-1).item()
-
             # process explanation results
             explanation_results = explanation_results[prediction]
             explanation_results = explainer.read_from_MCTSInfo_list(explanation_results)
@@ -855,6 +939,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print(f"Stability: {x_collector.stability:.4f}")
 
             # evaluate explanation
+
             visualise_explanation(
                 cluster_dataitem.pos,
                 cluster_dataitem.edge_index,
@@ -914,76 +999,17 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- pgexplainer ----
         if "pgex" in config.keys():
-            print("PGEX...")
-            max_epochs = config["pgex"]["max_epochs"]
-            lr = config["pgex"]["lr"]
-            edge_size = config["pgex"]["edge_size"]
-            edge_ent = config["pgex"]["edge_ent"]
-            temp = config["pgex"]["temp"]
-            bias = config["pgex"]["bias"]
-
-            # PGExplainer make it return logprobs
-            explainer = Explainer(
-                model=cluster_model,
-                algorithm=PGExplainer(
-                    epochs=max_epochs,
-                    lr=lr,
-                    edge_size=edge_size,
-                    edge_ent=edge_ent,
-                    temp=temp,
-                    bias=bias,
-                ),
-                explanation_type="model",
-                edge_mask_type="object",
-                model_config=dict(
-                    mode="multiclass_classification",
-                    task_level="graph",
-                    return_type="log_probs",
-                ),
-            )
-            explainer.algorithm.mlp.to(device)
-
-            ## Required to first train PGExplainer on the dataset:
-            pgex_train_set = torch.utils.data.ConcatDataset(
-                [cluster_train_set, cluster_val_set]
-            )
-
-            # initialise loader
-            train_loader = L.DataLoader(
-                pgex_train_set,
-                batch_size=1,
-                shuffle=True,
-                drop_last=True,
-            )
-
-            # train pgexplainer
-            print("Training")
-            for epoch in range(max_epochs):
-                total_loss = 0
-                items = 0
-                for index, item in enumerate(train_loader):
-                    loss = explainer.algorithm.train(
-                        epoch,
-                        cluster_model,
-                        item.x,
-                        item.edge_index,
-                        target=item.y,
-                        pos=item.pos,
-                        batch=torch.tensor([0], device=device),
-                        # return logprobs
-                        logits=False,
-                    )
-                    items += index
-                    total_loss += loss
-                print(f"Epoch: {epoch}; Loss : {total_loss/items}")
+            print("PGEX evaluate...")
 
             # explain cluster dataitem
-            explanation = explainer(
+            explanation = pg_explainer(
                 cluster_dataitem.x,
                 cluster_dataitem.edge_index,
                 target=cluster_dataitem.y,
                 pos=cluster_dataitem.pos,
-                batch=torch.tensor([0], device=device),
+                batch=torch.zeros(
+                    cluster_dataitem.x.shape[0], device=device, dtype=torch.int64
+                ),
                 # return logprobs
                 logits=False,
             )
@@ -999,10 +1025,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print(
                 f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
             )
-            pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+            pos_fid, neg_fid = metric.fidelity(pg_explainer, explanation)
             print(f"Positive fidelity closer to 1 better: {pos_fid})")
             print(f"Negative fidelity closer to 0 better: {neg_fid})")
-            unf = metric.unfaithfulness(explainer, explanation)
+            unf = metric.unfaithfulness(pg_explainer, explanation)
             print(f"Unfaithfulness, closer to 0 better {unf}")
 
             # visualise explanation
@@ -1013,7 +1039,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 edge_imp=explanation.edge_mask.to(device),
             )
 
-        # -------- PYTORCH GEO XAI -------------
+        # ---- attention -----
         # use model - logprobs or clustermodel - raw
         if "attention" in config.keys():
             print("---- Attention ----")
@@ -1123,23 +1149,14 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
 
+    print("Feature analysis...")
+
     # aggregate cluster features into collated df
     dataset = torch.utils.data.ConcatDataset(
         [cluster_train_set, cluster_val_set, cluster_test_set]
     )
 
     dfs = []
-
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
-
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
 
     # a dict to store the activations
     activation = {}
@@ -1155,9 +1172,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     h_0 = cluster_model.cluster_encoder_3.register_forward_hook(
         getActivation("clusterencoder")
     )
-    h_1 = cluster_model.cluster_encoder_3.register_forward_hook(
-        getActivation("globalpool")
-    )
+    h_1 = cluster_model.pool.register_forward_hook(getActivation("globalpool"))
 
     for _, data in enumerate(dataset):
         # gt label
@@ -1167,17 +1182,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         # file name
         file_name = data.name + ".parquet"
 
+        # forward through network
+        _ = cluster_model(
+            data.x,
+            data.edge_index,
+            torch.tensor([0], device=device),
+            data.pos,
+            logits=True,
+        )
+
         # convert to polars
         if config["encoder"] == "loc":
             data = data.x.detach().cpu().numpy()
         elif config["encoder"] == "cluster":
             data = activation["clusterencoder"].cpu().numpy()
-            print(data)
-            input("stop")
         elif config["encoder"] == "fov":
             data = activation["globalpool"].cpu().numpy()
-            print(data)
-            input("stop")
         else:
             raise ValueError("encoder should be loc or cluster")
         cluster_df = pl.DataFrame(data)
@@ -1230,6 +1250,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # --------------- UMAP --------------------------
     # Plot UMAP
     if config["umap"]["implement"]:
+        print("UMAP...")
         scaler = StandardScaler().fit(X)
         X = scaler.transform(X)
         plot_umap(X, df, config["label_map"], config["umap"])
@@ -1237,6 +1258,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # ---------------- PCA --------------------------
     # PCA
     if config["pca"]["implement"]:
+        print("PCA...")
         scaler = StandardScaler().fit(X)
         X_pca = scaler.transform(X)
         reduced_data = plot_pca(
@@ -1246,11 +1268,13 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # ---------------- K-MEANS ----------------------
     # k-means
     if config["kmeans"]:
+        print("K-means...")
         scaler = StandardScaler().fit(X)
         X_kmeans = scaler.transform(X)
         kmeans(X_kmeans, df, config["label_map"])
 
     # ------ Prediction methods taking in the folds (sklearn) ----- #
+    print("Prediction methods using deep features...")
     # train/test indices are list of lists
     # with one list for each fold
     train_indices_main = [train_indices_main[fold]]
