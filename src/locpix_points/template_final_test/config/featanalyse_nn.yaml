@@ -9,8 +9,6 @@ device: gpu # Options: [cpu, gpu]
 # choice of model
 model: locclusternet # Options: see train.yaml
 
-# fold for which we load the model from
-fold: 0
 # if automatic flag not specified then load in specific model name
 # the name of the model can be found from weights&bias for the corresponding fold
 model_name: INSERTMODELNAME.pt
@@ -109,36 +107,6 @@ pca:
   implement: True
   # number of compoments to retain during PCA
   n_components: 2
-
-# if specified then logistic regression applied to features
-log_reg:
-  # penalties to evaluate
-  penalty: [CHANGE]
-  # inverse of regularisation strength
-  C: [CHANGE]
-
-# if specified then decision tree applied to features
-dec_tree:
-  # depth of tree
-  max_depth: [CHANGE]
-  # number features to consider
-  max_features: [CHANGE]
-
-# if specified then svm applied to features
-svm:
-  # regularisation parameter
-  C: [CHANGE]
-  #'kernel used
-  kernel: [CHANGE]
-  # kernel coefficient
-  gamma: [CHANGE]
-
-# if specified then knn applied to features
-knn:
-  # number of neighbours
-  n_neighbors: [CHANGE]
-  # weight function used during prediction
-  weights: [CHANGE]
 
 # ---- Explainable AI arguments -----
 
