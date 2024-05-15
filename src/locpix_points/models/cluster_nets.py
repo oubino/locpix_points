@@ -393,7 +393,9 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3.load_state_dict(state_dict_saved)
             self.cluster_encoder_3.aggr = "max"
             # linear
-            self.linear = Linear(config["tr_out_channels"][2], config["OutputChannels"])
+            self.linear = Linear(
+                config["tr_out_channels"][-1], config["OutputChannels"]
+            )
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
 
@@ -584,7 +586,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3.aggr = "max"
             # linear
             self.linear = Linear(
-                config["pt_tr_out_channels"][2], config["OutputChannels"]
+                config["pt_tr_out_channels"][-1], config["OutputChannels"]
             )
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
@@ -637,10 +639,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             x = self.cluster_encoder_3(x, pos, edge_index)
 
         # pooling step so end up with one feature vector per fov
-        test = global_max_pool(x, batch)
-        test_1 = self.pool(x, index=batch)
-        assert torch.equals(test, test_1)
-        input("stop and check")
+        x = self.pool(x, index=batch)
 
         # linear layer on each fov feature vector
         if logits:
@@ -715,7 +714,7 @@ class ClusterNetHetero(torch.nn.Module):
                     tr_concat=config["tr_concat"],
                     tr_beta=config["tr_beta"],
                 ),
-                Linear(config["tr_out_channels"][2], config["OutputChannels"]),
+                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
             )
         elif config["cluster_conv_type"] == "pointnet":
             self.cluster_net = ClusterNet(
@@ -781,7 +780,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
-                Linear(config["pt_tr_out_channels"][2], config["OutputChannels"]),
+                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
             )
         else:
             conv_type = config["cluster_conv_type"]
