@@ -1,7 +1,12 @@
 # map from real terms to the integer labels
 label_map:
-  fib: 0
-  iso: 1
+  one: 0
+  two: 1
+  three: 2
+  T: 3
+  O: 4
+  L: 5
+  grid: 6
 
 # whether to run on gpu or cpu
 device: gpu # Options: [cpu, gpu]
@@ -19,17 +24,17 @@ model_name: INSERTMODELNAME.pt
 locclusternet:
 
   # +++ LocNet parameters +++
-  loc_conv_type: NEEDS CHANGING THIS FILE pointnet # Options: [pointnet, pointtransformer]
+  loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 1.0
+  ratio: 0.5
   # For each point we sample nearest neighbours up to nearest neighbours (k)
   k: 5
 
   # +++++ PointNet parameters +++++
-  local_channels: [[2, 32, 32, 64],[130, 64, 64, 128]]
-  global_channels: [[64, 128, 128],[128, 256, 256]]
-  global_sa_channels: [258, 128, 128, 128]
-  final_channels: [128, 64, 32, 8]
+  local_channels: [[2, 4, 6],[12, 14, 16], [22,24,26]]
+  global_channels: [[6, 8, 10],[16, 18, 20], [26,28,30]]
+  global_sa_channels: [32, 30, 28, 26]
+  final_channels: [26, 24, 22, 8]
   # For each point we sample nearest neighbours up to radius
   radius: 1.0
 
@@ -52,12 +57,12 @@ locclusternet:
   dropout: 0.0
   cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
-  OutputChannels: 2
+  OutputChannels: 7
   # add position coordinates to each cluster
   add_cluster_pos: False
 
   # --- if cluster_conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
+  ClusterEncoderChannels: [[10, 12, 16],[18, 20, 24],[26, 28, 32],[34, 36, 40]]
   # ------------------------------------
 
   # --- if cluster_conv_type == transformer ----
@@ -87,17 +92,18 @@ locclusternet:
 
 # if want to look at cluster features after having just gone through locnet: loc
 # if want to look at cluster features having gone through cluster net as well: cluster
+# if want to look at per fov features: fov
 encoder: loc
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False
 # plot features to screen (features will be saved regardless)
-boxplots: True
+boxplots: False
 # run umap on the features
 umap:
   # if implement True will run UMAP
   implement: True
   # number of neighbors
-  n_neighbors: 100
+  n_neighbors: 20
   # min distance
   min_dist: 0.5
 # run kmeans on the features
@@ -112,7 +118,7 @@ pca:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  penalty: ["l2"]
+  logistic__penalty: ["l2"]
   # inverse of regularisation strength
   C: [0.1, 0.5, 1]
 
@@ -149,58 +155,60 @@ dataitem: [0]
 edge_mask_threshold: 0.5
 
 # if specified then run through subgraphx
-subgraphx:
-  # number of iterations to get prediction
-  rollout: 20
-  # number of atoms of leaf node in search tree
-  min_atoms: 5
-  # hyperparameter that encourages exploration
-  c_puct: 10.0
-  # number of atoms to expand when extend the child nodes in the search tree
-  expand_atoms: 14
-  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
-  high2low: False
-  # number of local radius to caclulate
-  local_radius: 4
-  # sampling time of montecarlo approxim
-  sample_num: 100
-  # reward method
-  reward_method: "mc_l_shapley"
-  # subgrpah building method
-  subgraph_building_method: "split"
-  # maximum number of nodes to include in subgraph when generating explanation
-  max_nodes: 8
-  # number of classes
-  num_classes: 7
+#subgraphx:
+#  # number of iterations to get prediction
+#  rollout: 20
+#  # number of atoms of leaf node in search tree
+#  min_atoms: 5
+#  # hyperparameter that encourages exploration
+#  c_puct: 10.0
+#  # number of atoms to expand when extend the child nodes in the search tree
+#  expand_atoms: 14
+#  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
+#  high2low: False
+#  # number of local radius to caclulate
+#  local_radius: 4
+#  # sampling time of montecarlo approxim
+#  sample_num: 100
+#  # reward method
+#  reward_method: "mc_l_shapley"
+#  # subgrpah building method
+#  subgraph_building_method: "split"
+#  # maximum number of nodes to include in subgraph when generating explanation
+#  max_nodes: 8
+#  # number of classes
+#  num_classes: 7
 
 # if specified then run through gradcam
-gradcam:
-  # number of classes
-  num_classes: 2
-  # sparsity we need to control to transform a soft mask to a hard mask
-  sparsity: 0.7
+#gradcam:
+#  # number of classes
+#  num_classes: 2
+#  # sparsity we need to control to transform a soft mask to a hard mask
+#  sparsity: 0.7
 
 # if specified then run through pgexplainer
-pgex:
-  # size regularization to constrain the explanation size
-  edge_size: 0.00000001
-  # entropy regularization to constrain the connectivity of explanation
-  edge_ent: 0.00000001
-  # maximum number of networks to train explanation network
-  max_epochs: 20
-  # learning rate during training of explanation network
-  lr: 0.003
-  # ?
-  temp: [5.0,2.0]
-  # bias ?
-  bias: 0.0
+# pgex:
+#   # size regularization to constrain the explanation size
+#   edge_size: 0.00000001
+#   # entropy regularization to constrain the connectivity of explanation
+#   edge_ent: 0.00000001
+#   # maximum number of networks to train explanation network
+#   max_epochs: 10
+#   # learning rate during training of explanation network
+#   lr: 0.003
+#   # batch size during training of explanation network
+#   batch_size: 128
+#   # ?
+#   temp: [5.0,2.0]
+#   # bias ?
+#   bias: 0.0
 
 # if specified then examine attention for models
-attention:
-  # specify which models have attention
-  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
-  # how to combine attention scores across multiple attention heads
-  reduce: max
+#attention:
+#  # specify which models have attention
+#  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
+#  # how to combine attention scores across multiple attention heads
+#  reduce: max
 
 # ----- Archived arguments ----------
 dim: 2

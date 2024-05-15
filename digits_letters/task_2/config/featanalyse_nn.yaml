@@ -1,7 +1,12 @@
 # map from real terms to the integer labels
 label_map:
-  fib: 0
-  iso: 1
+  one: 0
+  two: 1
+  three: 2
+  T: 3
+  O: 4
+  L: 5
+  grid: 6
 
 # whether to run on gpu or cpu
 device: gpu # Options: [cpu, gpu]
@@ -19,11 +24,11 @@ model_name: INSERTMODELNAME.pt
 locclusternet:
 
   # +++ LocNet parameters +++
-  loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
+  loc_conv_type: pointtransformer # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 1.0
+  ratio: 0.5
   # For each point we sample nearest neighbours up to nearest neighbours (k)
-  k: 3
+  k: 5
 
   # +++++ PointNet parameters +++++
   local_channels: [[2, 4, 6],[12, 14, 16], [22,24,26]]
@@ -50,9 +55,9 @@ locclusternet:
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
   dropout: 0.0
-  cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
+  cluster_conv_type: pointtransformer # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
-  OutputChannels: 2
+  OutputChannels: 7
   # add position coordinates to each cluster
   add_cluster_pos: False
 
@@ -87,17 +92,17 @@ locclusternet:
 
 # if want to look at cluster features after having just gone through locnet: loc
 # if want to look at cluster features having gone through cluster net as well: cluster
-encoder: loc
+encoder: fov
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False
 # plot features to screen (features will be saved regardless)
-boxplots: True
+boxplots: False
 # run umap on the features
 umap:
   # if implement True will run UMAP
   implement: True
   # number of neighbors
-  n_neighbors: 100
+  n_neighbors: 20
   # min distance
   min_dist: 0.5
 # run kmeans on the features
@@ -112,7 +117,7 @@ pca:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  penalty: ["l2"]
+  logistic__penalty: ["l2"]
   # inverse of regularisation strength
   C: [0.1, 0.5, 1]
 
@@ -143,73 +148,75 @@ knn:
 
 # list of files to run through XAI
 # any integers starting from 0 up to number of test dataitems
-dataitem: [0]
+dataitem: [0, 1000, 2000, 3000, 4000]
 
 # threshold to apply to edge mask for pyg explain
 edge_mask_threshold: 0.5
 
 # if specified then run through subgraphx
-subgraphx:
-  # number of iterations to get prediction
-  rollout: 20
-  # number of atoms of leaf node in search tree
-  min_atoms: 5
-  # hyperparameter that encourages exploration
-  c_puct: 10.0
-  # number of atoms to expand when extend the child nodes in the search tree
-  expand_atoms: 14
-  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
-  high2low: False
-  # number of local radius to caclulate
-  local_radius: 4
-  # sampling time of montecarlo approxim
-  sample_num: 100
-  # reward method
-  reward_method: "mc_l_shapley"
-  # subgrpah building method
-  subgraph_building_method: "split"
-  # maximum number of nodes to include in subgraph when generating explanation
-  max_nodes: 8
-  # number of classes
-  num_classes: 7
+# subgraphx:
+#   # number of iterations to get prediction
+#   rollout: 20
+#   # number of atoms of leaf node in search tree
+#   min_atoms: 5
+#   # hyperparameter that encourages exploration
+#   c_puct: 10.0
+#   # number of atoms to expand when extend the child nodes in the search tree
+#   expand_atoms: 14
+#   # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
+#   high2low: False
+#   # number of local radius to caclulate
+#   local_radius: 4
+#   # sampling time of montecarlo approxim
+#   sample_num: 100
+#   # reward method
+#   reward_method: "mc_l_shapley"
+#   # subgrpah building method
+#   subgraph_building_method: "split"
+#   # maximum number of nodes to include in subgraph when generating explanation
+#   max_nodes: 8
+#   # number of classes
+#   num_classes: 7
 
 # if specified then run through gradcam
-gradcam:
-  # number of classes
-  num_classes: 2
-  # sparsity we need to control to transform a soft mask to a hard mask
-  sparsity: 0.7
+#gradcam:
+#  # number of classes
+#  num_classes: 2
+#  # sparsity we need to control to transform a soft mask to a hard mask
+#  sparsity: 0.7
 
 # if specified then run through pgexplainer
-pgex:
-  # size regularization to constrain the explanation size
-  edge_size: 0.00000001
-  # entropy regularization to constrain the connectivity of explanation
-  edge_ent: 0.00000001
-  # maximum number of networks to train explanation network
-  max_epochs: 20
-  # learning rate during training of explanation network
-  lr: 0.003
-  # each value in the the edge mask is divided by temperature
-  # i.e. lower temperature more confidence vs higher temperature
-  # more spread out confidence in masks
-  # where temperature is given by
-  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
-  # i.e. at low epochs closer to temp[0]
-  # and at high epochs closer to temp[1]
-  # since temp[0] > temp[1]
-  # at low epochs higher temp, at high epochs lower temp
-  # i.e. start with more uniform sampling towards spikier sampling
-  temp: [5.0,2.0]
-  # bias  - one of the terms in sampling 
-  bias: 0.0
+#pgex:
+#  # size regularization to constrain the explanation size
+#  edge_size: 0.00000001
+#  # entropy regularization to constrain the connectivity of explanation
+#  edge_ent: 0.00000001
+#  # maximum number of networks to train explanation network
+#  max_epochs: 10
+#  # learning rate during training of explanation network
+#  lr: 0.003
+#  # batch size during training of explanation network
+#  batch_size: 128
+#  # each value in the the edge mask is divided by temperature
+#  # i.e. lower temperature more confidence vs higher temperature
+#  # more spread out confidence in masks
+#  # where temperature is given by
+#  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
+#  # i.e. at low epochs closer to temp[0]
+#  # and at high epochs closer to temp[1]
+#  # since temp[0] > temp[1]
+#  # at low epochs higher temp, at high epochs lower temp
+#  # i.e. start with more uniform sampling towards spikier sampling
+#  temp: [5.0,2.0]
+#  # bias  - one of the terms in sampling 
+#  bias: 0.0
 
 # if specified then examine attention for models
-attention:
-  # specify which models have attention
-  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
-  # how to combine attention scores across multiple attention heads
-  reduce: max
+#attention:
+#  # specify which models have attention
+#  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
+#  # how to combine attention scores across multiple attention heads
+#  reduce: max
 
 # ----- Archived arguments ----------
 dim: 2
