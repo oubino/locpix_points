@@ -36,13 +36,11 @@ class TransformerBlock(torch.nn.Module):
         # !TODO: Below needs to depend on the dimensions and in paper it says
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
-        self.pos_nn = MLP(  # BN
-            [dim, pos_nn_layers, out_channels], norm=None, plain_last=True
-        )
+        self.pos_nn = MLP([dim, pos_nn_layers, out_channels], plain_last=True)  # BN
 
         # HARDCODE
         self.attn_nn = MLP(  # BN
-            [out_channels, attn_nn_layers, out_channels], norm=None, plain_last=True
+            [out_channels, attn_nn_layers, out_channels], plain_last=True
         )
 
         self.transformer = PointTransformerConv(
