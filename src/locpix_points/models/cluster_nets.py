@@ -92,12 +92,12 @@ class ClusterEncoder(torch.nn.Module):
         elif conv_type == "pointtransformer":
             pos_nn = MLP(  # BN
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
-                plain_last=True,
+                plain_last=False,
                 dropout=dropout,
             )
             attn_nn = MLP(  # BN
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
-                plain_last=True,
+                plain_last=False,
                 dropout=dropout,
             )
             self.conv = HeteroConv(
@@ -474,7 +474,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][0],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 MLP(  # BN
@@ -483,7 +483,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][0],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 add_self_loops=False,
@@ -504,7 +504,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][1],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 MLP(  # BN
@@ -513,7 +513,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][1],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 add_self_loops=False,
@@ -534,7 +534,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][2],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 MLP(  # BN
@@ -543,7 +543,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][2],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 add_self_loops=False,
@@ -564,7 +564,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_pos_nn_layers"],
                         config["pt_tr_out_channels"][3],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 MLP(  # BN
@@ -573,7 +573,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                         config["pt_tr_attn_nn_layers"],
                         config["pt_tr_out_channels"][3],
                     ],
-                    plain_last=True,
+                    plain_last=False,
                     dropout=config["dropout"],
                 ),
                 add_self_loops=False,
