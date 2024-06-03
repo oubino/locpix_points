@@ -66,8 +66,12 @@ class TransitionUp(torch.nn.Module):
 
     def __init__(self, in_channels, out_channels, k):
         super().__init__()
-        self.mlp_sub = MLP([in_channels, out_channels], plain_last=False)
-        self.mlp = MLP([out_channels, out_channels], plain_last=False)
+        self.mlp_sub = MLP(
+            [in_channels, out_channels], plain_last=False, norm="instance_norm"
+        )
+        self.mlp = MLP(
+            [out_channels, out_channels], plain_last=False, norm="instance_norm"
+        )
         self.k = k
 
     def forward(self, x, x_sub, pos, pos_sub, batch=None, batch_sub=None):
@@ -146,7 +150,9 @@ class PointTransformerEmbedding(torch.nn.Module):
         in_channels = max(in_channels, 1)
 
         # first block
-        self.mlp_input = MLP([in_channels, dim_model[0]], plain_last=False)  # BN
+        self.mlp_input = MLP(
+            [in_channels, dim_model[0]], plain_last=False, norm="instance_norm"
+        )  # BN
 
         self.transformer_input = TransformerBlock(
             in_channels=dim_model[0],
