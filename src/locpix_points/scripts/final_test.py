@@ -84,6 +84,7 @@ def main():
     prompt = (
         "--------------------------------------------------------------\n"
         "Would you like to copy preprocessed files from another folder?\n"
+        "Note these MUST BE THE TRAIN FILES!\n"
         "(yes/no): "
     )
     copy_preprocessed = get_valid_response(prompt, ["yes", "no"])
@@ -93,7 +94,7 @@ def main():
 
         # copy preprocessed folder
         src = os.path.join(folder_loc, "preprocessed")
-        dest = os.path.join(project_directory, "preprocessed")
+        dest = os.path.join(project_directory, "preprocessed/train")
         shutil.copytree(src, dest)
 
         # copy preprocess.yaml
@@ -117,18 +118,32 @@ def main():
 
         if csvs == "yes":
             # make data folder
-            data_folder = os.path.join(project_directory, "input_data")
-            os.makedirs(data_folder)
+            train_data_folder = os.path.join(project_directory, "input_data/train")
+            test_data_folder = os.path.join(project_directory, "input_data/test")
+            os.makedirs(train_data_folder)
+            os.makedirs(test_data_folder)
 
             # load in csvs from data_path
-            csv_files = os.listdir(data_path)
+            train_data_path = os.path.join(data_path, "train")
+            test_data_path = os.path.join(data_path, "test")
+            train_csv_files = os.listdir(train_data_path)
+            test_csv_files = os.listdir(test_data_path)
 
-            for file in csv_files:
-                csv_path = os.path.join(data_path, file)
+            for file in train_csv_files:
+                csv_path = os.path.join(train_data_path, file)
                 df = pl.read_csv(csv_path)
                 # save as parquet files
                 df.write_parquet(
-                    os.path.join(data_folder, f"{file.replace('.csv','.parquet')}")
+                    os.path.join(
+                        train_data_folder, f"{file.replace('.csv','.parquet')}"
+                    )
+                )
+            for file in test_csv_files:
+                csv_path = os.path.join(test_data_path, file)
+                df = pl.read_csv(csv_path)
+                # save as parquet files
+                df.write_parquet(
+                    os.path.join(test_data_folder, f"{file.replace('.csv','.parquet')}")
                 )
 
             # update metadata with new data path

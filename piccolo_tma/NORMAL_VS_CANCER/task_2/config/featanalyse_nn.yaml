@@ -113,32 +113,32 @@ pca:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  logistic__penalty: ["l2"]
+  penalty: ["l2"]
   # inverse of regularisation strength
-  logistic__C: [0.1, 0.5, 1]
+  C: [0.1, 0.5, 1]
 
 # if specified then decision tree applied to features
 dec_tree:
   # depth of tree
-  tree__max_depth: [40, 45, 50]
+  max_depth: [40, 45, 50]
   # number features to consider
-  tree__max_features: [4, 5, 6]
+  max_features: [4, 5, 6]
 
 # if specified then svm applied to features
 svm:
   # regularisation parameter
-  svm__C: [1]
+  C: [1]
   #'kernel used
-  svm__kernel: ["rbf"]
+  kernel: ["rbf"]
   # kernel coefficient
-  svm__gamma: ["scale"]
+  gamma: ["scale"]
 
 # if specified then knn applied to features
 knn:
   # number of neighbours
-  knn__n_neighbors: [3,5,7,9,11]
+  n_neighbors: [3,5,7,9,11]
   # weight function used during prediction
-  knn__weights: ["distance"]
+  weights: ["distance"]
 
 # ---- Explainable AI arguments -----
 
@@ -191,20 +191,9 @@ pgex:
   max_epochs: 20
   # learning rate during training of explanation network
   lr: 0.003
-  # batch size during training of explanation network
-  batch_size: 128
-  # each value in the the edge mask is divided by temperature
-  # i.e. lower temperature more confidence vs higher temperature
-  # more spread out confidence in masks
-  # where temperature is given by
-  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
-  # i.e. at low epochs closer to temp[0]
-  # and at high epochs closer to temp[1]
-  # since temp[0] > temp[1]
-  # at low epochs higher temp, at high epochs lower temp
-  # i.e. start with more uniform sampling towards spikier sampling
+  # ?
   temp: [5.0,2.0]
-  # bias - parameter for sampling
+  # bias ?
   bias: 0.0
 
 # if specified then examine attention for models

@@ -38,7 +38,7 @@ from sklearn.metrics import (
 )
 from sklearn.model_selection import GridSearchCV
 from sklearn.neighbors import KNeighborsClassifier
-from sklearn.pipeline import make_pipeline
+from sklearn.pipeline import Pipeline
 from sklearn.preprocessing import StandardScaler
 from sklearn.svm import SVC
 from sklearn.tree import DecisionTreeClassifier
@@ -156,8 +156,14 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
         # negative nodes
         neg_nodes = o3d.geometry.PointCloud()
-        neg_nodes.points = o3d.utility.Vector3dVector(pos[ind_zero])
-        neg_nodes.colors = o3d.utility.Vector3dVector(colors[ind_zero])
+        if type(ind_zero) == list:
+            pos = pos[ind_zero]
+            colors = colors[ind_zero]
+        else:
+            pos = [pos[ind_zero]]
+            colors = [colors[ind_zero]]
+        neg_nodes.points = o3d.utility.Vector3dVector(pos)
+        neg_nodes.colors = o3d.utility.Vector3dVector(colors)
 
         plots.extend([pos_nodes, neg_nodes])
 
@@ -305,6 +311,13 @@ def main(argv=None):
         "which we load in",
     )
 
+    parser.add_argument(
+        "-f",
+        "--final_test",
+        action="store_true",
+        help="if specified then running final test",
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -331,16 +344,30 @@ def main(argv=None):
 
     # list items
     try:
-        loc_files = os.listdir(
-            os.path.join(project_directory, "preprocessed/featextract/locs")
-        )
+        if not args.final_test:
+            loc_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/featextract/locs")
+            )
+        else:
+            print("Running only on final test files")
+            loc_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/test/featextract/locs")
+            )
     except FileNotFoundError:
         raise ValueError("There should be some loc files to open")
 
     try:
-        cluster_files = os.listdir(
-            os.path.join(project_directory, "preprocessed/featextract/clusters")
-        )
+        if not args.final_test:
+            cluster_files = os.listdir(
+                os.path.join(project_directory, "preprocessed/featextract/clusters")
+            )
+        else:
+            print("Running only on final test files")
+            cluster_files = os.listdir(
+                os.path.join(
+                    project_directory, "preprocessed/test/featextract/clusters"
+                )
+            )
     except FileNotFoundError:
         raise ValueError("There should be some cluster files to open")
 
@@ -385,12 +412,14 @@ def analyse_manual_feats(
     dfs = []
 
     for index, file in enumerate(loc_files):
-        # loc_path = os.path.join(
-        #   project_directory, f"preprocessed/featextract/locs/{file}"
-        # )
-        cluster_path = os.path.join(
-            project_directory, f"preprocessed/featextract/clusters/{file}"
-        )
+        if not args.final_test:
+            cluster_path = os.path.join(
+                project_directory, f"preprocessed/featextract/clusters/{file}"
+            )
+        else:
+            cluster_path = os.path.join(
+                project_directory, f"preprocessed/test/featextract/clusters/{file}"
+            )
 
         cluster_df = pq.read_table(cluster_path)
 
@@ -487,7 +516,11 @@ def analyse_manual_feats(
         plot_boxplots(features, df)
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
+        data_feats,
+        data_labels,
+        names,
+        args,
+        final_test=args.final_test,
     )
 
     # Plot UMAP
@@ -516,92 +549,94 @@ def analyse_manual_feats(
     # ---------------------------------------------------------------------- #
     # Prediction methods taking in the folds
     # ---------------------------------------------------------------------- #
+    # if final test skip this section as not currently implemented and would require changing -
+    # e.g. how to split into folds
+    if not args.final_test:
+        # Logistic regression
+        if "log_reg" in config.keys():
+            print("Log reg...")
+            parameters = config["log_reg"]
+            save_dir = os.path.join(project_directory, "output/log_reg")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            log_reg(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # Logistic regression
-    if "log_reg" in config.keys():
-        print("Log reg...")
-        parameters = config["log_reg"]
-        save_dir = os.path.join(project_directory, "output/log_reg")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        log_reg(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # Decision tree
+        if "dec_tree" in config.keys():
+            print("Dec tree...")
+            parameters = config["dec_tree"]
+            save_dir = os.path.join(project_directory, "output/dec_tree")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            dec_tree(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # Decision tree
-    if "dec_tree" in config.keys():
-        print("Dec tree...")
-        parameters = config["dec_tree"]
-        save_dir = os.path.join(project_directory, "output/dec_tree")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        dec_tree(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # K-NN
+        if "knn" in config.keys():
+            print("KNN...")
+            parameters = config["knn"]
+            save_dir = os.path.join(project_directory, "output/knn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            knn(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
-    # K-NN
-    if "knn" in config.keys():
-        print("KNN...")
-        parameters = config["knn"]
-        save_dir = os.path.join(project_directory, "output/knn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        knn(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
-
-    # SVM
-    if "svm" in config.keys():
-        print("SVM...")
-        parameters = config["svm"]
-        save_dir = os.path.join(project_directory, "output/svm")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        svm(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            None,
-            save_dir,
-            label_map,
-        )
+        # SVM
+        if "svm" in config.keys():
+            print("SVM...")
+            parameters = config["svm"]
+            save_dir = os.path.join(project_directory, "output/svm")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            svm(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                None,
+                save_dir,
+                label_map,
+            )
 
 
 def analyse_nn_feats(project_directory, label_map, config, args):
@@ -615,7 +650,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     Raises:
         ValueError: If device specified is neither cpu or gpu OR
-            if attention to examine is not correctly specified
+            if attention to examine is not correctly specified OR
+            if encoder not loc or cluster or fov
         NotImplementedError: If try to run attention on Loc or
             LocCluster instead of cluster
     """
@@ -628,6 +664,17 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         device = torch.device("cpu")
     else:
         raise ValueError("Device should be cpu or gpu")
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
 
     model_type = config["model"]
 
@@ -648,15 +695,22 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     print("\n")
     print("Loading in best model")
     print("\n")
-    # needs to be from same fold as below
-    fold = config["fold"]
+    if not args.final_test:
+        # needs to be from same fold as below
+        fold = config["fold"]
     model_name = config["model_name"]
     if not args.automatic:
-        model_loc = os.path.join(
-            project_directory, "models", f"fold_{fold}", model_name
-        )
+        if not args.final_test:
+            model_loc = os.path.join(
+                project_directory, "models", f"fold_{fold}", model_name
+            )
+        else:
+            model_loc = os.path.join(project_directory, "models", model_name)
     elif args.automatic:
-        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+        if not args.final_test:
+            model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+        else:
+            model_dir = os.path.join(project_directory, "models")
         model_list = os.listdir(model_dir)
         assert len(model_list) == 1
         model_name = model_list[0]
@@ -668,17 +722,26 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
     data_folder = os.path.join(project_directory, "processed", "featanalysis")
 
-    input_train_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "train"
-    )
+    if not args.final_test:
+        input_train_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "train"
+        )
+    else:
+        input_train_folder = os.path.join(project_directory, "processed", "train")
     output_train_folder = os.path.join(data_folder, "train")
-    input_val_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "val"
-    )
+    if not args.final_test:
+        input_val_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "val"
+        )
+    else:
+        input_val_folder = os.path.join(project_directory, "processed", "val")
     output_val_folder = os.path.join(data_folder, "val")
-    input_test_folder = os.path.join(
-        project_directory, "processed", f"fold_{fold}", "test"
-    )
+    if not args.final_test:
+        input_test_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "test"
+        )
+    else:
+        input_test_folder = os.path.join(project_directory, "processed", "test")
     output_test_folder = os.path.join(data_folder, "test")
 
     output_folders = [output_train_folder, output_val_folder, output_test_folder]
@@ -777,12 +840,95 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     cluster_model.to(device)
     cluster_model.eval()
 
+    # train pgexplainer
+    if "pgex" in config.keys():
+        print("Training PGEX...")
+        max_epochs = config["pgex"]["max_epochs"]
+        lr = config["pgex"]["lr"]
+        edge_size = config["pgex"]["edge_size"]
+        edge_ent = config["pgex"]["edge_ent"]
+        temp = config["pgex"]["temp"]
+        bias = config["pgex"]["bias"]
+
+        # PGExplainer make it return logprobs
+        pg_explainer = Explainer(
+            model=cluster_model,
+            algorithm=PGExplainer(
+                epochs=max_epochs,
+                lr=lr,
+                edge_size=edge_size,
+                edge_ent=edge_ent,
+                temp=temp,
+                bias=bias,
+            ),
+            explanation_type="phenomenon",
+            edge_mask_type="object",
+            model_config=dict(
+                mode="multiclass_classification",
+                task_level="graph",
+                return_type="log_probs",
+            ),
+        )
+        pg_explainer.algorithm.mlp.to(device)
+
+        ## Required to first train PGExplainer on the dataset:
+        pgex_train_set = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set]
+        )
+
+        batch_size = config["pgex"]["batch_size"]
+
+        # initialise loader
+        train_loader = L.DataLoader(
+            pgex_train_set,
+            batch_size=batch_size,  # change in config
+            shuffle=True,
+            drop_last=True,
+        )
+
+        # train pgexplainer
+        print("Training")
+        for epoch in range(max_epochs):
+            total_loss = 0
+            items = 0
+            for index, item in enumerate(train_loader):
+                loss = pg_explainer.algorithm.train(
+                    epoch,
+                    cluster_model,
+                    item.x,
+                    item.edge_index,
+                    target=item.y,
+                    pos=item.pos,
+                    batch=item.batch,
+                    # return logprobs
+                    logits=False,
+                )
+                items += index * batch_size
+                total_loss += loss
+            print(f"Epoch: {epoch}; Loss : {total_loss/items}")
+
     # get item to evaluate on
     dataitem_idx = config["dataitem"]
     for idx in dataitem_idx:
         cluster_dataitem = cluster_test_set.get(idx)
         loc_dataitem = loc_test_set.get(idx)
         loc_dataitem.to(device)
+
+        # generate prediction for the graph
+        logits = cluster_model(
+            cluster_dataitem.x,
+            cluster_dataitem.edge_index,
+            torch.tensor([0], device=device),
+            cluster_dataitem.pos,
+            logits=True,
+        )
+        prediction = logits.argmax(-1).item()
+
+        # print out prediction & gt label
+        print("-----")
+        print(f"Item {idx}")
+        print("Predicted label: ", gt_label_map[prediction])
+        print("GT label: ", gt_label_map[cluster_dataitem.y.cpu().item()])
 
         # ---- subgraphx -----
         if "subgraphx" in config.keys():
@@ -818,16 +964,6 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 max_nodes=config["subgraphx"]["max_nodes"],
             )
 
-            # generate prediction for the graph
-            logits = cluster_model(
-                cluster_dataitem.x,
-                cluster_dataitem.edge_index,
-                torch.tensor([0], device=device),
-                cluster_dataitem.pos,
-                logits=True,
-            )
-            prediction = logits.argmax(-1).item()
-
             # process explanation results
             explanation_results = explanation_results[prediction]
             explanation_results = explainer.read_from_MCTSInfo_list(explanation_results)
@@ -854,6 +990,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print(f"Stability: {x_collector.stability:.4f}")
 
             # evaluate explanation
+
             visualise_explanation(
                 cluster_dataitem.pos,
                 cluster_dataitem.edge_index,
@@ -913,76 +1050,17 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
         # ---- pgexplainer ----
         if "pgex" in config.keys():
-            print("PGEX...")
-            max_epochs = config["pgex"]["max_epochs"]
-            lr = config["pgex"]["lr"]
-            edge_size = config["pgex"]["edge_size"]
-            edge_ent = config["pgex"]["edge_ent"]
-            temp = config["pgex"]["temp"]
-            bias = config["pgex"]["bias"]
-
-            # PGExplainer make it return logprobs
-            explainer = Explainer(
-                model=cluster_model,
-                algorithm=PGExplainer(
-                    epochs=max_epochs,
-                    lr=lr,
-                    edge_size=edge_size,
-                    edge_ent=edge_ent,
-                    temp=temp,
-                    bias=bias,
-                ),
-                explanation_type="phenomenon",
-                edge_mask_type="object",
-                model_config=dict(
-                    mode="multiclass_classification",
-                    task_level="graph",
-                    return_type="log_probs",
-                ),
-            )
-            explainer.algorithm.mlp.to(device)
-
-            ## Required to first train PGExplainer on the dataset:
-            pgex_train_set = torch.utils.data.ConcatDataset(
-                [cluster_train_set, cluster_val_set]
-            )
-
-            # initialise loader
-            train_loader = L.DataLoader(
-                pgex_train_set,
-                batch_size=1,
-                shuffle=True,
-                drop_last=True,
-            )
-
-            # train pgexplainer
-            print("Training")
-            for epoch in range(max_epochs):
-                total_loss = 0
-                items = 0
-                for index, item in enumerate(train_loader):
-                    loss = explainer.algorithm.train(
-                        epoch,
-                        cluster_model,
-                        item.x,
-                        item.edge_index,
-                        target=item.y,
-                        pos=item.pos,
-                        batch=torch.tensor([0], device=device),
-                        # return logprobs
-                        logits=False,
-                    )
-                    items += index
-                    total_loss += loss
-                print(f"Epoch: {epoch}; Loss : {total_loss/items}")
+            print("PGEX evaluate...")
 
             # explain cluster dataitem
-            explanation = explainer(
+            explanation = pg_explainer(
                 cluster_dataitem.x,
                 cluster_dataitem.edge_index,
                 target=cluster_dataitem.y,
                 pos=cluster_dataitem.pos,
-                batch=torch.tensor([0], device=device),
+                batch=torch.zeros(
+                    cluster_dataitem.x.shape[0], device=device, dtype=torch.int64
+                ),
                 # return logprobs
                 logits=False,
             )
@@ -998,10 +1076,10 @@ def analyse_nn_feats(project_directory, label_map, config, args):
             print(
                 f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
             )
-            pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+            pos_fid, neg_fid = metric.fidelity(pg_explainer, explanation)
             print(f"Positive fidelity closer to 1 better: {pos_fid})")
             print(f"Negative fidelity closer to 0 better: {neg_fid})")
-            unf = metric.unfaithfulness(explainer, explanation)
+            unf = metric.unfaithfulness(pg_explainer, explanation)
             print(f"Unfaithfulness, closer to 0 better {unf}")
 
             # visualise explanation
@@ -1012,7 +1090,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
                 edge_imp=explanation.edge_mask.to(device),
             )
 
-        # -------- PYTORCH GEO XAI -------------
+        # ---- attention -----
         # use model - logprobs or clustermodel - raw
         if "attention" in config.keys():
             print("---- Attention ----")
@@ -1122,23 +1200,34 @@ def analyse_nn_feats(project_directory, label_map, config, args):
 
     # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
 
+    print("Feature analysis...")
+
     # aggregate cluster features into collated df
-    dataset = torch.utils.data.ConcatDataset(
-        [cluster_train_set, cluster_val_set, cluster_test_set]
-    )
+    if not args.final_test:
+        dataset = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set, cluster_test_set]
+        )
+    else:
+        print("Evaluation is only on the test set")
+        dataset = cluster_test_set
 
     dfs = []
 
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
+    # a dict to store the activations
+    activation = {}
 
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+    def getActivation(name):
+        # the hook signature
+        def hook(model, input, output):
+            activation[name] = output.detach()
+
+        return hook
+
+    # register forward hook
+    h_0 = cluster_model.cluster_encoder_3.register_forward_hook(
+        getActivation("clusterencoder")
+    )
+    h_1 = cluster_model.pool.register_forward_hook(getActivation("globalpool"))
 
     for _, data in enumerate(dataset):
         # gt label
@@ -1148,12 +1237,32 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         # file name
         file_name = data.name + ".parquet"
 
+        # forward through network
+        _ = cluster_model(
+            data.x,
+            data.edge_index,
+            torch.tensor([0], device=device),
+            data.pos,
+            logits=True,
+        )
+
         # convert to polars
-        data = data.x.detach().cpu().numpy()
+        if config["encoder"] == "loc":
+            data = data.x.detach().cpu().numpy()
+        elif config["encoder"] == "cluster":
+            data = activation["clusterencoder"].cpu().numpy()
+        elif config["encoder"] == "fov":
+            data = activation["globalpool"].cpu().numpy()
+        else:
+            raise ValueError("encoder should be loc or cluster")
         cluster_df = pl.DataFrame(data)
         cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
         cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
         dfs.append(cluster_df)
+
+    # remove foward hook
+    h_0.remove()
+    h_1.remove()
 
     # aggregate dfs into one big df
     df = pl.concat(dfs)
@@ -1184,7 +1293,11 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         plot_boxplots(features, df)
 
     X, Y, train_indices_main, val_indices_main, test_indices_main = prep_for_sklearn(
-        data_feats, data_labels, names, args
+        data_feats,
+        data_labels,
+        names,
+        args,
+        final_test=args.final_test,
     )
 
     # need to ensure no manual features being analysed
@@ -1196,6 +1309,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # --------------- UMAP --------------------------
     # Plot UMAP
     if config["umap"]["implement"]:
+        print("UMAP...")
         scaler = StandardScaler().fit(X)
         X = scaler.transform(X)
         plot_umap(X, df, config["label_map"], config["umap"])
@@ -1203,6 +1317,7 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # ---------------- PCA --------------------------
     # PCA
     if config["pca"]["implement"]:
+        print("PCA...")
         scaler = StandardScaler().fit(X)
         X_pca = scaler.transform(X)
         reduced_data = plot_pca(
@@ -1212,98 +1327,103 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     # ---------------- K-MEANS ----------------------
     # k-means
     if config["kmeans"]:
+        print("K-means...")
         scaler = StandardScaler().fit(X)
         X_kmeans = scaler.transform(X)
         kmeans(X_kmeans, df, config["label_map"])
 
     # ------ Prediction methods taking in the folds (sklearn) ----- #
-    # train/test indices are list of lists
-    # with one list for each fold
-    train_indices_main = [train_indices_main[fold]]
-    val_indices_main = [val_indices_main[fold]]
-    test_indices_main = [test_indices_main[fold]]
+    # if final test skip this section as not currently implemented and would require changing -
+    # e.g. how to split into folds
+    if not args.final_test:
+        print("Prediction methods using deep features...")
+        # train/test indices are list of lists
+        # with one list for each fold
+        train_indices_main = [train_indices_main[fold]]
+        val_indices_main = [val_indices_main[fold]]
+        test_indices_main = [test_indices_main[fold]]
 
-    # Logistic regression
-    if "log_reg" in config.keys():
-        parameters = config["log_reg"]
-        save_dir = os.path.join(project_directory, "output/log_reg_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        log_reg(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # Logistic regression
+        if "log_reg" in config.keys():
+            parameters = config["log_reg"]
+            save_dir = os.path.join(project_directory, "output/log_reg_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            log_reg(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # Decision tree
-    if "dec_tree" in config.keys():
-        parameters = config["dec_tree"]
-        save_dir = os.path.join(project_directory, "output/dec_tree_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        dec_tree(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            features,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # Decision tree
+        if "dec_tree" in config.keys():
+            parameters = config["dec_tree"]
+            save_dir = os.path.join(project_directory, "output/dec_tree_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            dec_tree(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                features,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # K-NN
-    if "knn" in config.keys():
-        parameters = config["knn"]
-        save_dir = os.path.join(project_directory, "output/knn_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        knn(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # K-NN
+        if "knn" in config.keys():
+            parameters = config["knn"]
+            save_dir = os.path.join(project_directory, "output/knn_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            knn(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
-    # SVM
-    if "svm" in config.keys():
-        parameters = config["svm"]
-        save_dir = os.path.join(project_directory, "output/svm_nn")
-        if not os.path.exists(save_dir):
-            os.makedirs(save_dir)
-        svm(
-            X,
-            Y,
-            train_indices_main,
-            val_indices_main,
-            test_indices_main,
-            parameters,
-            names,
-            args,
-            fold,
-            save_dir,
-            label_map,
-        )
+        # SVM
+        if "svm" in config.keys():
+            parameters = config["svm"]
+            save_dir = os.path.join(project_directory, "output/svm_nn")
+            if not os.path.exists(save_dir):
+                os.makedirs(save_dir)
+            svm(
+                X,
+                Y,
+                train_indices_main,
+                val_indices_main,
+                test_indices_main,
+                parameters,
+                names,
+                args,
+                fold,
+                save_dir,
+                label_map,
+            )
 
 
 def class_report_fn(df, indices):
@@ -1489,18 +1609,27 @@ def kmeans(data_feats_scaled, df, label_map):
     """
 
     n_clusters = len(label_map.keys())
-    reduced_data = PCA(n_components=2).fit_transform(data_feats_scaled)
-    kmeans = KMeans(init="k-means++", n_clusters=n_clusters, n_init=4)
-    kmeans.fit(reduced_data)
-
     y_true = df.type.map(label_map).to_numpy()
+
+    # with PCA reduction
+    reduced_data = PCA(n_components=2).fit_transform(data_feats_scaled)
+    kmeans = KMeans(init="k-means++", n_clusters=n_clusters)
+    kmeans.fit(reduced_data)
     y_pred = kmeans.labels_
 
-    print("--- K means report ---")
+    print("--- K means report (with PCA reduction to 2D) ---")
+    print(classification_report(y_true, y_pred))
+
+    # without PCA reduction
+    kmeans = KMeans(init="k-means++", n_clusters=n_clusters)
+    kmeans.fit(data_feats_scaled)
+    y_pred = kmeans.labels_
+
+    print("--- K means report (NO PCA reduction) ---")
     print(classification_report(y_true, y_pred))
 
 
-def prep_for_sklearn(data_feats, data_labels, names, args):
+def prep_for_sklearn(data_feats, data_labels, names, args, final_test=False):
     """Get data ready for sklearn analysis
 
     Args:
@@ -1508,6 +1637,7 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
         data_labels (array): Label for each data item
         names (array): Names for each data item
         args (dict): Arguments passed to the script
+        final_test (bool): If we are running final test
 
     Raises:
         ValueError: If overlap between train and test indices
@@ -1520,20 +1650,6 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
         test_indices_main (list): List of indices of test data
     """
 
-    warnings.warn(
-        "There must be a config file for k_fold.yaml in the directory for this to work"
-    )
-
-    # load config
-    config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
-    with open(config_path, "r") as ymlfile:
-        k_fold_config = yaml.safe_load(ymlfile)
-
-    splits = k_fold_config["splits"]
-    train_folds = splits["train"]
-    val_folds = splits["val"]
-    test_folds = splits["test"]
-
     df = pl.DataFrame(
         {
             "X": data_feats,
@@ -1541,34 +1657,6 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
             "name": names,
         }
     )
-
-    # get indices of train/test for CV
-    train_indices_main = []
-    val_indices_main = []
-    test_indices_main = []
-
-    for index, train_fold in enumerate(train_folds):
-        val_fold = val_folds[index]
-        test_fold = test_folds[index]
-
-        train_bool = df["name"].is_in(train_fold).to_list()
-        val_bool = df["name"].is_in(val_fold).to_list()
-        test_bool = df["name"].is_in(test_fold).to_list()
-
-        train_indices = np.where(train_bool)[0]
-        val_indices = np.where(val_bool)[0]
-        test_indices = np.where(test_bool)[0]
-
-        train_indices_main.append(train_indices)
-        val_indices_main.append(val_indices)
-        test_indices_main.append(test_indices)
-
-        if any(i in train_indices for i in test_indices):
-            raise ValueError("Should not share common values")
-        if any(i in train_indices for i in val_indices):
-            raise ValueError("Should not share common values")
-        if any(i in test_indices for i in val_indices):
-            raise ValueError("Should not share common values")
 
     num_features = len(df["X"][0])
     print("Num features: ", num_features)
@@ -1581,7 +1669,55 @@ def prep_for_sklearn(data_feats, data_labels, names, args):
     X = df["X"].to_list()
     Y = df["Y"].to_list()
 
-    return X, Y, train_indices_main, val_indices_main, test_indices_main
+    if not final_test:
+        warnings.warn(
+            "There must be a config file for k_fold.yaml in the directory for this to work"
+        )
+
+        # load config
+        config_path = os.path.join(args.project_directory, "config/k_fold.yaml")
+        with open(config_path, "r") as ymlfile:
+            k_fold_config = yaml.safe_load(ymlfile)
+
+        splits = k_fold_config["splits"]
+        train_folds = splits["train"]
+        val_folds = splits["val"]
+        test_folds = splits["test"]
+
+        # get indices of train/test for CV
+        train_indices_main = []
+        val_indices_main = []
+        test_indices_main = []
+
+        for index, train_fold in enumerate(train_folds):
+            val_fold = val_folds[index]
+            test_fold = test_folds[index]
+
+            train_bool = df["name"].is_in(train_fold).to_list()
+            val_bool = df["name"].is_in(val_fold).to_list()
+            test_bool = df["name"].is_in(test_fold).to_list()
+
+            train_indices = np.where(train_bool)[0]
+            val_indices = np.where(val_bool)[0]
+            test_indices = np.where(test_bool)[0]
+
+            train_indices_main.append(train_indices)
+            val_indices_main.append(val_indices)
+            test_indices_main.append(test_indices)
+
+            if any(i in train_indices for i in test_indices):
+                raise ValueError("Should not share common values")
+            if any(i in train_indices for i in val_indices):
+                raise ValueError("Should not share common values")
+            if any(i in test_indices for i in val_indices):
+                raise ValueError("Should not share common values")
+
+        return X, Y, train_indices_main, val_indices_main, test_indices_main
+
+    else:
+        # This needs to be changed to return valid indices if
+        # implement sklearn for final test
+        return X, Y, None, None, None
 
 
 def fold_results(
@@ -1735,7 +1871,12 @@ def log_reg(
     """
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), LogisticRegression(max_iter=1000))
+    pipeline = Pipeline(
+        steps=[
+            ("scaler", StandardScaler()),
+            ("logistic", LogisticRegression(max_iter=1000)),
+        ]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Log reg.-------")
@@ -1745,8 +1886,8 @@ def log_reg(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_C",
-            "param_penalty",
+            "param_logistic__C",
+            "param_logistic__penalty",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1759,7 +1900,9 @@ def log_reg(
     df.to_csv(save_df_path, index=False)
 
     best_model = clf.best_estimator_
-    best_feats = dict(zip(features, best_model.coef_[0].tolist()))
+    best_feats = dict(
+        zip(features, best_model.named_steps["logistic"].coef_[0].tolist())
+    )
     print("------ Coefficients --------")
     coeffs = sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
     print(coeffs)
@@ -1767,7 +1910,11 @@ def log_reg(
     save_df_path = os.path.join(save_dir, "best_coeffs.csv")
     coeff_df.to_csv(save_df_path, index=False)
 
-    model = LogisticRegression(max_iter=1000, **clf.best_params_)
+    model = LogisticRegression(
+        max_iter=1000,
+        C=clf.best_params_["logistic__C"],
+        penalty=clf.best_params_["logistic__penalty"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -1825,7 +1972,9 @@ def dec_tree(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), DecisionTreeClassifier())
+    pipeline = Pipeline(
+        steps=[("scaler", StandardScaler()), ("tree", DecisionTreeClassifier())]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("-----Dec tree.------")
@@ -1835,8 +1984,8 @@ def dec_tree(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_max_depth",
-            "param_max_features",
+            "param_tree__max_depth",
+            "param_tree__max_features",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1849,7 +1998,9 @@ def dec_tree(
     df.to_csv(save_df_path, index=False)
 
     best_model = clf.best_estimator_
-    best_feats = dict(zip(features, best_model.feature_importances_.tolist()))
+    best_feats = dict(
+        zip(features, best_model.named_steps["tree"].feature_importances_.tolist())
+    )
     print("------ Coefficients --------")
     coeffs = sorted(best_feats.items(), key=lambda x: abs(x[1]), reverse=True)
     print(coeffs)
@@ -1857,7 +2008,10 @@ def dec_tree(
     save_df_path = os.path.join(save_dir, "best_coeffs.csv")
     coeff_df.to_csv(save_df_path, index=False)
 
-    model = DecisionTreeClassifier(**clf.best_params_)
+    model = DecisionTreeClassifier(
+        max_depth=clf.best_params_["tree__max_depth"],
+        max_features=clf.best_params_["tree__max_features"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -1913,7 +2067,7 @@ def svm(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), SVC())
+    pipeline = Pipeline(steps=[("scaler", StandardScaler()), ("svm", SVC())])
     clf = GridSearchCV(pipeline, parameters, cv=cv, verbose=4)
 
     print("--------SVM---------")
@@ -1923,9 +2077,9 @@ def svm(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_C",
-            "param_kernel",
-            "param_gamma",
+            "param_svm__C",
+            "param_svm__kernel",
+            "param_svm__gamma",
             "mean_test_score",
             "std_test_score",
             "rank_test_score",
@@ -1939,7 +2093,11 @@ def svm(
 
     best_model = clf.best_estimator_
 
-    model = SVC(**clf.best_params_)
+    model = SVC(
+        C=clf.best_params_["svm__C"],
+        kernel=clf.best_params_["svm__kernel"],
+        gamma=clf.best_params_["svm__gamma"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()
@@ -1995,7 +2153,9 @@ def knn(
 
     cv = iter(zip(train_indices_main, val_indices_main))
 
-    pipeline = make_pipeline(StandardScaler(), KNeighborsClassifier())
+    pipeline = Pipeline(
+        steps=[("scaler", StandardScaler()), ("knn", KNeighborsClassifier())]
+    )
     clf = GridSearchCV(pipeline, parameters, cv=cv)
 
     print("--------KNN---------")
@@ -2005,7 +2165,7 @@ def knn(
     df = pd.DataFrame(clf.cv_results_)
     df = df[
         [
-            "param_n_neighbors",
+            "param_knn__n_neighbors",
             # "param_weights",
             "mean_test_score",
             "std_test_score",
@@ -2020,7 +2180,10 @@ def knn(
 
     best_model = clf.best_estimator_
 
-    model = KNeighborsClassifier(**clf.best_params_)
+    model = KNeighborsClassifier(
+        n_neighbors=clf.best_params_["knn__n_neighbors"],
+        weights=clf.best_params_["knn__weights"],
+    )
 
     train_indices = train_indices_main.copy()
     val_indices = val_indices_main.copy()

@@ -21,7 +21,10 @@ def main(argv=None):
         argv : Custom arguments to run script with
 
     Raises:
-        ValueError: If try to preprocess but already files there"""
+        ValueError: If try to preprocess but already files there
+
+    Returns:
+        1: Returns 1 in the case that files are already preprocessed"""
 
     # parse arugments
     parser = argparse.ArgumentParser(
@@ -74,7 +77,10 @@ def main(argv=None):
         output_folder = os.path.join(project_directory, "preprocessed")
     else:
         output_folder = os.path.join(project_directory, args.preprocessed_folder)
-    if not os.path.exists(output_folder):
+    # If already preprocessed e.g. copying from other folder then don't need to run and should skip
+    if os.path.exists(output_folder):
+        return 1
+    else:
         os.makedirs(output_folder)
 
     # save to metadata

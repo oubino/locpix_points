@@ -62,7 +62,9 @@ Install other requirements
 
 .. code-block:: python
 
+    cd locpix_points
     pip install -r requirements.txt
+    cd ..
 
 Also need to install DIG
 
@@ -94,7 +96,7 @@ Install external packages
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
 
-Then install this repository
+Then install this repository, its additional requirements and pytorch geometric as above 
 
 .. code-block:: python
 
@@ -102,14 +104,31 @@ Then install this repository
     pip install -e .
     cd ..
 
-Then install pytorch geometric
+.. code-block:: python
+
+    cd pytorch_geometric
+    pip install -e .
+    cd ..
 
 .. code-block:: python
 
-    pip install torch-geometric
+    cd locpix_points
+    pip install -r requirements.txt
+    cd ..
 
+Problems
+--------
 
-Note need to install locpix points as well
+You may have difficulty installing the following: open3d, torch-scatter, torch-sparse, torch-cluster
+
+To navigate this we can 
+
+1. Remove open3d, torch-scatter, torch-sparse and torch-cluster from requirements.txt
+2. For the moment no fix for open3d
+3. For torch-scatter, torch-sparse and torch-cluster - where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page
+    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
 
 Quickstart (Linux)
 ==================
@@ -612,6 +631,10 @@ This is different to initialise as we now ASSUME that your input data is located
     └── test
         ├── file_0.parquet
         └── ...
+
+*Description*
+
+If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files
     
 *Warning*
 
@@ -620,6 +643,101 @@ Currently data has to have gt_labels already loaded in
 AND
 
 There is only feature analysis of manual features
+
+Running final test
+==================
+
+1. Initialise a project directory 
+
+.. code-block:: python
+
+    final_test
+
+*Notes*
+This will create a project directory, if copy already preprocessed files then will ASSUME these are train files and place these in folder preprocessed/train
+
+2. Navigate to the project directory
+
+3. Amend all config files
+
+4. Preprocess the data
+
+.. code-block:: shell
+
+    bash scripts/preprocess.sh
+
+*Notes*
+If the train files already copied acrossed will skip this otherwise will preprocess the train files into preprocessed/train
+Will preprocess the test files into preprocessed/test
+
+5. Annotate the data (Optional)
+
+.. code-block:: shell
+
+    bash scripts/annotate.sh
+
+6. Extract features
+
+.. code-block:: shell
+
+    bash scripts/featextract.sh
+
+*Notes*
+Will extract features from train and test folders - similarly will skip preprocessed/train if files copied across from another folder
+
+7. Process the data
+
+.. code-block:: shell
+
+    bash scripts/process.sh
+
+8. Run training 
+
+.. code-block:: shell
+
+    bash scripts/train.sh
+
+
+*Notes*
+Trains of all the training data
+
+9. Run evaluation
+
+.. code-block:: shell
+
+    bash scripts/evaluate.sh
+
+*Notes*
+Evaluate on the test set
+
+10. Analyse manual features
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_manual.sh
+
+*Notes*
+Analyse the manual features just for the TEST set
+No sklearn prediction models as this requires further changes
+
+10. Analyse neural network features for one fold
+
+Adjust config file to choose fold
+
+.. code-block:: shell
+
+    bash scripts/featanalyse_nn.sh
+
+*Notes*
+For XAI algos that need training will train of train dataset but all evaluation and 
+results are on the test set
+No sklearn prediction models as this requires further changes
+
+11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+
+.. code-block:: shell
+
+    visualise [ARGS] 
 
 Generate figures using OriginPro
 ================================

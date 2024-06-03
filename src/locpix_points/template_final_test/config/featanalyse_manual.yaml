@@ -3,7 +3,13 @@ pca_vs_convex_hull: False
 # plot features to screen (features will be saved regardless)
 boxplots: True
 # run umap on the features
-umap: True
+umap:
+  # if implement True will run UMAP
+  implement: True
+  # number of neighbors
+  n_neighbors: 100
+  # min distance
+  min_dist: 0.5
 # run kmeans on the features
 kmeans: True
 # run pca on the data
@@ -31,33 +37,3 @@ features:
   #- area_convex_hull
   #- length_convex_hull
   #- density_convex_hull
-
-# if specified then logistic regression applied to features
-log_reg:
-  # penalties to evaluate
-  penalty: [CHANGE]
-  # inverse of regularisation strength
-  C: [CHANGE]
-
-# if specified then decision tree applied to features
-dec_tree:
-  # depth of tree
-  max_depth: [CHANGE]
-  # number features to consider
-  max_features: [CHANGE]
-
-# if specified then svm applied to features
-svm:
-  # regularisation parameter
-  C: [CHANGE]
-  #'kernel used
-  kernel: [CHANGE]
-  # kernel coefficient
-  gamma: [CHANGE]
-
-# if specified then knn applied to features
-knn:
-  # number of neighbours
-  n_neighbors: [CHANGE]
-  # weight function used during prediction
-  weights: [CHANGE]

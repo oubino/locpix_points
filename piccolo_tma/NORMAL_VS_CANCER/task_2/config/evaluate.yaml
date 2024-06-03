@@ -5,7 +5,7 @@ load_data_from_gpu: False
 label_level: graph # Options: [node, graph]
 
 # number of classes in the dataset
-num_classes: 7
+num_classes: 2
 
 # whether to evaluate on the gpu
 eval_on_gpu: True
@@ -17,7 +17,7 @@ model: locclusternet # Options: see below
 locclusternet:
 
   # +++ LocNet parameters +++
-  loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
+  loc_conv_type: pointtransformer # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
   ratio: 0.5
   # For each point we sample nearest neighbours up to nearest neighbours (k)
@@ -46,16 +46,16 @@ locclusternet:
   # ++++++++++++++++++++++++++++++++++++++++
 
   # +++++ ClusterNet parameters +++++
-  # Dropout for each layer
-  dropout: 0.0
-  cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
+  # Dropout for each layer during evaluate should be 0.0
+  dropout: 0.0 # CAREFUL CHANGING!
+  cluster_conv_type: pointtransformer # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
-  OutputChannels: 7
+  OutputChannels: 2
   # add position coordinates to each cluster
   add_cluster_pos: False
 
   # --- if cluster_conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[10, 12, 16],[18, 20, 24],[26, 28, 32],[34, 36, 40]]
+  ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
   # ------------------------------------
 
   # --- if cluster_conv_type == transformer ----

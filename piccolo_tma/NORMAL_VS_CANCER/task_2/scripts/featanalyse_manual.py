@@ -11,7 +11,6 @@ def main():
             ".",
             "-c",
             "./config/featanalyse_manual.yaml",
-            "-f",
         ]
     )
 

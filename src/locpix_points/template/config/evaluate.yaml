@@ -19,7 +19,7 @@ locclusternet:
   # +++ LocNet parameters +++
   loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 1.0
+  ratio: 0.5
   # For each point we sample nearest neighbours up to nearest neighbours (k)
   k: 3
 
