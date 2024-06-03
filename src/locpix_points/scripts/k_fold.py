@@ -7,6 +7,7 @@ Recipe :
 """
 
 import argparse
+import logging
 import os
 import json
 import time
@@ -89,6 +90,9 @@ def main(argv=None):
         assert train_fold != val_fold
         assert train_fold != test_fold
         assert val_fold != test_fold
+
+    # log errors
+    logging.basicConfig(filename="errors.txt", level=logging.DEBUG)
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):

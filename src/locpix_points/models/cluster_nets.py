@@ -13,6 +13,7 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, conv
+from torch_geometric.nn.aggr import MaxAggregation
 from torch_geometric.nn.pool import global_mean_pool, global_max_pool
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
@@ -79,7 +80,7 @@ class ClusterEncoder(torch.nn.Module):
                 aggr="max",
             )
         elif conv_type == "pointnet":
-            nn = MLP(channel_list, plain_last=False, dropout=dropout)
+            nn = MLP(channel_list, plain_last=False, dropout=dropout)  # BN
             self.conv = HeteroConv(
                 {
                     ("clusters", "near", "clusters"): conv.PointNetConv(
@@ -89,12 +90,12 @@ class ClusterEncoder(torch.nn.Module):
                 aggr="max",
             )
         elif conv_type == "pointtransformer":
-            pos_nn = MLP(
+            pos_nn = MLP(  # BN
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
             )
-            attn_nn = MLP(
+            attn_nn = MLP(  # BN
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
@@ -392,14 +393,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3.load_state_dict(state_dict_saved)
             self.cluster_encoder_3.aggr = "max"
             # linear
-            self.linear = Linear(config["tr_out_channels"][2], config["OutputChannels"])
+            self.linear = Linear(
+                config["tr_out_channels"][-1], config["OutputChannels"]
+            )
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
 
         elif config["cluster_conv_type"] == "pointnet":
             # first
             self.cluster_encoder_0 = conv.PointNetConv(
-                MLP(
+                MLP(  # BN
                     config["ClusterEncoderChannels"][0],
                     plain_last=False,
                     dropout=config["dropout"],
@@ -413,7 +416,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_0.aggr = "max"
             # second
             self.cluster_encoder_1 = conv.PointNetConv(
-                MLP(
+                MLP(  # BN
                     config["ClusterEncoderChannels"][1],
                     plain_last=False,
                     dropout=config["dropout"],
@@ -427,7 +430,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_1.aggr = "max"
             # third
             self.cluster_encoder_2 = conv.PointNetConv(
-                MLP(
+                MLP(  # BN
                     config["ClusterEncoderChannels"][2],
                     plain_last=False,
                     dropout=config["dropout"],
@@ -441,7 +444,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_2.aggr = "max"
             # fourth
             self.cluster_encoder_3 = conv.PointNetConv(
-                MLP(
+                MLP(  # BN
                     config["ClusterEncoderChannels"][3],
                     plain_last=False,
                     dropout=config["dropout"],
@@ -465,7 +468,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_0 = conv.PointTransformerConv(
                 config["pt_tr_in_channels"][0],
                 config["pt_tr_out_channels"][0],
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_dim"],
                         config["pt_tr_pos_nn_layers"],
@@ -474,7 +477,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     plain_last=False,
                     dropout=config["dropout"],
                 ),
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_out_channels"][0],
                         config["pt_tr_attn_nn_layers"],
@@ -495,7 +498,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_1 = conv.PointTransformerConv(
                 config["pt_tr_in_channels"][1],
                 config["pt_tr_out_channels"][1],
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_dim"],
                         config["pt_tr_pos_nn_layers"],
@@ -504,7 +507,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     plain_last=False,
                     dropout=config["dropout"],
                 ),
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_out_channels"][1],
                         config["pt_tr_attn_nn_layers"],
@@ -525,7 +528,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_2 = conv.PointTransformerConv(
                 config["pt_tr_in_channels"][2],
                 config["pt_tr_out_channels"][2],
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_dim"],
                         config["pt_tr_pos_nn_layers"],
@@ -534,7 +537,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     plain_last=False,
                     dropout=config["dropout"],
                 ),
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_out_channels"][2],
                         config["pt_tr_attn_nn_layers"],
@@ -555,7 +558,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3 = conv.PointTransformerConv(
                 config["pt_tr_in_channels"][3],
                 config["pt_tr_out_channels"][3],
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_dim"],
                         config["pt_tr_pos_nn_layers"],
@@ -564,7 +567,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
                     plain_last=False,
                     dropout=config["dropout"],
                 ),
-                MLP(
+                MLP(  # BN
                     [
                         config["pt_tr_out_channels"][3],
                         config["pt_tr_attn_nn_layers"],
@@ -583,13 +586,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3.aggr = "max"
             # linear
             self.linear = Linear(
-                config["pt_tr_out_channels"][2], config["OutputChannels"]
+                config["pt_tr_out_channels"][-1], config["OutputChannels"]
             )
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
 
         else:
             raise ValueError("conv_type should be transformer or ginconv")
+
+        # define pool as part of model so can access
+        self.pool = MaxAggregation()
 
     def forward(self, x, edge_index, batch, pos, logits=True):
         """The method called when ClusterNetHomogeneous is used on a dataitem
@@ -633,7 +639,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             x = self.cluster_encoder_3(x, pos, edge_index)
 
         # pooling step so end up with one feature vector per fov
-        x = global_max_pool(x, batch)
+        x = self.pool(x, index=batch)
 
         # linear layer on each fov feature vector
         if logits:
@@ -708,7 +714,7 @@ class ClusterNetHetero(torch.nn.Module):
                     tr_concat=config["tr_concat"],
                     tr_beta=config["tr_beta"],
                 ),
-                Linear(config["tr_out_channels"][2], config["OutputChannels"]),
+                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
             )
         elif config["cluster_conv_type"] == "pointnet":
             self.cluster_net = ClusterNet(
@@ -774,7 +780,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
-                Linear(config["pt_tr_out_channels"][2], config["OutputChannels"]),
+                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
             )
         else:
             conv_type = config["cluster_conv_type"]
@@ -830,7 +836,7 @@ class ClusterMLP(torch.nn.Module):
             x = data.x_dict["clusters"]
         except KeyError:
             raise KeyError("Clusters need to have features present")
-        x = self.MLP_in(x, batch=data["clusters"].batch)
+        x = self.MLP_in(x)
         x = global_max_pool(x, batch=data["clusters"].batch)
         x = self.linear(x)
 

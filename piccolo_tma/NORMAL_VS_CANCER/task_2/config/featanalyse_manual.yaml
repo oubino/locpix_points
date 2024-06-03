@@ -41,29 +41,29 @@ pca:
 # if specified then logistic regression applied to features
 log_reg:
   # penalties to evaluate
-  logistic__penalty: ["l2"]
+  penalty: ["l2"]
   # inverse of regularisation strength
-  logistic__C: [0.1, 0.5, 1]
+  C: [0.1, 0.5, 1]
 
 # if specified then decision tree applied to features
 dec_tree:
   # depth of tree
-  tree__max_depth: [40, 45, 50]
+  max_depth: [40, 45, 50]
   # number features to consider
-  tree__max_features: [4, 5, 6]
+  max_features: [4, 5, 6]
 
 # if specified then svm applied to features
 svm:
   # regularisation parameter
-  svm__C: [1]
+  C: [1]
   #'kernel used
-  svm__kernel: ["rbf"]
+  kernel: ["rbf"]
   # kernel coefficient
-  svm__gamma: ["scale"]
+  gamma: ["scale"]
 
 # if specified then knn applied to features
 knn:
   # number of neighbours
-  knn__n_neighbors: [3,5,7,9,11]
+  n_neighbors: [3,5,7,9,11]
   # weight function used during prediction
-  knn__weights: ["distance"]
+  weights: ["distance"]

@@ -4,7 +4,7 @@ Extracts features for the data
 """
 
 import itertools
-import warnings
+import logging
 
 import numpy as np
 import polars as pl
@@ -167,11 +167,11 @@ def load_loc_cluster(
     x_range = x_locs.max() - min_x
     y_range = y_locs.max() - min_y
     if x_range < 0.95 * fov_x:
-        warnings.warn(
-            f"Range of x data: {x_range} is smaller than 95% of the wdith of the fov: {fov_x}"
+        logging.info(
+            f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
         )
     if y_range < 0.95 * fov_y:
-        warnings.warn(
+        logging.info(
             f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
         )
     range_xy = max(x_range, y_range)
