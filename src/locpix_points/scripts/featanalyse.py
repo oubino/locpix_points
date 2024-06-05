@@ -156,7 +156,7 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
         # negative nodes
         neg_nodes = o3d.geometry.PointCloud()
-        if type(ind_zero) == list:
+        if ind_zero.ndim != 0:
             pos = pos[ind_zero]
             colors = colors[ind_zero]
         else:
@@ -1229,22 +1229,30 @@ def analyse_nn_feats(project_directory, label_map, config, args):
     )
     h_1 = cluster_model.pool.register_forward_hook(getActivation("globalpool"))
 
+    labels = []
+    predictions = []
+
     for _, data in enumerate(dataset):
         # gt label
         gt_label = int(data.y)
         label = gt_label_map[gt_label]
+        data.to(device)
 
         # file name
         file_name = data.name + ".parquet"
 
         # forward through network
-        _ = cluster_model(
+        logits = cluster_model(
             data.x,
             data.edge_index,
             torch.tensor([0], device=device),
             data.pos,
             logits=True,
         )
+
+        prediction = logits.argmax(-1).item()
+        labels.append(gt_label)
+        predictions.append(prediction)
 
         # convert to polars
         if config["encoder"] == "loc":
@@ -1259,6 +1267,8 @@ def analyse_nn_feats(project_directory, label_map, config, args):
         cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
         cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
         dfs.append(cluster_df)
+
+    print("accuracy", accuracy_score(labels, predictions))
 
     # remove foward hook
     h_0.remove()

@@ -35,7 +35,7 @@ umap:
   # min distance
   min_dist: 0.5
 # run kmeans on the features
-kmeans: False
+kmeans: True
 # run pca on the data
 pca:
   # if implement True will run PCA
