@@ -41,6 +41,8 @@ dependencies = [
     "importlib_resources",
     "scikit-learn",
     "umap",
+    "ipympl",
+    "mplcursors",
 ]
 
 [project.scripts]
