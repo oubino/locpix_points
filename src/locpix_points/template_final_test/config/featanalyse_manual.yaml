@@ -1,24 +1,3 @@
-# plot pca length/area vs convex hull to compare
-pca_vs_convex_hull: False
-# plot features to screen (features will be saved regardless)
-boxplots: True
-# run umap on the features
-umap:
-  # if implement True will run UMAP
-  implement: True
-  # number of neighbors
-  n_neighbors: 100
-  # min distance
-  min_dist: 0.5
-# run kmeans on the features
-kmeans: True
-# run pca on the data
-pca:
-  # if implement True will run PCA
-  implement: True
-  # number of compoments to retain during PCA
-  n_components: 2
-
 # map from real terms to the integer labels
 label_map:
   fib: 0
