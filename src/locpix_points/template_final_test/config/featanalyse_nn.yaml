@@ -55,7 +55,7 @@ locclusternet:
   add_cluster_pos: False
 
   # --- if cluster_conv_type == gin OR pointnet ------------
-  ClusterEncoderChannels: [[10, 12, 16],[18,20,24],[26,28,32], [34,36,40]]
+  ClusterEncoderChannels: [[[10, 12, 14], [14, 16, 16]],[[18, 20, 22], [22, 24, 24]],[[26, 28, 30], [30, 32, 32]],[[34, 36, 38], [38, 40, 40]]]
   # ------------------------------------
 
   # --- if cluster_conv_type == transformer ----
@@ -82,31 +82,6 @@ locclusternet:
   # dimensions of data: options = [2,3]
   pt_tr_dim: 2
   # -------------------------------------------------
-
-# if want to look at cluster features after having just gone through locnet: loc
-# if want to look at cluster features having gone through cluster net as well: cluster
-# if want to look at per fov features: fov
-encoder: loc
-# plot pca length/area vs convex hull to compare
-pca_vs_convex_hull: False
-# plot features to screen (features will be saved regardless)
-boxplots: True
-# run umap on the features
-umap:
-  # if implement True will run UMAP
-  implement: True
-  # number of neighbors
-  n_neighbors: 100
-  # min distance
-  min_dist: 0.5
-# run kmeans on the features
-kmeans: True
-# run pca on the data
-pca:
-  # if implement True will run PCA
-  implement: True
-  # number of compoments to retain during PCA
-  n_components: 2
 
 # ---- Explainable AI arguments -----
 
