@@ -92,7 +92,7 @@ locclusternet:
 
 # if want to look at cluster features after having just gone through locnet: loc
 # if want to look at cluster features having gone through cluster net as well: cluster
-encoder: fov
+encoder: cluster
 # plot pca length/area vs convex hull to compare
 pca_vs_convex_hull: False
 # plot features to screen (features will be saved regardless)
@@ -148,35 +148,35 @@ knn:
 
 # list of files to run through XAI
 # any integers starting from 0 up to number of test dataitems
-dataitem: [0, 1000, 2000, 3000, 4000]
+dataitem: [0, 1, 9, 19, 2000, 2001, 2020] # [0, 1000, 2000, 3000, 3500, 4000]
 
 # threshold to apply to edge mask for pyg explain
 edge_mask_threshold: 0.5
 
 # if specified then run through subgraphx
-# subgraphx:
-#   # number of iterations to get prediction
-#   rollout: 20
-#   # number of atoms of leaf node in search tree
-#   min_atoms: 5
-#   # hyperparameter that encourages exploration
-#   c_puct: 10.0
-#   # number of atoms to expand when extend the child nodes in the search tree
-#   expand_atoms: 14
-#   # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
-#   high2low: False
-#   # number of local radius to caclulate
-#   local_radius: 4
-#   # sampling time of montecarlo approxim
-#   sample_num: 100
-#   # reward method
-#   reward_method: "mc_l_shapley"
-#   # subgrpah building method
-#   subgraph_building_method: "split"
-#   # maximum number of nodes to include in subgraph when generating explanation
-#   max_nodes: 8
-#   # number of classes
-#   num_classes: 7
+subgraphx:
+  # number of iterations to get prediction
+  rollout: 20
+  # number of atoms of leaf node in search tree
+  min_atoms: 5
+  # hyperparameter that encourages exploration
+  c_puct: 10.0
+  # number of atoms to expand when extend the child nodes in the search tree
+  expand_atoms: 14
+  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
+  high2low: False
+  # number of local radius to caclulate
+  local_radius: 4
+  # sampling time of montecarlo approxim
+  sample_num: 100
+  # reward method
+  reward_method: "mc_l_shapley"
+  # subgrpah building method
+  subgraph_building_method: "split"
+  # maximum number of nodes to include in subgraph when generating explanation
+  max_nodes: 8
+  # number of classes
+  num_classes: 7
 
 # if specified then run through gradcam
 #gradcam:
@@ -186,37 +186,37 @@ edge_mask_threshold: 0.5
 #  sparsity: 0.7
 
 # if specified then run through pgexplainer
-#pgex:
-#  # size regularization to constrain the explanation size
-#  edge_size: 0.00000001
-#  # entropy regularization to constrain the connectivity of explanation
-#  edge_ent: 0.00000001
-#  # maximum number of networks to train explanation network
-#  max_epochs: 10
-#  # learning rate during training of explanation network
-#  lr: 0.003
-#  # batch size during training of explanation network
-#  batch_size: 128
-#  # each value in the the edge mask is divided by temperature
-#  # i.e. lower temperature more confidence vs higher temperature
-#  # more spread out confidence in masks
-#  # where temperature is given by
-#  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
-#  # i.e. at low epochs closer to temp[0]
-#  # and at high epochs closer to temp[1]
-#  # since temp[0] > temp[1]
-#  # at low epochs higher temp, at high epochs lower temp
-#  # i.e. start with more uniform sampling towards spikier sampling
-#  temp: [5.0,2.0]
-#  # bias  - one of the terms in sampling 
-#  bias: 0.0
+pgex:
+  # size regularization to constrain the explanation size
+  edge_size: 0.00000001
+  # entropy regularization to constrain the connectivity of explanation
+  edge_ent: 0.00000001
+  # maximum number of networks to train explanation network
+  max_epochs: 20
+  # learning rate during training of explanation network
+  lr: 0.003
+  # batch size during training of explanation network
+  batch_size: 128
+  # each value in the the edge mask is divided by temperature
+  # i.e. lower temperature more confidence vs higher temperature
+  # more spread out confidence in masks
+  # where temperature is given by
+  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
+  # i.e. at low epochs closer to temp[0]
+  # and at high epochs closer to temp[1]
+  # since temp[0] > temp[1]
+  # at low epochs higher temp, at high epochs lower temp
+  # i.e. start with more uniform sampling towards spikier sampling
+  temp: [5.0,2.0]
+  # bias  - one of the terms in sampling 
+  bias: 0.0
 
 # if specified then examine attention for models
-#attention:
-#  # specify which models have attention
-#  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
-#  # how to combine attention scores across multiple attention heads
-#  reduce: max
+attention:
+  # specify which models have attention
+  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
+  # how to combine attention scores across multiple attention heads
+  reduce: max
 
 # ----- Archived arguments ----------
 dim: 2

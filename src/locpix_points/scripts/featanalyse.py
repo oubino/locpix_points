@@ -156,7 +156,7 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
         # negative nodes
         neg_nodes = o3d.geometry.PointCloud()
-        if type(ind_zero) == list:
+        if ind_zero.ndim != 0:
             pos = pos[ind_zero]
             colors = colors[ind_zero]
         else:
@@ -1189,12 +1189,13 @@ def get_features(dataset, cluster_model, gt_label_map, encoder, device):
         # gt label
         gt_label = int(data.y)
         label = gt_label_map[gt_label]
+        data.to(device)
 
         # file name
         file_name = data.name + ".parquet"
 
         # forward through network
-        prediction = cluster_model(
+        logits = cluster_model(
             data.x,
             data.edge_index,
             torch.tensor([0], device=device),
@@ -1202,8 +1203,10 @@ def get_features(dataset, cluster_model, gt_label_map, encoder, device):
             logits=True,
         )
 
-        predictions.append(prediction.log_softmax(dim=-1).argmax().cpu().item())
-        labels.append(data.y[0].cpu().item())
+
+        prediction = logits.argmax(-1).item()
+        labels.append(gt_label)
+        predictions.append(prediction)
 
         # convert to polars
         if encoder == "loc":
