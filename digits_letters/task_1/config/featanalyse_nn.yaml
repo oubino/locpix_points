@@ -90,8 +90,6 @@ locclusternet:
   pt_tr_dim: 2
   # -------------------------------------------------
 
-# plot pca length/area vs convex hull to compare
-
 # ---- Explainable AI arguments -----
 
 # list of files to run through XAI
