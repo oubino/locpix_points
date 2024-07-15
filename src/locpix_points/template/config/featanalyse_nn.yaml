@@ -87,45 +87,6 @@ locclusternet:
 
 # ---- Explainable AI arguments -----
 
-# list of files to run through XAI
-# any integers starting from 0 up to number of test dataitems
-dataitem: [0]
-
-# threshold to apply to edge mask for pyg explain
-edge_mask_threshold: 0.5
-
-# if specified then run through subgraphx
-subgraphx:
-  # number of iterations to get prediction
-  rollout: 20
-  # number of atoms of leaf node in search tree
-  min_atoms: 5
-  # hyperparameter that encourages exploration
-  c_puct: 10.0
-  # number of atoms to expand when extend the child nodes in the search tree
-  expand_atoms: 14
-  # whether to expand the children nodes from high degreee to low degree when extend the child nodes in the search tree
-  high2low: False
-  # number of local radius to caclulate
-  local_radius: 4
-  # sampling time of montecarlo approxim
-  sample_num: 100
-  # reward method
-  reward_method: "mc_l_shapley"
-  # subgrpah building method
-  subgraph_building_method: "split"
-  # maximum number of nodes to include in subgraph when generating explanation
-  max_nodes: 14
-  # number of classes
-  num_classes: 2
-
-# if specified then run through gradcam
-gradcam:
-  # number of classes
-  num_classes: 2
-  # sparsity we need to control to transform a soft mask to a hard mask
-  sparsity: 0.7
-
 # if specified then run through pgexplainer
 pgex:
   # size regularization to constrain the explanation size
@@ -151,13 +112,3 @@ pgex:
   temp: [5.0,2.0]
   # bias - parameter for sampling
   bias: 0.0
-
-# if specified then examine attention for models
-attention:
-  # specify which models have attention
-  scale: cluster # Options: [cluster] In future will also include [loc, loccluster]
-  # how to combine attention scores across multiple attention heads
-  reduce: max
-
-# ----- Archived arguments ----------
-dim: 2
