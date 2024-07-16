@@ -93,18 +93,18 @@ locclusternet:
 # ---- Explainable AI arguments -----
 
 # if specified then run through pgexplainer
-# pgex:
-#   # size regularization to constrain the explanation size
-#   edge_size: 0.00000001
-#   # entropy regularization to constrain the connectivity of explanation
-#   edge_ent: 0.00000001
-#   # maximum number of networks to train explanation network
-#   max_epochs: 10
-#   # learning rate during training of explanation network
-#   lr: 0.003
-#   # batch size during training of explanation network
-#   batch_size: 128
-#   # ?
-#   temp: [5.0,2.0]
-#   # bias ?
-#   bias: 0.0
+pgex:
+  # size regularization to constrain the explanation size
+  edge_size: 0.00000001
+  # entropy regularization to constrain the connectivity of explanation
+  edge_ent: 0.00000001
+  # maximum number of networks to train explanation network
+  max_epochs: 20
+  # learning rate during training of explanation network
+  lr: 0.003
+  # batch size during training of explanation network
+  batch_size: 128
+  # ?
+  temp: [5.0,2.0]
+  # bias ?
+  bias: 0.0
