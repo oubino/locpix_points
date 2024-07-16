@@ -49,6 +49,7 @@ class TransformerBlock(torch.nn.Module):
             pos_nn=self.pos_nn,
             attn_nn=self.attn_nn,
             aggr="max",
+            add_self_loops=False,
         )
 
     def forward(self, x, pos, edge_index):

@@ -98,20 +98,29 @@ def test(loader):
 
 
 if __name__ == "__main__":
-    path = osp.join(
-        osp.dirname(osp.realpath(__file__)), "..", "sandpit/data/ModelNet10"
-    )
-    pre_transform, transform = T.NormalizeScale(), T.SamplePoints(1024)
-    train_dataset = ModelNet(path, "10", True, transform, pre_transform)
-    test_dataset = ModelNet(path, "10", False, transform, pre_transform)
-    train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=6)
-    test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=6)
+    if 0:
+        path = osp.join(
+            osp.dirname(osp.realpath(__file__)), "..", "sandpit/data/ModelNet10"
+        )
+        pre_transform, transform = T.NormalizeScale(), T.SamplePoints(1024)
+        train_dataset = ModelNet(path, "10", True, transform, pre_transform)
+        test_dataset = ModelNet(path, "10", False, transform, pre_transform)
+        train_loader = DataLoader(train_dataset, batch_size=32, shuffle=True, num_workers=6)
+        test_loader = DataLoader(test_dataset, batch_size=32, shuffle=False, num_workers=6)
 
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-    model = Net().to(device)
-    optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
+        device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+        model = Net().to(device)
+        optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 
-    for epoch in range(1, 201):
-        train(epoch)
-        test_acc = test(test_loader)
-        print(f"Epoch: {epoch:03d}, Test: {test_acc:.4f}")
+        for epoch in range(1, 201):
+            train(epoch)
+            test_acc = test(test_loader)
+            print(f"Epoch: {epoch:03d}, Test: {test_acc:.4f}")
+    
+    else:
+        file_path = "data/test/0.pt"
+        file = torch.load(file_path)
+        model = Net()
+        output = model(file)
+        
+

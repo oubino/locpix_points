@@ -80,11 +80,12 @@ class ClusterEncoder(torch.nn.Module):
                 aggr="max",
             )
         elif conv_type == "pointnet":
-            nn = MLP(channel_list, plain_last=False, dropout=dropout)  # BN
+            local_nn = MLP(channel_list[0], plain_last=True, dropout=dropout)  # BN
+            global_nn = MLP(channel_list[1], plain_last=True, dropout=dropout)  # BN
             self.conv = HeteroConv(
                 {
                     ("clusters", "near", "clusters"): conv.PointNetConv(
-                        nn, add_self_loops=False
+                        local_nn, global_nn, add_self_loops=False
                     )
                 },
                 aggr="max",
@@ -403,10 +404,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             # first
             self.cluster_encoder_0 = conv.PointNetConv(
                 MLP(  # BN
-                    config["ClusterEncoderChannels"][0],
-                    plain_last=False,
+                    config["ClusterEncoderChannels"][0][0],
+                    plain_last=True,
                     dropout=config["dropout"],
-                )
+                ),
+                MLP(  # BN
+                    config["ClusterEncoderChannels"][0][1],
+                    plain_last=True,
+                    dropout=config["dropout"],
+                ),
+                add_self_loops=False,
             )
             state_dict_saved = {
                 key[40:]: value
@@ -417,10 +424,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             # second
             self.cluster_encoder_1 = conv.PointNetConv(
                 MLP(  # BN
-                    config["ClusterEncoderChannels"][1],
-                    plain_last=False,
+                    config["ClusterEncoderChannels"][1][0],
+                    plain_last=True,
                     dropout=config["dropout"],
-                )
+                ),
+                MLP(  # BN
+                    config["ClusterEncoderChannels"][1][1],
+                    plain_last=True,
+                    dropout=config["dropout"],
+                ),
+                add_self_loops=False,
             )
             state_dict_saved = {
                 key[40:]: value
@@ -431,10 +444,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             # third
             self.cluster_encoder_2 = conv.PointNetConv(
                 MLP(  # BN
-                    config["ClusterEncoderChannels"][2],
-                    plain_last=False,
+                    config["ClusterEncoderChannels"][2][0],
+                    plain_last=True,
                     dropout=config["dropout"],
-                )
+                ),
+                MLP(  # BN
+                    config["ClusterEncoderChannels"][2][1],
+                    plain_last=True,
+                    dropout=config["dropout"],
+                ),
+                add_self_loops=False,
             )
             state_dict_saved = {
                 key[40:]: value
@@ -445,10 +464,16 @@ class ClusterNetHomogeneous(torch.nn.Module):
             # fourth
             self.cluster_encoder_3 = conv.PointNetConv(
                 MLP(  # BN
-                    config["ClusterEncoderChannels"][3],
-                    plain_last=False,
+                    config["ClusterEncoderChannels"][3][0],
+                    plain_last=True,
                     dropout=config["dropout"],
-                )
+                ),
+                MLP(  # BN
+                    config["ClusterEncoderChannels"][3][1],
+                    plain_last=True,
+                    dropout=config["dropout"],
+                ),
+                add_self_loops=False,
             )
             state_dict_saved = {
                 key[40:]: value
@@ -458,7 +483,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             self.cluster_encoder_3.aggr = "max"
             # linear
             self.linear = Linear(
-                config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                config["ClusterEncoderChannels"][-1][-1][-1], config["OutputChannels"]
             )
             state_dict_saved = cluster_net_hetero.linear.state_dict()
             self.linear.load_state_dict(state_dict_saved)
@@ -1051,7 +1076,8 @@ class LocClusterNet(torch.nn.Module):
                     channel_list=config["ClusterEncoderChannels"][3],
                 ),
                 Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
                 ),
             )
         elif config["cluster_conv_type"] == "pointtransformer":
