@@ -662,11 +662,15 @@ class item:
             "dim": str(self.dim),
             "channels": str(self.channels),
             "channel_label": str(self.channel_label),
-            "gt_label_scope": self.gt_label_scope,
             "gt_label": str(self.gt_label),
             "gt_label_map": gt_label_map,
             "bin_sizes": str(self.bin_sizes),
         }
+
+        if self.gt_label_scope is None:
+            meta_data["gt_label_scope"] = "None"
+        else:
+            meta_data["gt_label_scope"] = self.gt_label_scope
 
         # add in label mapping
         # change
@@ -726,6 +730,9 @@ class item:
         bin_sizes = arrow_table.schema.metadata[b"bin_sizes"]
         bin_sizes = ast.literal_eval(bin_sizes.decode("utf-8"))
         df = pl.from_arrow(arrow_table)
+
+        if gt_label_scope == "None":
+            gt_label_scope = None
 
         self.__init__(
             name=name,

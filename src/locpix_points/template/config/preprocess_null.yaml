@@ -40,3 +40,12 @@ features: []
 
 ## GT label null (not specified)
 gt_label_scope: null
+
+# IGNORE BUT DON'T REMOVE FOLLOWING
+gt_label_loc:
+  # map from the integer labels to real terms for each localisation
+  gt_label_map:
+    0 : null # e.g. 0: background
+    1 : null # e.g. 1: membrane
+  # which column is the gt label in
+  gt_label_col : null
