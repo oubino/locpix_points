@@ -1,5 +1,6 @@
 """Initialise project"""
 
+import argparse
 import json
 import socket
 from importlib_resources import files
@@ -22,7 +23,30 @@ def get_valid_response(prompt, allowed):
     return response
 
 
-def main():
+def main(argv=None):
+    """Main script
+
+    Args:
+        argv : Custom arguments to run script with
+    """
+    # parse arugments
+    parser = argparse.ArgumentParser(
+        description="Preprocess the data for\
+        further processing."
+    )
+
+    parser.add_argument(
+        "-d",
+        "--dataset_folder",
+        action="store",
+        type=str,
+        help="path for the input data folder",
+        required=False,
+    )
+
+    args = parser.parse_args(argv)
+    data_path = args.dataset_folder
+
     # Get user name (needs to match weights and bias entity)
     user = input("Please input the user name (should match entity on wandbai): ")
 
@@ -34,9 +58,10 @@ def main():
     project_directory = os.path.join(project_path, project_name)
 
     # Get dataset location
-    root = tk.Tk()
-    root.withdraw()
-    data_path = filedialog.askdirectory(title="Dataset folder")
+    if data_path is None:
+        root = tk.Tk()
+        root.withdraw()
+        data_path = filedialog.askdirectory(title="Dataset folder")
     rel_data_path = os.path.relpath(data_path, start=project_directory)
 
     # Get dataset name
