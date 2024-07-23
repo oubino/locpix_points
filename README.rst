@@ -218,6 +218,12 @@ Initialise
 
     initialise
 
+*Arguments*
+
+    - -d (Optional) Path to the input data folder
+
+If specify data folder then runs in headless mode otherwise will get data using a window
+
 Initialise a project directory, linked to the dataset you want to analyse.
 Project directory contains the configuration files, scripts and metadata required.
 
