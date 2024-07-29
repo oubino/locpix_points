@@ -1675,7 +1675,10 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
             )
         else:
             warnings.warning(
-                "As the graphs are directed - it may still appear that the important edge is in the complement BUT this will be the edge in the other direction i.e. if two edges between two nodes and only one is important, visualising the graph and complement will appear the same between these nodes"
+                "As the graphs are directed - it may still appear that the important edge is in the "
+                "complement BUT this will be the edge in the other direction i.e. if two edges between"
+                "two nodes and only one is important, visualising the graph and complement will appear"
+                "the same between these nodes"
             )
             complement_graph = nx_graph.edge_subgraph(non_include_edges)
             complement_graph_pyg = from_networkx(
