@@ -35,7 +35,13 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import torch
 import torch_geometric.loader as L
-from torch_geometric.explain import Explainer, PGExplainer, AttentionExplainer, metric
+from torch_geometric.explain import (
+    Explainer,
+    PGExplainer,
+    AttentionExplainer,
+    metric,
+    CaptumExplainer,
+)
 from torch_geometric.utils import to_undirected, contains_self_loops
 from torch_geometric.utils.convert import to_networkx, from_networkx
 import umap
@@ -1077,7 +1083,7 @@ def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
 
 
 def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem):
-    """Evaluate SubgraphX explainability algo
+    """Evaluate attention explainability algo
 
     Args:
         cluster_model (PyG model): PyG model acts on the clusters
@@ -1212,6 +1218,81 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
             node_imp=None,
             edge_imp=explanation.edge_mask.to(device),
         )
+
+
+def saliency_eval(cluster_model, config, cluster_dataitem, device):
+    """Evaluate saliency explainability algo
+
+    Args:
+        cluster_model (PyG model): PyG model acts on the clusters
+        device (string): Device to run on
+        config (dict): Parameters for algo
+        cluster_dataitem (pyg dataitem): Cluster graph to pass through network
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph"""
+
+    explainer = Explainer(
+        model=cluster_model,
+        algorithm=CaptumExplainer(attribution_method="Saliency"),
+        explanation_type="model",
+        node_mask_type=None,
+        edge_mask_type="object",
+        model_config=dict(
+            mode="multiclass_classification",
+            task_level="graph",
+            # return logprobs
+            return_type="log_probs",
+        ),
+    )
+
+    explanation = explainer(
+        x=cluster_dataitem.x,
+        edge_index=cluster_dataitem.edge_index,
+        target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+        # kwargs passed to model
+        batch=torch.tensor([0], device=device),
+        pos=cluster_dataitem.pos,
+        # return logprobs
+        logits=False,
+    )
+    # metrics
+    print(
+        f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    )
+
+    explanation.edge_mask = torch.where(
+        explanation.edge_mask > config["edge_mask_threshold"],
+        explanation.edge_mask,
+        0.0,
+    )
+
+    print(
+        f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    )
+    # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+    # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+    # print(f"Negative fidelity closer to 0 better: {neg_fid})")
+    unf = metric.unfaithfulness(explainer, explanation)
+    print(f"Unfaithfulness, closer to 0 better {unf}")
+    visualise_explanation(
+        cluster_dataitem.pos,
+        cluster_dataitem.edge_index,
+        node_imp=None,
+        edge_imp=explanation.edge_mask.to(device),
+    )
+
+    # this commented out code removes important edges that are self loops
+    # loop_mask = cluster_dataitem.edge_index[0] == cluster_dataitem.edge_index[1]
+    # explanation.edge_mask = torch.where(~loop_mask, explanation.edge_mask, 0.0)
+
+    # alternative fidelity measure
+    subgraph, complement = custom_fidelity_measure(
+        cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+    )
+
+    return subgraph, complement
 
 
 def custom_fidelity_measure(
