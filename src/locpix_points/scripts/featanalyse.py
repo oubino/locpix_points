@@ -1674,7 +1674,7 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
                 "No complement graph as induced subgraph is the whole graph"
             )
         else:
-            warnings.warning(
+            warnings.warn(
                 "As the graphs are directed - it may still appear that the important edge is in the "
                 "complement BUT this will be the edge in the other direction i.e. if two edges between"
                 "two nodes and only one is important, visualising the graph and complement will appear"
