@@ -46,7 +46,6 @@ from torch_geometric.utils import to_undirected, contains_self_loops
 from torch_geometric.utils.convert import to_networkx, from_networkx
 import umap
 import warnings
-import warnings
 import yaml
 
 
@@ -1662,6 +1661,8 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
         nx_graph = to_networkx(data, node_attrs=["x", "pos"])
         include_edges = data.edge_index.T[imp_list].cpu().numpy()
         include_edges = list(map(tuple, include_edges))
+        non_include_edges = data.edge_index.T[non_imp_list].cpu().numpy()
+        non_include_edges = list(map(tuple, non_include_edges))
         subgraph = nx_graph.edge_subgraph(include_edges)
         subgraph_pyg = from_networkx(subgraph, group_node_attrs=["x", "pos"])
         x = subgraph_pyg.x[:, :-2]
@@ -1673,15 +1674,28 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
                 "No complement graph as induced subgraph is the whole graph"
             )
         else:
-            e = list(subgraph.nodes)
-            nx_graph.remove_nodes_from(e)
+            warnings.warning(
+                "As the graphs are directed - it may still appear that the important edge is in the complement BUT this will be the edge in the other direction i.e. if two edges between two nodes and only one is important, visualising the graph and complement will appear the same between these nodes"
+            )
+            complement_graph = nx_graph.edge_subgraph(non_include_edges)
             complement_graph_pyg = from_networkx(
-                nx_graph, group_node_attrs=["x", "pos"]
+                complement_graph, group_node_attrs=["x", "pos"]
             )
             x = complement_graph_pyg.x[:, :-2]
             pos = complement_graph_pyg.x[:, -2:]
             complement_graph_pyg.x = x
             complement_graph_pyg.pos = pos
+
+            # complement induced by the nodes not in the subgraph below
+            # e = list(subgraph.nodes)
+            # nx_graph.remove_nodes_from(e)
+            # complement_graph_pyg = from_networkx(
+            #    nx_graph, group_node_attrs=["x", "pos"]
+            # )
+            # x = complement_graph_pyg.x[:, :-2]
+            # pos = complement_graph_pyg.x[:, -2:]
+            # complement_graph_pyg.x = x
+            # complement_graph_pyg.pos = pos
 
         return subgraph_pyg, complement_graph_pyg
 
