@@ -755,6 +755,9 @@ def visualise_umap_embedding(
         project_directory (string): Project directory to save plot in"""
 
     if not interactive:
+        warnings.warn(
+            "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
+        )
         ax = umap.plot.points(embedding, labels=df.type.map(label_map))
         ax.collections[0].set_sizes(len(df) * [point_size])
         legend = ax.get_legend()
@@ -769,7 +772,7 @@ def visualise_umap_embedding(
                     color="w",
                     markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
                     markersize=point_size,
-                    label=item[0],
+                    label=item[0].capitalize(),
                 )
             )
         ax.get_legend().remove()
