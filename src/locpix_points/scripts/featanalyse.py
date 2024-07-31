@@ -758,8 +758,23 @@ def visualise_umap_embedding(
         ax = umap.plot.points(embedding, labels=df.type.map(label_map))
         ax.collections[0].set_sizes(len(df) * [point_size])
         legend = ax.get_legend()
+        new_handles = []
+        # get circular labels in legend
         for item in label_map.items():
-            legend.get_texts()[item[1]].set_text(item[0])
+            new_handles.append(
+                plt.Line2D(
+                    [],
+                    [],
+                    marker="o",
+                    color="w",
+                    markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
+                    markersize=point_size,
+                    label=item[0],
+                )
+            )
+        ax.get_legend().remove()
+        ax.axis("off")
+        ax.legend(handles=new_handles)
         plt.show()
         if save:
             save_path = os.path.join(project_directory, f"output/{save_name}.svg")
