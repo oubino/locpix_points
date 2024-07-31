@@ -45,6 +45,7 @@ from torch_geometric.explain import (
 from torch_geometric.utils import to_undirected, contains_self_loops
 from torch_geometric.utils.convert import to_networkx, from_networkx
 import umap
+import umap.plot
 import warnings
 import yaml
 
@@ -726,41 +727,59 @@ def generate_umap_embedding(X, min_dist, n_neighbours):
         min_dist=min_dist,
         n_neighbors=n_neighbours,
     )
-    embedding = reducer.fit_transform(X)
+    embedding = reducer.fit(X)
 
     return embedding
 
 
-def visualise_umap_embedding(embedding, df, label_map):
+def visualise_umap_embedding(
+    embedding,
+    df,
+    label_map,
+    point_size=5,
+    interactive=False,
+    save=False,
+    save_name="UMAP",
+    project_directory="..",
+):
     """Visualise UMAP results
 
     Args:
         embedding (array): UMAP embedding
         df (dataframe): Dataframe with data in
-        label_map (dict): Map from numbers to concepts"""
+        label_map (dict): Map from numbers to concepts
+        point_size (int): Size of points to plot UMAP
+        interactive (bool): Whether to do interactive plot
+        save (bool): Whether to save UMAP plot
+        save_name (string): Name of file to save
+        project_directory (string): Project directory to save plot in"""
 
-    # Plot UMAP - per cluster
-    plt.close("all")
-    plt.scatter(
-        embedding[:, 0],
-        embedding[:, 1],
-        c=[sns.color_palette()[x] for x in df.type.map(label_map)],
-        label=[x for x in df.type.map(label_map)],
-        s=5,
-    )
-    num_classes = len(label_map.keys())
-    patches = [
-        mpatches.Patch(color=sns.color_palette()[i], label=list(label_map.keys())[i])
-        for i in range(num_classes)
-    ]
-    cursor = mplcursors.cursor(hover=False)
-    cursor.connect(
-        "add", lambda sel: sel.annotation.set_text(f"{df.file_name[sel.index]}")
-    )
-    plt.legend(handles=patches)
-    plt.gca().set_aspect("equal", "datalim")
-    plt.title("UMAP projection of the dataset", fontsize=24)
-    plt.show()
+    if not interactive:
+        ax = umap.plot.points(embedding, labels=df.type.map(label_map))
+        ax.collections[0].set_sizes(len(df) * [point_size])
+        legend = ax.get_legend()
+        for item in label_map.items():
+            legend.get_texts()[item[1]].set_text(item[0])
+        plt.show()
+        if save:
+            save_path = os.path.join(project_directory, f"output/{save_name}.svg")
+            ax.figure.savefig(save_path)
+    else:
+        hover_data = pd.DataFrame(
+            {
+                "index": np.arange(len(df)),
+                "label": df.type.map(label_map),
+                "item": df.type,
+            }
+        )
+        umap.plot.output_notebook()
+        p = umap.plot.interactive(
+            embedding,
+            labels=df.type.map(label_map),
+            hover_data=hover_data,
+            point_size=point_size,
+        )
+        umap.plot.show(p)
 
 
 def generate_pca_embedding(X, n_components):
