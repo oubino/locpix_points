@@ -723,7 +723,11 @@ class item:
         channels = arrow_table.schema.metadata[b"channels"]
         channels = ast.literal_eval(channels.decode("utf-8"))
         gt_label = arrow_table.schema.metadata[b"gt_label"]
-        gt_label = int(gt_label)
+        try:
+            gt_label = int(gt_label)
+        except ValueError:
+            gt_label = gt_label.decode("utf-8")
+        print(gt_label)
         gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
         channel_label = arrow_table.schema.metadata[b"channel_label"]
         channel_label = ast.literal_eval(channel_label.decode("utf-8"))
