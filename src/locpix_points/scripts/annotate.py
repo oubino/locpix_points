@@ -27,7 +27,7 @@ def main(argv=None):
 
     parser.add_argument(
         "-i",
-        "--project_direcotry",
+        "--project_directory",
         action="store",
         type=str,
         help="location of the project directory",
@@ -80,7 +80,7 @@ def main(argv=None):
         os.makedirs(output_directory)
 
     for file in files:
-        item = datastruc.item(None, None, None, None)
+        item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, "preprocessed/no_gt_label", file)
         )
