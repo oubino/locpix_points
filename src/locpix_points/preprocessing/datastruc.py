@@ -699,7 +699,11 @@ class item:
 
         Args:
             input_file (string) : Location of the .parquet file to
-                load dataitem from"""
+                load dataitem from
+
+        Raises:
+            ValueError: If gt label is not an integer or None
+        """
 
         # read in parquet file
         arrow_table = pq.read_table(input_file)
@@ -723,7 +727,14 @@ class item:
         channels = arrow_table.schema.metadata[b"channels"]
         channels = ast.literal_eval(channels.decode("utf-8"))
         gt_label = arrow_table.schema.metadata[b"gt_label"]
-        gt_label = int(gt_label)
+        try:
+            gt_label = int(gt_label)
+        except ValueError:
+            gt_label = gt_label.decode("utf-8")
+            if gt_label == "None":
+                gt_label = None
+            else:
+                raise ValueError("GT label should be integer or None")
         gt_label_scope = arrow_table.schema.metadata[b"gt_label_scope"].decode("utf-8")
         channel_label = arrow_table.schema.metadata[b"channel_label"]
         channel_label = ast.literal_eval(channel_label.decode("utf-8"))

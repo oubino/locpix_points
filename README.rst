@@ -653,7 +653,7 @@ There is only feature analysis of manual features
 Running final test
 ==================
 
-1. Initialise a project directory 
+1. Initialise a new project directory 
 
 .. code-block:: python
 

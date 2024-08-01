@@ -35,10 +35,17 @@ from sklearn.cluster import KMeans
 from sklearn.decomposition import PCA
 import torch
 import torch_geometric.loader as L
-from torch_geometric.explain import Explainer, PGExplainer, AttentionExplainer, metric
-from torch_geometric.utils import to_undirected
+from torch_geometric.explain import (
+    Explainer,
+    PGExplainer,
+    AttentionExplainer,
+    metric,
+    CaptumExplainer,
+)
+from torch_geometric.utils import to_undirected, contains_self_loops
+from torch_geometric.utils.convert import to_networkx, from_networkx
 import umap
-import warnings
+import umap.plot
 import warnings
 import yaml
 
@@ -720,41 +727,77 @@ def generate_umap_embedding(X, min_dist, n_neighbours):
         min_dist=min_dist,
         n_neighbors=n_neighbours,
     )
-    embedding = reducer.fit_transform(X)
+    embedding = reducer.fit(X)
 
     return embedding
 
 
-def visualise_umap_embedding(embedding, df, label_map):
+def visualise_umap_embedding(
+    embedding,
+    df,
+    label_map,
+    point_size=5,
+    interactive=False,
+    save=False,
+    save_name="UMAP",
+    project_directory="..",
+):
     """Visualise UMAP results
 
     Args:
         embedding (array): UMAP embedding
         df (dataframe): Dataframe with data in
-        label_map (dict): Map from numbers to concepts"""
+        label_map (dict): Map from numbers to concepts
+        point_size (int): Size of points to plot UMAP
+        interactive (bool): Whether to do interactive plot
+        save (bool): Whether to save UMAP plot
+        save_name (string): Name of file to save
+        project_directory (string): Project directory to save plot in"""
 
-    # Plot UMAP - per cluster
-    plt.close("all")
-    plt.scatter(
-        embedding[:, 0],
-        embedding[:, 1],
-        c=[sns.color_palette()[x] for x in df.type.map(label_map)],
-        label=[x for x in df.type.map(label_map)],
-        s=5,
-    )
-    num_classes = len(label_map.keys())
-    patches = [
-        mpatches.Patch(color=sns.color_palette()[i], label=list(label_map.keys())[i])
-        for i in range(num_classes)
-    ]
-    cursor = mplcursors.cursor(hover=False)
-    cursor.connect(
-        "add", lambda sel: sel.annotation.set_text(f"{df.file_name[sel.index]}")
-    )
-    plt.legend(handles=patches)
-    plt.gca().set_aspect("equal", "datalim")
-    plt.title("UMAP projection of the dataset", fontsize=24)
-    plt.show()
+    if not interactive:
+        warnings.warn(
+            "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
+        )
+        ax = umap.plot.points(embedding, labels=df.type.map(label_map))
+        ax.collections[0].set_sizes(len(df) * [point_size])
+        legend = ax.get_legend()
+        new_handles = []
+        # get circular labels in legend
+        for item in label_map.items():
+            new_handles.append(
+                plt.Line2D(
+                    [],
+                    [],
+                    marker="o",
+                    color="w",
+                    markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
+                    markersize=point_size,
+                    label=item[0].capitalize(),
+                )
+            )
+        ax.get_legend().remove()
+        ax.axis("off")
+        ax.legend(handles=new_handles)
+        plt.show()
+        if save:
+            save_path = os.path.join(project_directory, f"output/{save_name}.svg")
+            ax.figure.savefig(save_path)
+    else:
+        hover_data = pd.DataFrame(
+            {
+                "index": np.arange(len(df)),
+                "label": df.type.map(label_map),
+                "item": df.type,
+            }
+        )
+        umap.plot.output_notebook()
+        p = umap.plot.interactive(
+            embedding,
+            labels=df.type.map(label_map),
+            hover_data=hover_data,
+            point_size=point_size,
+        )
+        umap.plot.show(p)
 
 
 def generate_pca_embedding(X, n_components):
@@ -948,7 +991,11 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
         device (string): Device to run on
         config (dict): Parameters for algo
         cluster_dataitem (pyg dataitem): Cluster graph to pass through network
-        prediction (float): Prediction for the cluster graph"""
+        prediction (float): Prediction for the cluster graph
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph"""
 
     print("Subgraphx...")
     explainer = SubgraphX(
@@ -995,14 +1042,13 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
     x_collector.collect_data(tree_node_x.coalition, related_preds, label=prediction)
 
     # print metrics for explanation
-    print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
-    print(f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})")
+    # print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
+    # print(f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})")
     print(f"Sparsity: {x_collector.sparsity:.4f}")
     print(f"Accuracy: {x_collector.accuracy:.4f}")
     print(f"Stability: {x_collector.stability:.4f}")
 
     # evaluate explanation
-
     visualise_explanation(
         cluster_dataitem.pos,
         cluster_dataitem.edge_index,
@@ -1010,11 +1056,19 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
         edge_imp=None,
     )
 
+    # alternative fidelity measures
+    subgraph, complement = custom_fidelity_measure(
+        cluster_model, cluster_dataitem, node_imp, "node", device
+    )
 
-def pgex_eval(pg_explainer, cluster_dataitem, device, config):
+    return subgraph, complement
+
+
+def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
     """Evaluate PGExplainer explainability algo
 
     Args:
+        cluster_model (PyG model): PyG model acts on the clusters
         pg_explainer (PGExplainer model): PyG explainer trained to explain predictions
         device (string): Device to run on
         config (dict): Parameters for algo
@@ -1044,9 +1098,9 @@ def pgex_eval(pg_explainer, cluster_dataitem, device, config):
     print(
         f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
     )
-    pos_fid, neg_fid = metric.fidelity(pg_explainer, explanation)
-    print(f"Positive fidelity closer to 1 better: {pos_fid})")
-    print(f"Negative fidelity closer to 0 better: {neg_fid})")
+    # pos_fid, neg_fid = metric.fidelity(pg_explainer, explanation)
+    # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+    # print(f"Negative fidelity closer to 0 better: {neg_fid})")
     unf = metric.unfaithfulness(pg_explainer, explanation)
     print(f"Unfaithfulness, closer to 0 better {unf}")
 
@@ -1058,9 +1112,14 @@ def pgex_eval(pg_explainer, cluster_dataitem, device, config):
         edge_imp=explanation.edge_mask.to(device),
     )
 
+    # alternative fidelity measure
+    subgraph, complement = custom_fidelity_measure(
+        cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+    )
+
 
 def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem):
-    """Evaluate SubgraphX explainability algo
+    """Evaluate attention explainability algo
 
     Args:
         cluster_model (PyG model): PyG model acts on the clusters
@@ -1071,7 +1130,12 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
 
     Raises:
         NotImplementedError: If try to run attention on Loc or
-            LocCluster instead of cluster"""
+            LocCluster instead of cluster
+
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph"""
 
     scale = config["scale"]
     reduce = config["reduce"]
@@ -1122,17 +1186,19 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         print(
             f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
         )
+
         explanation.edge_mask = torch.where(
             explanation.edge_mask > config["edge_mask_threshold"],
             explanation.edge_mask,
             0.0,
         )
+
         print(
             f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
         )
-        pos_fid, neg_fid = metric.fidelity(explainer, explanation)
-        print(f"Positive fidelity closer to 1 better: {pos_fid})")
-        print(f"Negative fidelity closer to 0 better: {neg_fid})")
+        # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+        # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+        # print(f"Negative fidelity closer to 0 better: {neg_fid})")
         unf = metric.unfaithfulness(explainer, explanation)
         print(f"Unfaithfulness, closer to 0 better {unf}")
         visualise_explanation(
@@ -1141,6 +1207,18 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
             node_imp=None,
             edge_imp=explanation.edge_mask.to(device),
         )
+
+        # this commented out code removes important edges that are self loops
+        # loop_mask = cluster_dataitem.edge_index[0] == cluster_dataitem.edge_index[1]
+        # explanation.edge_mask = torch.where(~loop_mask, explanation.edge_mask, 0.0)
+
+        # alternative fidelity measure
+        subgraph, complement = custom_fidelity_measure(
+            cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+        )
+
+        return subgraph, complement
+
     elif scale == "loc":
         loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
             loc_dataitem, None
@@ -1165,9 +1243,9 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         print(
             f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
         )
-        pos_fid, neg_fid = metric.fidelity(explainer, explanation)
-        print(f"Positive fidelity closer to 1 better: {pos_fid})")
-        print(f"Negative fidelity closer to 0 better: {neg_fid})")
+        # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+        # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+        # print(f"Negative fidelity closer to 0 better: {neg_fid})")
         unf = metric.unfaithfulness(explainer, explanation)
         print(f"Unfaithfulness, closer to 0 better {unf}")
         visualise_explanation(
@@ -1176,6 +1254,137 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
             node_imp=None,
             edge_imp=explanation.edge_mask.to(device),
         )
+
+
+def saliency_eval(cluster_model, config, cluster_dataitem, device):
+    """Evaluate saliency explainability algo
+
+    Args:
+        cluster_model (PyG model): PyG model acts on the clusters
+        device (string): Device to run on
+        config (dict): Parameters for algo
+        cluster_dataitem (pyg dataitem): Cluster graph to pass through network
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph"""
+
+    explainer = Explainer(
+        model=cluster_model,
+        algorithm=CaptumExplainer(attribution_method="Saliency"),
+        explanation_type="model",
+        node_mask_type=None,
+        edge_mask_type="object",
+        model_config=dict(
+            mode="multiclass_classification",
+            task_level="graph",
+            # return logprobs
+            return_type="log_probs",
+        ),
+    )
+
+    explanation = explainer(
+        x=cluster_dataitem.x,
+        edge_index=cluster_dataitem.edge_index,
+        target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+        # kwargs passed to model
+        batch=torch.tensor([0], device=device),
+        pos=cluster_dataitem.pos,
+        # return logprobs
+        logits=False,
+    )
+    # metrics
+    print(
+        f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    )
+
+    explanation.edge_mask = torch.where(
+        explanation.edge_mask > config["edge_mask_threshold"],
+        explanation.edge_mask,
+        0.0,
+    )
+
+    print(
+        f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    )
+    # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+    # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+    # print(f"Negative fidelity closer to 0 better: {neg_fid})")
+    unf = metric.unfaithfulness(explainer, explanation)
+    print(f"Unfaithfulness, closer to 0 better {unf}")
+    visualise_explanation(
+        cluster_dataitem.pos,
+        cluster_dataitem.edge_index,
+        node_imp=None,
+        edge_imp=explanation.edge_mask.to(device),
+    )
+
+    # this commented out code removes important edges that are self loops
+    # loop_mask = cluster_dataitem.edge_index[0] == cluster_dataitem.edge_index[1]
+    # explanation.edge_mask = torch.where(~loop_mask, explanation.edge_mask, 0.0)
+
+    # alternative fidelity measure
+    subgraph, complement = custom_fidelity_measure(
+        cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+    )
+
+    return subgraph, complement
+
+
+def custom_fidelity_measure(
+    cluster_model, cluster_dataitem, imp_list, node_or_edge, device
+):
+    graph_pred = cluster_model(
+        cluster_dataitem.x,
+        cluster_dataitem.edge_index,
+        torch.tensor([0], device=device),
+        cluster_dataitem.pos,
+        logits=False,
+    )
+    graph_pred = torch.exp(graph_pred)
+    # probability of the predicted class
+    prediction = graph_pred.max(-1)
+    predicted_index = prediction.indices
+    whole_graph_prob = prediction.values
+
+    imp_list = imp_list.to(device)
+
+    subgraph, complement = induced_subgraph(
+        cluster_dataitem, imp_list, node_or_edge=node_or_edge
+    )
+
+    subgraph.to(device)
+    complement.to(device)
+
+    complement_pred = cluster_model(
+        complement.x,
+        complement.edge_index,
+        torch.tensor([0], device=device),
+        complement.pos,
+        logits=False,
+    )
+    complement_pred = torch.exp(complement_pred)
+    complement_pred = complement_pred.squeeze()
+    complement_prob = complement_pred[predicted_index]
+
+    subgraph_pred = cluster_model(
+        subgraph.x,
+        subgraph.edge_index,
+        torch.tensor([0], device=device),
+        subgraph.pos,
+        logits=False,
+    )
+    subgraph_pred = torch.exp(subgraph_pred)
+    subgraph_pred = subgraph_pred.squeeze()
+    subgraph_prob = subgraph_pred[predicted_index]
+
+    pos_fid = abs(whole_graph_prob - complement_prob)
+    neg_fid = abs(whole_graph_prob - subgraph_prob)
+
+    print("Positive fidelity", pos_fid)
+    print("Negative fidelity", neg_fid)
+
+    return subgraph, complement
 
 
 def gradcam_eval(cluster_model, cluster_dataitem, config, device):
@@ -1266,6 +1475,9 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
         node_imp = None
 
     plots = []
+
+    # are self loops present
+    print("Contains self loops: ", contains_self_loops(edge_index))
 
     # edge importance
     if edge_imp is not None:
@@ -1445,6 +1657,90 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
     _ = o3d.visualization.Visualizer()
     o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
+
+
+def induced_subgraph(data, imp_list, node_or_edge="node"):
+    """Return the induced subgraph and its complement
+
+    Args:
+        data (pyg graph): Graph we want to induce
+        imp_list (tensor): Tensor of 0s and 1s corresponding to
+            unimportant and important nodes/edges
+        node_or_edge (string): If node we induce node subgraph
+            and if edge we induce edge subgraph
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph
+
+    Raises:
+        ValueError: If induced subgraph is whole graph OR no important nodes/edges"""
+
+    if sum(imp_list) == 0:
+        raise ValueError("No important edges/nodes")
+
+    imp_list = imp_list.bool()
+    non_imp_list = torch.where(imp_list == False, True, False)
+
+    if node_or_edge == "node":
+        # automatically relabelled
+        subgraph = data.subgraph(imp_list)
+        if subgraph.num_nodes == data.num_nodes:
+            raise ValueError(
+                "No complement graph as induced subgraph is the whole graph"
+            )
+        else:
+            complement_graph = data.subgraph(non_imp_list)
+
+        return subgraph, complement_graph
+
+    elif node_or_edge == "edge":
+        nx_graph = to_networkx(data, node_attrs=["x", "pos"])
+        include_edges = data.edge_index.T[imp_list].cpu().numpy()
+        include_edges = list(map(tuple, include_edges))
+        non_include_edges = data.edge_index.T[non_imp_list].cpu().numpy()
+        non_include_edges = list(map(tuple, non_include_edges))
+        subgraph = nx_graph.edge_subgraph(include_edges)
+        subgraph_pyg = from_networkx(subgraph, group_node_attrs=["x", "pos"])
+        x = subgraph_pyg.x[:, :-2]
+        pos = subgraph_pyg.x[:, -2:]
+        subgraph_pyg.x = x
+        subgraph_pyg.pos = pos
+        if subgraph.nodes == nx_graph.nodes:
+            raise ValueError(
+                "No complement graph as induced subgraph is the whole graph"
+            )
+        else:
+            warnings.warn(
+                "As the graphs are directed - it may still appear that the important edge is in the "
+                "complement BUT this will be the edge in the other direction i.e. if two edges between"
+                "two nodes and only one is important, visualising the graph and complement will appear"
+                "the same between these nodes"
+            )
+            complement_graph = nx_graph.edge_subgraph(non_include_edges)
+            complement_graph_pyg = from_networkx(
+                complement_graph, group_node_attrs=["x", "pos"]
+            )
+            x = complement_graph_pyg.x[:, :-2]
+            pos = complement_graph_pyg.x[:, -2:]
+            complement_graph_pyg.x = x
+            complement_graph_pyg.pos = pos
+
+            # complement induced by the nodes not in the subgraph below
+            # e = list(subgraph.nodes)
+            # nx_graph.remove_nodes_from(e)
+            # complement_graph_pyg = from_networkx(
+            #    nx_graph, group_node_attrs=["x", "pos"]
+            # )
+            # x = complement_graph_pyg.x[:, :-2]
+            # pos = complement_graph_pyg.x[:, -2:]
+            # complement_graph_pyg.x = x
+            # complement_graph_pyg.pos = pos
+
+        return subgraph_pyg, complement_graph_pyg
+
+    else:
+        raise ValueError("node or edge should be node or edge")
 
 
 if __name__ == "__main__":
