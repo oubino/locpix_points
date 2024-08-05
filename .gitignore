@@ -133,3 +133,5 @@ digits_letters/final_test/*
 !digits_letters/final_test/scripts/
 !digits_letters/final_test/README.md
 
+# ignore renal
+renal/*
