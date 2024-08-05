@@ -771,12 +771,23 @@ def visualise_umap_embedding(
                     marker="o",
                     color="w",
                     markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
-                    markersize=point_size,
+                    # markersize=point_size,
                     label=item[0].capitalize(),
                 )
             )
         ax.get_legend().remove()
-        ax.axis("off")
+        ax.tick_params(
+            axis="both",
+            which="both",
+            bottom=False,
+            top=False,
+            left=False,
+            right=False,
+            labelbottom=False,
+            labeltop=False,
+            labelleft=False,
+            labelright=False,
+        )
         ax.legend(handles=new_handles)
         plt.show()
         if save:

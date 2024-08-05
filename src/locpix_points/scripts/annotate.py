@@ -5,6 +5,7 @@ visualise histo mask, save the exported annotation .parquet
 """
 
 import argparse
+import json
 import os
 import yaml
 
@@ -147,6 +148,17 @@ def main(argv=None):
             output_directory,
             drop_zero_label=config["drop_zero_label"],
         )
+
+    # save gt label map to metadata
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        metadata["gt_label_map"] = config["gt_label_map"]
+        with open(metadata_path, "w") as outfile:
+            json.dump(metadata, outfile)
 
 
 if __name__ == "__main__":
