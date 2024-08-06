@@ -12,9 +12,14 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 
 import torch
 from torch.nn import Linear
-from torch_geometric.nn import MLP, HeteroConv, conv
+from torch_geometric.nn import MLP, HeteroConv, conv, knn_graph
 from torch_geometric.nn.aggr import MaxAggregation
-from torch_geometric.nn.pool import global_mean_pool, global_max_pool
+from torch_geometric.nn.pool import (
+    global_mean_pool,
+    global_max_pool,
+    max_pool_x,
+    avg_pool_x,
+)
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
 
@@ -168,7 +173,62 @@ class ClusterNet(torch.nn.Module):
         self.cluster_encoder_3 = cluster_encoder_3
         self.linear = linear
 
-    def forward(self, x_dict, pos_dict, edge_index_dict, batch, add_cluster_pos):
+        # dim, pos, out
+        pos_nn_0 = MLP(  # BN
+            [2, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        # out, attn, out
+        attn_nn_0 = MLP(  # BN
+            [64, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        # in, out
+        self.cluster_encoder_0_new = conv.PointTransformerConv(
+            40, 64, pos_nn_0, attn_nn_0, add_self_loops=False, aggr="max"
+        )
+
+        pos_nn_1 = MLP(  # BN
+            [2, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        attn_nn_1 = MLP(  # BN
+            [64, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        self.cluster_encoder_1_new = conv.PointTransformerConv(
+            64, 64, pos_nn_1, attn_nn_1, add_self_loops=False, aggr="max"
+        )
+
+        pos_nn_2 = MLP(  # BN
+            [2, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        attn_nn_2 = MLP(  # BN
+            [64, 64, 64],
+            plain_last=False,
+            dropout=0.0,
+        )
+        self.cluster_encoder_2_new = conv.PointTransformerConv(
+            64, 64, pos_nn_2, attn_nn_2, add_self_loops=False, aggr="max"
+        )
+
+        self.linear_new = Linear(64, 2)
+
+    def forward(
+        self,
+        x_dict,
+        pos_dict,
+        edge_index_dict,
+        batch,
+        add_cluster_pos,
+        supercluster_ID=None,
+    ):
         """The method called when ClusterNet is used on a dataitem
 
         Args:
@@ -181,6 +241,7 @@ class ClusterNet(torch.nn.Module):
             add_cluster_pos (bool): if True add on position for each
                 cluster
             batch (torch.tensor): batch for the clusters
+            supercluster_ID (torch.tensor): supercluster ID for each cluster
 
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
@@ -199,11 +260,30 @@ class ClusterNet(torch.nn.Module):
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
         )
 
-        # pooling step so end up with one feature vector per fov
-        x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+        if 0:
+            # pooling step so end up with one feature vector per fov
+            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
 
-        # linear layer on each fov feature vector
-        return self.linear(x_dict["clusters"])
+            # linear layer on each fov feature vector
+            return self.linear(x_dict["clusters"])
+
+        elif 1:
+            cluster = batch * 15 + supercluster_ID
+
+            x_superclusters, batch = max_pool_x(cluster, x_dict["clusters"], batch)
+            edge_index = knn_graph(pos_dict["superclusters"], k=5, batch=batch)
+
+            # clusterencoders
+            x = self.cluster_encoder_0_new(
+                x_superclusters, pos_dict["superclusters"], edge_index
+            )
+            x = self.cluster_encoder_1_new(x, pos_dict["superclusters"], edge_index)
+            x = self.cluster_encoder_2_new(x, pos_dict["superclusters"], edge_index)
+
+            # global max pool
+            x = global_max_pool(x, batch)
+
+            return self.linear_new(x)
 
 
 def parse_data(data, device):
@@ -1160,6 +1240,7 @@ class LocClusterNet(torch.nn.Module):
             edge_index_dict,
             data["clusters"].batch,
             self.add_cluster_pos,
+            supercluster_ID=data["superclusters"].index,
         )
 
         return output.log_softmax(dim=-1)

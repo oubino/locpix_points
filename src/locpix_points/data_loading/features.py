@@ -9,7 +9,7 @@ import logging
 import numpy as np
 import polars as pl
 import torch
-from torch_geometric.nn import knn_graph
+from torch_geometric.nn import knn_graph, aggr
 from torch_geometric.utils import (
     add_self_loops,
     to_undirected,
@@ -199,8 +199,20 @@ def load_loc_cluster(
     x_clusters = 2.0 * x_clusters - 1.0
     y_clusters = 2.0 * y_clusters - 1.0
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
-
     data["clusters"].pos = cluster_coords.float()
+
+    # super clusters
+    superclusterID = torch.tensor(
+        cluster_table["superclusterID"].to_numpy(), dtype=torch.long
+    )
+
+    ## Simple aggregations:
+    mean_aggr = aggr.MeanAggregation()
+    x_super_clusters = mean_aggr(x_clusters, index=superclusterID, dim=0)
+    y_super_clusters = mean_aggr(y_clusters, index=superclusterID, dim=0)
+    super_cluster_coords = torch.stack((x_super_clusters, y_super_clusters), dim=1)
+    data["superclusters"].index = superclusterID
+    data["superclusters"].pos = super_cluster_coords.float()
 
     data["locs", "in", "clusters"].edge_index = loc_cluster_edges
     # loc_loc_edges = sort_edge_index(loc_loc_edges)

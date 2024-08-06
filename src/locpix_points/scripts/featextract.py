@@ -182,6 +182,12 @@ def main(argv=None):
             (pl.col("count") / pl.col("area_pca")).alias("density_pca")
         )
 
+        # identify superclusters
+        cluster_df = featextract.super_cluster(
+            cluster_df,
+            k=15,
+        )
+
         # save locs dataframe
         item.df = df
         item.save_to_parquet(
