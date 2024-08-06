@@ -546,7 +546,7 @@ class ClusterLocDataset(SMLMDataset):
             # save it
             _, extension = os.path.splitext(raw_path)
             _, tail = os.path.split(raw_path)
-            file_name = tail.rstrip(extension)
+            file_name = tail.removesuffix(extension)
             # TODO: change/check this and make option in process
             # if self.save_on_gpu:
             #    data.cuda()
