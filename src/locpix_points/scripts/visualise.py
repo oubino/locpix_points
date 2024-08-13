@@ -122,19 +122,33 @@ def visualise_torch_geometric(
 ):
     """Visualise pytorch geometric object.
     Assumes that all locs are from the same channel and that there are also clusters present, plots these
-    in two colours
+    in two colours also if there are superclusters present plots these as well
 
     Args:
         file_loc (str) : Location of the pytorch geometric file"""
 
     x = torch.load(file_loc)
 
-    cmap = ["r", "darkorange", "b", "y"]
+    cmap = ["r", "darkorange", "b", "k"]
 
     locs = x["locs"].pos.numpy()
     clusters = x["clusters"].pos.numpy()
 
-    pcds = [locs, clusters]
+    try:
+        superclusters_0 = x["superclusters_0"].pos.numpy()
+        superclusters_1 = x["superclusters_1"].pos.numpy()
+        pcds = [locs, clusters, superclusters_0, superclusters_1]
+        unique_chans = [0, 1, 2, 3]
+        channel_labels = {
+            0: "locs",
+            1: "clusters",
+            2: "superclusters_0",
+            3: "superclusters_1",
+        }
+    except:
+        pcds = [locs, clusters]
+        unique_chans = [0, 1]
+        channel_labels = {0: "locs", 1: "clusters"}
 
     # convert 2d to 3d if required
     for index, pcd in enumerate(pcds):
@@ -174,6 +188,37 @@ def visualise_torch_geometric(
     clusters_to_clusters.lines = o3d.utility.Vector2iVector(lines)
     clusters_to_clusters.colors = o3d.utility.Vector3dVector(colors)
 
+    try:
+        # cluster to supercluster_0 edges
+        lines = np.swapaxes(x["clusters", "in", "superclusters_0"].edge_index, 0, 1)
+        # need one set of coordinates with all points in it
+        # add cluster coords at elocs nd of locs
+        # increase index of cluster edge index by the number of locs
+        coords = np.concatenate([pcds[1], pcds[2]], axis=0)
+        lines[:, 1] += len(clusters)
+
+        colors = [[1, 0.078, 0.576] for i in range(len(lines))]
+        clusters_to_superclusters_0 = o3d.geometry.LineSet()
+        clusters_to_superclusters_0.points = o3d.utility.Vector3dVector(coords)
+        clusters_to_superclusters_0.lines = o3d.utility.Vector2iVector(lines)
+        clusters_to_superclusters_0.colors = o3d.utility.Vector3dVector(colors)
+
+        lines = np.swapaxes(
+            x["superclusters_0", "in", "superclusters_1"].edge_index, 0, 1
+        )
+        coords = np.concatenate([pcds[2], pcds[3]], axis=0)
+        lines[:, 1] += len(superclusters_0)
+
+        colors = [[0.64, 0.128, 0.96] for i in range(len(lines))]
+        superclusters_0_to_superclusters_1 = o3d.geometry.LineSet()
+        superclusters_0_to_superclusters_1.points = o3d.utility.Vector3dVector(coords)
+        superclusters_0_to_superclusters_1.lines = o3d.utility.Vector2iVector(lines)
+        superclusters_0_to_superclusters_1.colors = o3d.utility.Vector3dVector(colors)
+
+    except:
+        clusters_to_superclusters_0 = None
+        superclusters_0_to_superclusters_1 = None
+
     for index, pcd in enumerate(pcds):
         point_cloud = o3d.geometry.PointCloud()
         point_cloud.points = o3d.utility.Vector3dVector(pcd)
@@ -185,9 +230,11 @@ def visualise_torch_geometric(
         locs_to_locs,
         locs_to_clusters,
         clusters_to_clusters,
-        [0, 1],
-        {0: "locs", 1: "clusters"},
+        unique_chans,
+        channel_labels,
         cmap,
+        clusters_to_superclusters_0=clusters_to_superclusters_0,
+        superclusters_0_to_superclusters_1=superclusters_0_to_superclusters_1,
     )
 
 
@@ -199,6 +246,8 @@ def visualise(
     unique_chans,
     channel_labels,
     cmap,
+    clusters_to_superclusters_0=None,
+    superclusters_0_to_superclusters_1=None,
 ):
     """Visualise point cloud data
 
@@ -209,7 +258,11 @@ def visualise(
         clusters_to_clusters (list) : Lines to draw between clusters
         unique_chans (list) : List of unique channels
         channel_labels (dict) : Dictionary mapping channel index to real name
-        cmap (list) : Colours to plot in"""
+        cmap (list) : Colours to plot in
+        clusters_to_superclusters_0 (list): Lines to draw from clusters to superclusters_0
+        superclusters_0_to_superclusters_1 (list): Lines to draw from superclusters_0
+            to superclusters_1
+    """
 
     _ = o3d.visualization.Visualizer()
 
@@ -268,7 +321,7 @@ def visualise(
             present.chan_present[3] = True
 
     # reverse pcds for visualisation
-    pcds.reverse()
+    # pcds.reverse()
 
     key_to_callback = {}
     key_to_callback[ord("K")] = visualise_chan_0
@@ -281,9 +334,9 @@ def visualise(
     if 1 in unique_chans:
         print(f"Channel 1 is {channel_labels[1]} is colour {cmap[1]} to remove use R")
     if 2 in unique_chans:
-        print(f"Channel 2 is ... is colour {cmap[2]} to remove use T")
+        print(f"Channel 2 is {channel_labels[2]} is colour {cmap[2]} to remove use T")
     if 3 in unique_chans:
-        print(f"Channel 3 is ... is colour {cmap[3]} to remove use Y")
+        print(f"Channel 3 is {channel_labels[3]} is colour {cmap[3]} to remove use Y")
 
     if locs_to_clusters is not None:
         pcds.append(locs_to_clusters)
@@ -291,6 +344,10 @@ def visualise(
         pcds.append(clusters_to_clusters)
     if locs_to_locs is not None:
         pcds.append(locs_to_locs)
+    if clusters_to_superclusters_0 is not None:
+        pcds.append(clusters_to_superclusters_0)
+    if superclusters_0_to_superclusters_1 is not None:
+        pcds.append(superclusters_0_to_superclusters_1)
     o3d.visualization.draw_geometries_with_key_callbacks(pcds, key_to_callback)
 
     """
