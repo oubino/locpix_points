@@ -201,18 +201,27 @@ def load_loc_cluster(
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
     data["clusters"].pos = cluster_coords.float()
 
-    # super clusters
-    superclusterID = torch.tensor(
-        cluster_table["superclusterID"].to_numpy(), dtype=torch.long
+    #  ---- superclusters_0 ----
+    data, x_sc_0, y_sc_0, cluster_id_sc_0 = supercluster_ID(
+        data,
+        cluster_table,
+        x_clusters,
+        y_clusters,
+        torch.tensor(cluster_table["clusterID"].to_numpy(), dtype=torch.int64),
+        "clusters",
+        "superclusters_0",
     )
 
-    ## Simple aggregations:
-    mean_aggr = aggr.MeanAggregation()
-    x_super_clusters = mean_aggr(x_clusters, index=superclusterID, dim=0)
-    y_super_clusters = mean_aggr(y_clusters, index=superclusterID, dim=0)
-    super_cluster_coords = torch.stack((x_super_clusters, y_super_clusters), dim=1)
-    data["superclusters"].index = superclusterID
-    data["superclusters"].pos = super_cluster_coords.float()
+    # ---- superclusters_1 ----
+    data, _, _, cluster_id_above = supercluster_ID(
+        data,
+        cluster_table,
+        x_sc_0,
+        y_sc_0,
+        cluster_id_sc_0,
+        "superclusters_0",
+        "superclusters_1",
+    )
 
     data["locs", "in", "clusters"].edge_index = loc_cluster_edges
     # loc_loc_edges = sort_edge_index(loc_loc_edges)
@@ -226,5 +235,80 @@ def load_loc_cluster(
     # warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
     # warnings.warn("Need to check that graph is connected correctly")
     # warnings.warn("Data should be normalised and scaled correctly")
+    data.validate(raise_on_error=True)
 
     return data
+
+
+def supercluster_ID(
+    data,
+    cluster_table,
+    x_sub,
+    y_sub,
+    cluster_id_sub,
+    subcluster_string,
+    supercluster_string,
+):
+    """Assign supercluster to data point
+
+    Args:
+        data (pyg data): Dataitem from PyG
+        cluster_table (dataframe): Dataframe with the superclusters in it
+        x_sub (tensor): x coordinates of the cluster being clustered into supercluster
+        y_sub (tensor): y coordinates of the cluster being clustered into supercluster
+        cluster_id_sub (tensor): cluster ID for the clusters being clustered into supercluster
+        subcluster_string (string): name of the subcluster
+        supercluster_string (string): name of the supercluster in the dataset
+
+    Returns:
+        data (pyG dataitem): Dataitem with added supercluster
+        x_super_clusters (tensor): x-coords of supercluster
+        y_super_clusters (tensor): y-coords of supercluster
+        superclusterID (tensor): ID for the supercluster
+    """
+
+    mean_aggr = aggr.MeanAggregation()
+
+    # get the superclusterID from the dataframe
+    superclusterID = torch.tensor(
+        cluster_table[supercluster_string].to_numpy(), dtype=torch.long
+    )
+    # mean agg is misleading here - what we are doing is shrinking the list so we go
+    # from
+    # cluster_id_sub, superclusterID
+    # 0, 0
+    # 0, 0
+    # 1, 1
+    # 2, 2
+    # 3, 2
+    # to
+    # cluster_id_sub, superclusterID
+    # 0, 0
+    # 1, 1
+    # 2, 2
+    # 3, 2
+    # therfoer can take mean
+    superclusterID = mean_aggr(superclusterID, index=cluster_id_sub, dim=0).to(
+        torch.int64
+    )
+
+    # calculate the x, y positions of the super clusters
+    x_super_clusters = mean_aggr(x_sub, index=superclusterID, dim=0)
+    y_super_clusters = mean_aggr(y_sub, index=superclusterID, dim=0)
+    super_cluster_coords = torch.stack((x_super_clusters, y_super_clusters), dim=1)
+
+    # assign to the dataitem
+    data[supercluster_string].index = superclusterID
+    data[supercluster_string].pos = super_cluster_coords.float()
+
+    # calculate edges
+    sub_cluster_super_cluster_edges = np.stack(
+        [np.arange(0, len(superclusterID)), superclusterID]
+    )
+
+    sub_cluster_super_cluster_edges = torch.from_numpy(sub_cluster_super_cluster_edges)
+    data[
+        subcluster_string, "in", supercluster_string
+    ].edge_index = sub_cluster_super_cluster_edges
+
+    return data, x_super_clusters, y_super_clusters, superclusterID
