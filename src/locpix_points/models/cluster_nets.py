@@ -102,13 +102,13 @@ class ClusterEncoder(torch.nn.Module):
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="leakyrelu",
+                act="relu",
             )
             attn_nn = MLP(  # BN
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="leakyrelu",
+                act="relu",
             )
             self.conv = HeteroConv(
                 {
@@ -178,73 +178,61 @@ class ClusterNet(torch.nn.Module):
         self.linear = linear
 
         # dim, pos, out
-        pos_nn_0_0 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_0_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         # out, attn, out
         attn_nn_0_0 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
-            40, 32, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
+            40, 64, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_0 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_1_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         attn_nn_1_0 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         self.cluster_encoder_1_0_new = conv.PointTransformerConv(
-            32, 32, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_0 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_2_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         attn_nn_2_0 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
-            32, 32, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
         )
 
         # dim, pos, out
-        pos_nn_0_1 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_0_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         # out, attn, out
         attn_nn_0_1 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         # in, out
         self.cluster_encoder_0_1_new = conv.PointTransformerConv(
-            32, 32, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_1 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_1_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         attn_nn_1_1 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         self.cluster_encoder_1_1_new = conv.PointTransformerConv(
-            32, 32, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_1 = MLP(
-            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
-        )  # BN
+        pos_nn_2_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
         attn_nn_2_1 = MLP(
-            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
         )  # BN
         self.cluster_encoder_2_1_new = conv.PointTransformerConv(
-            32, 32, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
         )
 
         warnings.warn("Change back to number of classes")
-        self.linear_new = Linear(32, 2)
+        self.linear_new = Linear(64, 2)
 
     def forward(
         self,

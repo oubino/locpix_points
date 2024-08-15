@@ -37,14 +37,14 @@ class TransformerBlock(torch.nn.Module):
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
         self.pos_nn = MLP(
-            [dim, pos_nn_layers, out_channels], plain_last=False, act="leakyrelu"
+            [dim, pos_nn_layers, out_channels], plain_last=False, act="relu"
         )  # BN
 
         # HARDCODE
         self.attn_nn = MLP(  # BN
             [out_channels, attn_nn_layers, out_channels],
             plain_last=False,
-            act="leakyrelu",
+            act="relu",
         )
 
         self.transformer = PointTransformerConv(
@@ -74,12 +74,12 @@ class TransitionUp(torch.nn.Module):
         self.mlp_sub = MLP(
             [in_channels, out_channels],
             plain_last=False,
-            act="leakyrelu",
+            act="relu",
         )
         self.mlp = MLP(
             [out_channels, out_channels],
             plain_last=False,
-            act="leakyrelu",
+            act="relu",
         )
         self.k = k
 
@@ -111,7 +111,7 @@ class TransitionDown(torch.nn.Module):
             [in_channels, out_channels],
             plain_last=False,
             norm="instance_norm",
-            act="leakyrelu",
+            act="relu",
         )  # BN
 
     def forward(self, x, pos, batch):
@@ -165,7 +165,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_input = MLP(
             [in_channels, dim_model[0]],
             plain_last=False,
-            act="leakyrelu",
+            act="relu",
         )  # BN
 
         self.transformer_input = TransformerBlock(
@@ -205,7 +205,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_output = MLP(  # BN
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
-            act="leakyrelu",
+            act="relu",
         )
 
     def forward(self, x, pos, batch=None):
