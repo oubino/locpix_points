@@ -264,14 +264,14 @@ class ClusterNet(torch.nn.Module):
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
         )
 
-        if 1:
+        if 0:
             # pooling step so end up with one feature vector per fov
             x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
 
-        elif 0:
+        elif 1:
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
             x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
