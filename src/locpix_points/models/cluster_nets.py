@@ -185,7 +185,7 @@ class ClusterNet(torch.nn.Module):
         )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
-            40, 64, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
+            64, 64, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
         )
 
         pos_nn_1_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
