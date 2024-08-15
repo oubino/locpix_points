@@ -102,13 +102,13 @@ class ClusterEncoder(torch.nn.Module):
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="relu",
+                act="leakyrelu",
             )
             attn_nn = MLP(  # BN
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="relu",
+                act="leakyrelu",
             )
             self.conv = HeteroConv(
                 {
@@ -178,43 +178,67 @@ class ClusterNet(torch.nn.Module):
         self.linear = linear
 
         # dim, pos, out
-        pos_nn_0_0 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_0_0 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         # out, attn, out
-        attn_nn_0_0 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        attn_nn_0_0 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
             40, 32, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_0 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
-        attn_nn_1_0 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_1_0 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
+        attn_nn_1_0 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         self.cluster_encoder_1_0_new = conv.PointTransformerConv(
             32, 32, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_0 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
-        attn_nn_2_0 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_2_0 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
+        attn_nn_2_0 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
             32, 32, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
         )
 
         # dim, pos, out
-        pos_nn_0_1 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_0_1 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         # out, attn, out
-        attn_nn_0_1 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        attn_nn_0_1 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         # in, out
         self.cluster_encoder_0_1_new = conv.PointTransformerConv(
             32, 32, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_1 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
-        attn_nn_1_1 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_1_1 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
+        attn_nn_1_1 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         self.cluster_encoder_1_1_new = conv.PointTransformerConv(
             32, 32, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_1 = MLP([2, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
-        attn_nn_2_1 = MLP([32, 32, 32], plain_last=False, dropout=0.0, act="relu")  # BN
+        pos_nn_2_1 = MLP(
+            [2, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
+        attn_nn_2_1 = MLP(
+            [32, 32, 32], plain_last=False, dropout=0.25, act="leakyrelu"
+        )  # BN
         self.cluster_encoder_2_1_new = conv.PointTransformerConv(
             32, 32, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
         )
