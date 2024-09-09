@@ -24,6 +24,8 @@ Below is an overview of the details for each task
 | ------------- | ------------- | ------------- | ------------- |
 | Task 1  | No  | LocClusterNet | PointNetConv | PointNetConv |
 | Task 2  | No  | LocClusterNet | PointTransformer | PointTransformer |
+| Task 3  | No  | LocOnlyNet | PointNet 
+| Task 4  | No  | LocOnlyNet | PointTransformer 
 
 
 ## Note
