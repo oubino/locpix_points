@@ -247,31 +247,147 @@ class LocDataset(SMLMDataset):
     def __init__(
         self,
         raw_loc_dir_root,
-        raw_cluster_dir_root,
         processed_dir_root,
         label_level,
         pre_filter,
         save_on_gpu,
         transform,
         pre_transform,
+        feat,
         min_feat,
         max_feat,
-        pos,
-        feat,
+        fov_x,
+        fov_y,
+        kneighbours,
     ):
+        self.min_feat = min_feat
+        self.max_feat = max_feat
+        self.feat = feat
+        self.kneighbours = kneighbours
+
         super().__init__(
             raw_loc_dir_root,
-            raw_cluster_dir_root,
+            None,
             processed_dir_root,
             label_level,
             pre_filter,
             save_on_gpu,
             transform,
             pre_transform,
+            fov_x,
+            fov_y,
         )
 
     def process(self):
-        raise NotImplementedError
+        idx = 0
+        idx_to_name = {"idx": [], "file_name": []}
+
+        # convert raw parquet files to tensors
+        # note that cluster and loc file names should be the same therefore choosing one should
+        # have no impact
+        for raw_path in self.raw_loc_file_names:
+            # load in and process localisation data
+            loc_path = os.path.join(self._raw_loc_dir_root, raw_path)
+            loc_table = pq.read_table(loc_path)
+
+            # metadata load in
+            dimensions = loc_table.schema.metadata[b"dim"]
+            dimensions = int(dimensions)
+
+            gt_label_scope = loc_table.schema.metadata[b"gt_label_scope"].decode(
+                "utf-8"
+            )
+            if gt_label_scope == "loc":
+                if self.label_level != "node":
+                    raise ValueError(
+                        "You cannot specify graph level label when the gt label is per loc/node. Amend process configuration file"
+                    )
+            elif gt_label_scope == "fov":
+                if self.label_level != "graph":
+                    raise ValueError(
+                        "You cannot specify node level label when dataset has per fov/graph labels. Amend process config file"
+                    )
+            else:
+                raise ValueError("No gt label scope")
+
+            gt_label_map = json.loads(
+                loc_table.schema.metadata[b"gt_label_map"].decode("utf-8")
+            )
+            gt_label_map = {int(key): value for key, value in gt_label_map.items()}
+            self.gt_label_map = gt_label_map
+
+            # each dataitem is a homogeneous graph
+            data = Data()
+
+            # load position (if present) and features to data
+            data = features.load_loc(
+                data,
+                loc_table,
+                self.feat,
+                self.min_feat,
+                self.max_feat,
+                self.fov_x,
+                self.fov_y,
+                self.kneighbours,
+            )
+
+            # load in gt label
+            gt_label = loc_table.schema.metadata[b"gt_label"]
+            gt_label = int(gt_label)
+
+            # load gt label to data
+            if self.label_level == "graph":
+                if gt_label is None:
+                    raise ValueError("No GT label for the FOV")
+                if "gt_label" in loc_table.columns:
+                    raise ValueError("Should be no gt label column")
+                else:
+                    # print("gt label", gt_label)
+                    data.y = torch.tensor([gt_label], dtype=torch.long)
+            elif self.label_level == "node":
+                raise NotImplementedError()
+
+            # assign name to data
+            name = loc_table.schema.metadata[b"name"]
+            name = str(name.decode("utf-8"))
+            data.name = name
+
+            # if pre filter skips it then skip this item
+            # if pre_filter is 0 - data should not be included
+            # and the if statement will read
+            # if not 0
+            # this is True and so continue will occur - i.e. data is skipped
+            if self.pre_filter is not None and not self.pre_filter(data):
+                continue
+
+            # pre-transform
+            if self.pre_transform is not None:
+                data = self.pre_transform(data)
+
+            # save it
+            _, extension = os.path.splitext(raw_path)
+            _, tail = os.path.split(raw_path)
+            file_name = tail.removesuffix(extension)
+            # TODO: change/check this and make option in process
+            # if self.save_on_gpu:
+            #    data.cuda()
+            torch.save(data, os.path.join(self.processed_dir, f"{idx}.pt"))
+
+            # add to index
+            idx_to_name["idx"].append(idx)
+            idx_to_name["file_name"].append(file_name)
+            idx += 1
+
+        self._processed_file_names = list(sorted(os.listdir(self.processed_dir)))
+
+        warnings.warn("Need to check values are correct for data, positions, features")
+        warnings.warn("Check graph correctly connected")
+        warnings.warn(
+            "Consider what else may want to save for each dataitem: name of each feature? gt label map? scope? name? a lot of this is in the config files so would become redundant"
+        )
+        # save mapping from idx to name
+        df = pl.from_dict(idx_to_name)
+        df.write_csv(os.path.join(self.processed_dir, "file_map.csv"))
 
 
 class ClusterDataset(SMLMDataset):

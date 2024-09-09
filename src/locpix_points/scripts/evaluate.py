@@ -141,26 +141,54 @@ def main(argv=None):
 
     test_folder = os.path.join(processed_directory, "test")
 
-    test_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        test_folder,  # processed_dir_root
-        label_level=config["label_level"],  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=load_data_from_gpu,  # gpu
-        transform=None,  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-    )
+    if config["model"] in [
+        "locclusternet",
+        "clusternet",
+        "clustermlp",
+        "locnetonly_pointnet",
+        "locnetonly_pointtransformer",
+    ]:
+        test_set = datastruc.ClusterLocDataset(
+            None,  # raw_loc_dir_root
+            None,  # raw_cluster_dir_root
+            test_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=None,  # transform
+            pre_transform=None,  # pre_transform
+            loc_feat=None,
+            cluster_feat=None,
+            min_feat_locs=None,
+            max_feat_locs=None,
+            min_feat_clusters=None,
+            max_feat_clusters=None,
+            kneighboursclusters=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbourslocs=None,
+        )
+
+    elif config["model"] in ["loconlynet"]:
+        # load in test dataset
+        test_set = datastruc.LocDataset(
+            None,  # raw_loc_dir_root
+            test_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=None,  # transform
+            pre_transform=None,  # pre_transform
+            feat=None,
+            min_feat=None,
+            max_feat=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbours=None,
+        )
+
+    else:
+        raise ValueError("Model not defined")
 
     test_loader = L.DataLoader(
         test_set,
@@ -171,7 +199,18 @@ def main(argv=None):
     )
     for _, data in enumerate(test_loader):
         first_item = data
-    dim = first_item["locs"].pos.shape[-1]
+    if config["model"] in [
+        "locclusternet",
+        "clusternet",
+        "clustermlp",
+        "locnetonly_pointnet",
+        "locnetonly_pointtransformer",
+    ]:
+        dim = first_item["locs"].pos.shape[-1]
+    elif config["model"] in ["loconlynet"]:
+        dim = first_item.pos.shape[-1]
+    else:
+        raise ValueError("Model not defined")
     # initialise model
     model = model_choice(
         config["model"],

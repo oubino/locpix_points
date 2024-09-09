@@ -312,3 +312,95 @@ def supercluster_ID(
     ].edge_index = sub_cluster_super_cluster_edges
 
     return data, x_super_clusters, y_super_clusters, superclusterID
+
+
+def load_loc(
+    data,
+    loc_table,
+    loc_feat,
+    min_feat_locs,
+    max_feat_locs,
+    fov_x,
+    fov_y,
+    kneighbours=None,
+):
+    """Load in position, features and edge index to each node
+
+    Args:
+        data (torch_geometric data) : Data item to
+            load position, features and edge index into
+        loc_table (parquet arrow table) : Localisation data
+            in form of parquet file
+        loc_feat (list) : List of features to consider in localisation dataset
+        min_feat_locs (dict) : Minimum values of features for the locs training dataset
+        max_feat_locs (dict) : Maxmimum values of features over locs training dataset
+        fov_x (float) : Size of fov (x) in units of data
+        fov_y (float) : Size of fov (y) in units of data
+        kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
+            loc loc dataset. If None then no edges between locs Default (None)
+
+    Returns:
+        data (torch_geometric data) : Data with
+            position and feature for eacch node"""
+
+    loc_table = pl.from_arrow(loc_table)
+
+    # load in positions
+    x_locs = torch.tensor(loc_table["x"].to_numpy())
+    y_locs = torch.tensor(loc_table["y"].to_numpy())
+
+    # load in features
+    if min_feat_locs is None:
+        assert loc_feat is None or (type(loc_feat) is list and len(loc_feat) == 0)
+        data.x = None
+    else:
+        assert list(min_feat_locs.keys()) == loc_feat
+        assert list(max_feat_locs.keys()) == loc_feat
+
+        feat_data = torch.tensor(loc_table.select(loc_feat).to_pandas().to_numpy())
+        min_vals = torch.tensor(list(min_feat_locs.values()))
+        max_vals = torch.tensor(list(max_feat_locs.values()))
+        feat_data = (feat_data - min_vals) / (max_vals - min_vals)
+        # clamp needed if val/test data has min/max greater than train set min/max
+        feat_data = torch.clamp(feat_data, min=0, max=1)
+        data.x = feat_data.float()  # might not need .float()
+
+    if kneighbours is not None:
+        batch = torch.zeros(len(data["locs"].x))
+        loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+        # add 1 as with loop = True considers itself as one of the k neighbours
+        loc_loc_edges = knn_graph(loc_coords, k=kneighbours + 1, batch=batch, loop=True)
+        data.edge_index = loc_loc_edges
+
+    # Load in positions afterwards as scale data to between -1 and 1 - this might affect
+    # above code
+    # scale positions
+    min_x = x_locs.min()
+    min_y = y_locs.min()
+    x_range = x_locs.max() - min_x
+    y_range = y_locs.max() - min_y
+    if x_range < 0.95 * fov_x:
+        logging.info(
+            f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
+        )
+    if y_range < 0.95 * fov_y:
+        logging.info(
+            f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
+        )
+    range_xy = max(x_range, y_range)
+
+    # scale position
+    # shift and scale biggest axis from -1 to 1
+    x_locs = (x_locs - min_x) / range_xy
+    y_locs = (y_locs - min_y) / range_xy
+    # scale to between -1 and 1
+    x_locs = 2.0 * x_locs - 1.0
+    y_locs = 2.0 * y_locs - 1.0
+    assert x_locs.min() == -1.0 or y_locs.min() == 1.0
+    assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    data.pos = loc_coords.float()
+
+    data.validate(raise_on_error=True)
+
+    return data

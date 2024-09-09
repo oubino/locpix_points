@@ -409,6 +409,74 @@ def main(argv=None):
         with open(yaml_save_loc, "w") as outfile:
             yaml.dump(config, outfile)
 
+    elif config["model"] == "Loc":
+        if os.path.exists(os.path.join(input_folder_train, "featextract/locs")):
+            input_folder = "featextract/locs"
+            min_feat, max_feat = minmax(config, "loc_feat", file_directory, train_list)
+        else:
+            input_folder = "gt_label"
+            min_feat = None
+            max_feat = None
+
+        print("Train set...")
+        # create train dataset
+        _ = datastruc.LocDataset(
+            os.path.join(input_folder_train, input_folder),
+            train_folder,
+            config["label_level"],
+            train_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform introduced in train script
+            None,  # pre-transform
+            config["feat"],
+            min_feat,
+            max_feat,
+            config["fov_x"],
+            config["fov_y"],
+            kneighbours=config["kneighbours"],
+        )
+
+        print("Val set...")
+        # create val dataset
+        _ = datastruc.LocDataset(
+            os.path.join(input_folder_val, input_folder),
+            val_folder,
+            config["label_level"],
+            val_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["feat"],
+            min_feat,
+            max_feat,
+            config["fov_x"],
+            config["fov_y"],
+            kneighbours=config["kneighbours"],
+        )
+
+        print("Test set...")
+        # create test dataset
+        _ = datastruc.LocDataset(
+            os.path.join(input_folder_test, input_folder),
+            test_folder,
+            config["label_level"],
+            test_pre_filter,
+            config["save_on_gpu"],
+            None,  # transform
+            None,  # pre-transform
+            config["feat"],
+            min_feat,
+            max_feat,
+            config["fov_x"],
+            config["fov_y"],
+            kneighbours=config["kneighbours"],
+        )
+
+        # save yaml file
+        yaml_save_loc = os.path.join(project_directory, "process.yaml")
+        with open(yaml_save_loc, "w") as outfile:
+            yaml.dump(config, outfile)
+
     else:
         raise NotImplementedError
 

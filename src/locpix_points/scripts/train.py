@@ -147,76 +147,135 @@ def main(argv=None):
     val_folder = os.path.join(processed_directory, "val")
     test_folder = os.path.join(processed_directory, "test")
 
-    # load in train dataset
-    train_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        train_folder,  # processed_dir_root
-        label_level=config["label_level"],  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=load_data_from_gpu,  # gpu
-        transform=config["transforms"],  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-    )
+    if config["model"] in [
+        "locclusternet",
+        "clusternet",
+        "clustermlp",
+        "locnetonly_pointnet",
+        "locnetonly_pointtransformer",
+    ]:
+        # load in train dataset
+        train_set = datastruc.ClusterLocDataset(
+            None,  # raw_loc_dir_root
+            None,  # raw_cluster_dir_root
+            train_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=config["transforms"],  # transform
+            pre_transform=None,  # pre_transform
+            loc_feat=None,
+            cluster_feat=None,
+            min_feat_locs=None,
+            max_feat_locs=None,
+            min_feat_clusters=None,
+            max_feat_clusters=None,
+            kneighboursclusters=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbourslocs=None,
+        )
+
+        # load in val dataset
+        val_set = datastruc.ClusterLocDataset(
+            None,  # raw_loc_dir_root
+            None,  # raw_cluster_dir_root
+            val_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=config["transforms"],  # transform
+            pre_transform=None,  # pre_transform
+            loc_feat=None,
+            cluster_feat=None,
+            min_feat_locs=None,
+            max_feat_locs=None,
+            min_feat_clusters=None,
+            max_feat_clusters=None,
+            kneighboursclusters=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbourslocs=None,
+        )
+
+        # load in test dataset
+        test_set = datastruc.ClusterLocDataset(
+            None,  # raw_loc_dir_root
+            None,  # raw_cluster_dir_root
+            test_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=None,  # transform
+            pre_transform=None,  # pre_transform
+            loc_feat=None,
+            cluster_feat=None,
+            min_feat_locs=None,
+            max_feat_locs=None,
+            min_feat_clusters=None,
+            max_feat_clusters=None,
+            kneighboursclusters=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbourslocs=None,
+        )
+
+    elif config["model"] in ["loconlynet"]:
+        # load in train dataset
+        train_set = datastruc.LocDataset(
+            None,  # raw_loc_dir_root
+            train_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=config["transforms"],  # transform
+            pre_transform=None,  # pre_transform
+            feat=None,
+            min_feat=None,
+            max_feat=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbours=None,
+        )
+
+        # load in val dataset
+        val_set = datastruc.LocDataset(
+            None,  # raw_loc_dir_root
+            val_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=config["transforms"],  # transform
+            pre_transform=None,  # pre_transform
+            feat=None,
+            min_feat=None,
+            max_feat=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbours=None,
+        )
+
+        # load in test dataset
+        test_set = datastruc.LocDataset(
+            None,  # raw_loc_dir_root
+            test_folder,  # processed_dir_root
+            label_level=config["label_level"],  # label_level
+            pre_filter=None,  # pre_filter
+            save_on_gpu=load_data_from_gpu,  # gpu
+            transform=None,  # transform
+            pre_transform=None,  # pre_transform
+            feat=None,
+            min_feat=None,
+            max_feat=None,
+            fov_x=None,
+            fov_y=None,
+            kneighbours=None,
+        )
+    else:
+        raise ValueError("Model not defined for train script")
 
     print(f"Length of train dataset {len(train_set)}")
-
-    # load in val dataset
-    val_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        val_folder,  # processed_dir_root
-        label_level=config["label_level"],  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=load_data_from_gpu,  # gpu
-        transform=config["transforms"],  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-    )
-
     print(f"Length of validation dataset {len(val_set)}")
-
-    # load in test dataset
-    test_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        test_folder,  # processed_dir_root
-        label_level=config["label_level"],  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=load_data_from_gpu,  # gpu
-        transform=None,  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-    )
-
     print(f"Length of test dataset {len(test_set)}")
 
     # if data is on gpu then don't need to pin memory
@@ -308,7 +367,18 @@ def main(argv=None):
     #    assert label.shape == torch.Size([1])
     # else:
     #    raise ValueError("Label level not defined")
-    dim = first_train_item["locs"].pos.shape[-1]
+    if config["model"] in [
+        "locclusternet",
+        "clusternet",
+        "clustermlp",
+        "locnetonly_pointnet",
+        "locnetonly_pointtransformer",
+    ]:
+        dim = first_train_item["locs"].pos.shape[-1]
+    elif config["model"] in ["loconlynet"]:
+        dim = first_train_item.pos.shape[-1]
+    else:
+        raise ValueError("Model not listed in train")
     print("Dim", dim)
 
     # initialise model
