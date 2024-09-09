@@ -16,6 +16,7 @@ Currently available models:
 """
 
 from .cluster_nets import ClusterNetHetero, LocClusterNet, ClusterMLP, LocNetClassifyFOV
+from .loc_only_nets import LocOnlyNet
 
 # from .simple_gcn_1 import SimpleGCN1
 # from .point_net import PointNetEmbedding, PointNetSegmentation
@@ -61,6 +62,9 @@ def model_choice(name, *args, **kwargs):
     elif name == "locnetonly_pointtransformer":
         device = kwargs["device"]
         return LocNetClassifyFOV(*args, device=device, transformer=True)
+    elif name == "loconlynet":
+        return LocOnlyNet(*args)
+
     # elif name == "locpointnet":
     #    device = kwargs["device"]
     #    return LocPointNet(*args, device=device)
