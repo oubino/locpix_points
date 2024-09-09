@@ -148,7 +148,7 @@ def main(argv=None):
         df = df.filter(~pl.col("clusterID").is_in(small_clusters["clusterID"]))
 
         # remap the clusterIDs
-        unique_clusters = list(df["clusterID"].unique())
+        unique_clusters = list(df["clusterID"].unique(maintain_order=True))
         map = {value: i for i, value in enumerate(unique_clusters)}
         df = df.with_columns(pl.col("clusterID").map_dict(map).alias("clusterID"))
 
@@ -183,6 +183,7 @@ def main(argv=None):
         )
 
         # identify superclusters
+        raise ValueError("Change accordingly")
         cluster_df = featextract.super_cluster(
             cluster_df,
             k=15,
