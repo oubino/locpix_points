@@ -1243,11 +1243,15 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         # explanation.edge_mask = torch.where(~loop_mask, explanation.edge_mask, 0.0)
 
         # alternative fidelity measure
-        subgraph, complement = custom_fidelity_measure(
-            cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
-        )
+        try:
+            subgraph, complement = custom_fidelity_measure(
+                cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+            )
+        except ValueError:
+            print("Can't calculate fidelity measure")
+            return None, None, cluster_dataitem, explanation.edge_mask.to(device)
 
-        return subgraph, complement
+        return subgraph, complement, cluster_dataitem, explanation.edge_mask.to(device)
 
     elif scale == "loc":
         loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
@@ -1492,6 +1496,9 @@ def visualise_explanation(
         edge_imp (tensor) : Tensor denoting importance of each edge from 0 to 1
         overlay (bool) : Whether to overlay the raw localisations
         file_loc (string) : Raw file to visualise
+
+    Raises:
+        ValueError: Temporary fix as not written properly for edge
     """
 
     # edge_index and edge_imp to undirected
@@ -1515,8 +1522,9 @@ def visualise_explanation(
 
     # edge importance
     if edge_imp is not None:
+        raise ValueError("This is not checked - visualise with matplotlib instead")
         # make edges between nodes maximum of nodes connecting them
-        edge_index, edge_imp = to_undirected(edge_index, edge_imp, reduce="max")
+        # edge_index, edge_imp = to_undirected(edge_index, edge_imp, reduce="max")
         # find nonzero/zero edges
         ind_nonzero = torch.squeeze(edge_imp.nonzero()).cpu().numpy()
         ind_zero = torch.squeeze((edge_imp == 0.0).nonzero()).cpu().numpy()
@@ -1547,7 +1555,7 @@ def visualise_explanation(
         neg_edges.lines = o3d.utility.Vector2iVector(lines[ind_zero, :])
         neg_edges.colors = o3d.utility.Vector3dVector(colors[ind_zero])
 
-        plots.extend([pos_edges, neg_edges])
+        plots.extend([neg_edges, pos_edges])
 
     else:
         pos = pos.cpu().numpy()
@@ -1699,7 +1707,13 @@ def visualise_explanation(
         locs = x["locs"].pos.numpy()
         if locs.shape[1] == 2:
             z = np.ones(locs.shape[0])
-            z -= 0.1
+            plus = input(
+                "Plot localisations set back (YES) or set forward (anything else)"
+            )
+            if plus == "YES":
+                z += 0.1
+            else:
+                z -= 0.1
             z = np.expand_dims(z, axis=1)
             locs = np.concatenate([locs, z], axis=1)
 
