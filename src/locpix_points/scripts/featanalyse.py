@@ -1231,12 +1231,12 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         # print(f"Negative fidelity closer to 0 better: {neg_fid})")
         unf = metric.unfaithfulness(explainer, explanation)
         print(f"Unfaithfulness, closer to 0 better {unf}")
-        visualise_explanation(
-            cluster_dataitem.pos,
-            cluster_dataitem.edge_index,
-            node_imp=None,
-            edge_imp=explanation.edge_mask.to(device),
-        )
+        # visualise_explanation(
+        #    cluster_dataitem.pos,
+        #    cluster_dataitem.edge_index,
+        #    node_imp=None,
+        #    edge_imp=explanation.edge_mask.to(device),
+        # )
 
         # this commented out code removes important edges that are self loops
         # loop_mask = cluster_dataitem.edge_index[0] == cluster_dataitem.edge_index[1]
