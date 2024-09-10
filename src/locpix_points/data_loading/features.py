@@ -44,6 +44,7 @@ def load_loc_cluster(
     fov_x,
     fov_y,
     kneighbourslocs=None,
+    superclusters=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -66,6 +67,7 @@ def load_loc_cluster(
         fov_y (float) : Size of fov (y) in units of data
         kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If None then connects all locs within each cluster. Default (None)
+        superclusters (bool) : If true extracts superclusters
 
     Returns:
         data (torch_geometric data) : Data with
@@ -201,27 +203,28 @@ def load_loc_cluster(
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
     data["clusters"].pos = cluster_coords.float()
 
-    #  ---- superclusters_0 ----
-    data, x_sc_0, y_sc_0, cluster_id_sc_0 = supercluster_ID(
-        data,
-        cluster_table,
-        x_clusters,
-        y_clusters,
-        torch.tensor(cluster_table["clusterID"].to_numpy(), dtype=torch.int64),
-        "clusters",
-        "superclusters_0",
-    )
+    if superclusters:
+        #  ---- superclusters_0 ----
+        data, x_sc_0, y_sc_0, cluster_id_sc_0 = supercluster_ID(
+            data,
+            cluster_table,
+            x_clusters,
+            y_clusters,
+            torch.tensor(cluster_table["clusterID"].to_numpy(), dtype=torch.int64),
+            "clusters",
+            "superclusters_0",
+        )
 
-    # ---- superclusters_1 ----
-    data, _, _, cluster_id_above = supercluster_ID(
-        data,
-        cluster_table,
-        x_sc_0,
-        y_sc_0,
-        cluster_id_sc_0,
-        "superclusters_0",
-        "superclusters_1",
-    )
+        # ---- superclusters_1 ----
+        data, _, _, cluster_id_above = supercluster_ID(
+            data,
+            cluster_table,
+            x_sc_0,
+            y_sc_0,
+            cluster_id_sc_0,
+            "superclusters_0",
+            "superclusters_1",
+        )
 
     data["locs", "in", "clusters"].edge_index = loc_cluster_edges
     # loc_loc_edges = sort_edge_index(loc_loc_edges)

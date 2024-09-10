@@ -624,6 +624,7 @@ class ClusterLocDataset(SMLMDataset):
                 self.fov_x,
                 self.fov_y,
                 self.kneighbourslocs,
+                superclusters=False,
             )
 
             # load in gt label
