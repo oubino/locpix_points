@@ -183,11 +183,12 @@ def main(argv=None):
         )
 
         # identify superclusters
-        raise ValueError("Change accordingly")
-        cluster_df = featextract.super_cluster(
-            cluster_df,
-            k=15,
-        )
+        if "superclusters" in config.keys():
+            if config["superclusters"]:
+                cluster_df = featextract.super_cluster(
+                    cluster_df,
+                    k=15,
+                )
 
         # save locs dataframe
         item.df = df
