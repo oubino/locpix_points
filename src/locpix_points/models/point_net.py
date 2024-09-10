@@ -20,7 +20,7 @@ from torch_geometric.nn import (
     knn_interpolate,
     radius,
 )
-from torch_geometric.utils import sort_edge_index, coalesce
+from torch_geometric.utils import sort_edge_index, coalesce, contains_self_loops
 import warnings
 
 # TODO: layer sizes
@@ -61,6 +61,7 @@ class SAModule(torch.nn.Module):
         # remove duplicate edges
         edge_index = coalesce(edge_index)
         x_dst = None if x is None else x[idx]
+        assert contains_self_loops(edge_index)
         x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch

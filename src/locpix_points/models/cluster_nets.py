@@ -20,6 +20,7 @@ from torch_geometric.nn.pool import (
     max_pool_x,
     avg_pool_x,
 )
+from torch_geometric.utils import contains_self_loops
 import torch_scatter
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
@@ -145,6 +146,7 @@ class ClusterEncoder(torch.nn.Module):
         if self.conv_type in ["gin", "transformer"]:
             out = self.conv(x_dict, edge_index_dict)
         elif self.conv_type in ["pointnet", "pointtransformer"]:
+            assert contains_self_loops(edge_index_dict["clusters", "near", "clusters"])
             out = self.conv(x_dict, pos_dict, edge_index_dict)
         return out["clusters"]
         # raise ValueError("Wrong axis when have batch")
@@ -1110,6 +1112,8 @@ class LocClusterNet(torch.nn.Module):
                 self.superclusters = True
             else:
                 self.superclusters = False
+        else:
+            self.superclusters = False
 
         # wrong input channel size 2 might change if locs have features
         self.loc_net = LocNet(config, transformer=transformer)
