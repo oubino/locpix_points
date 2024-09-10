@@ -53,11 +53,12 @@ class TransformerBlock(torch.nn.Module):
             pos_nn=self.pos_nn,
             attn_nn=self.attn_nn,
             aggr="max",
-            add_self_loops=False,
+            add_self_loops=False,  # CHECK-10/9/24
         )
 
     def forward(self, x, pos, edge_index):
         x = self.lin_in(x).relu()
+        # assert not contains_self_loops(edge_index)
         x = self.transformer(x, pos, edge_index)
         x = self.lin_out(x).relu()
         return x
@@ -215,14 +216,14 @@ class PointTransformerEmbedding(torch.nn.Module):
 
         # first block
         x = self.mlp_input(x)
-        edge_index = knn_graph(pos, k=self.k, batch=batch)
+        edge_index = knn_graph(pos, k=self.k, batch=batch)  # CHECK-10/9/24
         x = self.transformer_input(x, pos, edge_index)
 
         # backbone
         for i in range(len(self.transformers_down)):
             x, pos, batch = self.transition_down[i](x, pos, batch=batch)
 
-            edge_index = knn_graph(pos, k=self.k, batch=batch)
+            edge_index = knn_graph(pos, k=self.k, batch=batch)  # CHECK-10/9/24
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling
