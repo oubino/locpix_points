@@ -216,14 +216,14 @@ class PointTransformerEmbedding(torch.nn.Module):
 
         # first block
         x = self.mlp_input(x)
-        edge_index = knn_graph(pos, k=self.k, batch=batch)  # CHECK-10/9/24
+        edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
         # backbone
         for i in range(len(self.transformers_down)):
             x, pos, batch = self.transition_down[i](x, pos, batch=batch)
 
-            edge_index = knn_graph(pos, k=self.k, batch=batch)  # CHECK-10/9/24
+            edge_index = knn_graph(pos, k=self.k, batch=batch)
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling
