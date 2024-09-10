@@ -148,7 +148,7 @@ def main(argv=None):
         df = df.filter(~pl.col("clusterID").is_in(small_clusters["clusterID"]))
 
         # remap the clusterIDs
-        unique_clusters = list(df["clusterID"].unique())
+        unique_clusters = list(df["clusterID"].unique(maintain_order=True))
         map = {value: i for i, value in enumerate(unique_clusters)}
         df = df.with_columns(pl.col("clusterID").map_dict(map).alias("clusterID"))
 
@@ -181,6 +181,14 @@ def main(argv=None):
         cluster_df = cluster_df.with_columns(
             (pl.col("count") / pl.col("area_pca")).alias("density_pca")
         )
+
+        # identify superclusters
+        if "superclusters" in config.keys():
+            if config["superclusters"]:
+                cluster_df = featextract.super_cluster(
+                    cluster_df,
+                    k=15,
+                )
 
         # save locs dataframe
         item.df = df

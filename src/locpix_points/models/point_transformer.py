@@ -24,7 +24,7 @@ from torch_geometric.nn import (
     knn_graph,
     knn_interpolate,
 )
-from torch_geometric.utils import scatter
+from torch_geometric.utils import scatter, contains_self_loops
 
 
 class TransformerBlock(torch.nn.Module):
@@ -36,11 +36,15 @@ class TransformerBlock(torch.nn.Module):
         # !TODO: Below needs to depend on the dimensions and in paper it says
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
-        self.pos_nn = MLP([dim, pos_nn_layers, out_channels], plain_last=False)  # BN
+        self.pos_nn = MLP(
+            [dim, pos_nn_layers, out_channels], plain_last=False, act="relu"
+        )  # BN
 
         # HARDCODE
         self.attn_nn = MLP(  # BN
-            [out_channels, attn_nn_layers, out_channels], plain_last=False
+            [out_channels, attn_nn_layers, out_channels],
+            plain_last=False,
+            act="relu",
         )
 
         self.transformer = PointTransformerConv(
@@ -49,11 +53,12 @@ class TransformerBlock(torch.nn.Module):
             pos_nn=self.pos_nn,
             attn_nn=self.attn_nn,
             aggr="max",
-            add_self_loops=False,
+            add_self_loops=True,
         )
 
     def forward(self, x, pos, edge_index):
         x = self.lin_in(x).relu()
+        assert not contains_self_loops(edge_index)
         x = self.transformer(x, pos, edge_index)
         x = self.lin_out(x).relu()
         return x
@@ -70,10 +75,12 @@ class TransitionUp(torch.nn.Module):
         self.mlp_sub = MLP(
             [in_channels, out_channels],
             plain_last=False,
+            act="relu",
         )
         self.mlp = MLP(
             [out_channels, out_channels],
             plain_last=False,
+            act="relu",
         )
         self.k = k
 
@@ -102,7 +109,10 @@ class TransitionDown(torch.nn.Module):
         self.k = k
         self.ratio = ratio
         self.mlp = MLP(
-            [in_channels, out_channels], plain_last=False, norm="instance_norm"
+            [in_channels, out_channels],
+            plain_last=False,
+            norm="instance_norm",
+            act="relu",
         )  # BN
 
     def forward(self, x, pos, batch):
@@ -111,9 +121,9 @@ class TransitionDown(torch.nn.Module):
 
         # compute for each cluster (they say cluster as each point comes to represent
         # a cluster despite being just points in the first layer) t
-        # he k nearest points & beware of self loop
         sub_batch = batch[id_clusters] if batch is not None else None
         # add one to nearest neighs as nearest neighs includes itself
+        # note this includes self loops
         id_k_neighbor = knn(
             pos, pos[id_clusters], k=self.k + 1, batch_x=batch, batch_y=sub_batch
         )
@@ -156,6 +166,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_input = MLP(
             [in_channels, dim_model[0]],
             plain_last=False,
+            act="relu",
         )  # BN
 
         self.transformer_input = TransformerBlock(
@@ -195,6 +206,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_output = MLP(  # BN
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
+            act="relu",
         )
 
     def forward(self, x, pos, batch=None):

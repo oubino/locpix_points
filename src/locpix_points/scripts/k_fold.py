@@ -101,9 +101,9 @@ def main(argv=None):
         val_fold = val_folds[index]
         test_fold = test_folds[index]
 
-        train_fold = [x.rstrip(".parquet") for x in train_fold]
-        val_fold = [x.rstrip(".parquet") for x in val_fold]
-        test_fold = [x.rstrip(".parquet") for x in test_fold]
+        train_fold = [x.removesuffix(".parquet") for x in train_fold]
+        val_fold = [x.removesuffix(".parquet") for x in val_fold]
+        test_fold = [x.removesuffix(".parquet") for x in test_fold]
 
         # initialise wandb
         wandb.init(

@@ -15,6 +15,7 @@ import time
 from matplotlib.cm import get_cmap
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
+import matplotlib.colors as mpl_colors
 import mplcursors
 import numpy as np
 import open3d as o3d
@@ -22,7 +23,6 @@ from locpix_points.data_loading import datastruc
 from locpix_points.models.cluster_nets import ClusterNetHomogeneous
 from locpix_points.models.cluster_nets import parse_data
 from locpix_points.models import model_choice
-from locpix_points.scripts.visualise import visualise_torch_geometric
 import pandas as pd
 import polars as pl
 import pyarrow.parquet as pq
@@ -48,6 +48,10 @@ import umap
 import umap.plot
 import warnings
 import yaml
+
+
+def _to_hex(arr):
+    return [mpl_colors.to_hex(c) for c in arr]
 
 
 def main(argv=None):
@@ -752,7 +756,10 @@ def visualise_umap_embedding(
         interactive (bool): Whether to do interactive plot
         save (bool): Whether to save UMAP plot
         save_name (string): Name of file to save
-        project_directory (string): Project directory to save plot in"""
+        project_directory (string): Project directory to save plot in
+
+    Returns:
+        p (umap plot): Returns the umap plot"""
 
     if not interactive:
         warnings.warn(
@@ -799,16 +806,28 @@ def visualise_umap_embedding(
                 "index": np.arange(len(df)),
                 "label": df.type.map(label_map),
                 "item": df.type,
+                "file_name": df.file_name,
             }
         )
         umap.plot.output_notebook()
+
+        # replace yellow with pink for better visualisation
+        unique_labels = np.unique(df.type.map(label_map))
+        num_labels = unique_labels.shape[0]
+        color_key_cmap = "Spectral"
+        color_key = _to_hex(plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels)))
+        color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+
         p = umap.plot.interactive(
             embedding,
             labels=df.type.map(label_map),
             hover_data=hover_data,
             point_size=point_size,
+            color_key=color_key,
         )
         umap.plot.show(p)
+
+        return p
 
 
 def generate_pca_embedding(X, n_components):
@@ -1072,7 +1091,7 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
         cluster_model, cluster_dataitem, node_imp, "node", device
     )
 
-    return subgraph, complement
+    return subgraph, complement, cluster_dataitem, node_imp
 
 
 def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
@@ -1212,23 +1231,27 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         # print(f"Negative fidelity closer to 0 better: {neg_fid})")
         unf = metric.unfaithfulness(explainer, explanation)
         print(f"Unfaithfulness, closer to 0 better {unf}")
-        visualise_explanation(
-            cluster_dataitem.pos,
-            cluster_dataitem.edge_index,
-            node_imp=None,
-            edge_imp=explanation.edge_mask.to(device),
-        )
+        # visualise_explanation(
+        #    cluster_dataitem.pos,
+        #    cluster_dataitem.edge_index,
+        #    node_imp=None,
+        #    edge_imp=explanation.edge_mask.to(device),
+        # )
 
         # this commented out code removes important edges that are self loops
         # loop_mask = cluster_dataitem.edge_index[0] == cluster_dataitem.edge_index[1]
         # explanation.edge_mask = torch.where(~loop_mask, explanation.edge_mask, 0.0)
 
         # alternative fidelity measure
-        subgraph, complement = custom_fidelity_measure(
-            cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
-        )
+        try:
+            subgraph, complement = custom_fidelity_measure(
+                cluster_model, cluster_dataitem, explanation.edge_mask, "edge", device
+            )
+        except ValueError:
+            print("Can't calculate fidelity measure")
+            return None, None, cluster_dataitem, explanation.edge_mask.to(device)
 
-        return subgraph, complement
+        return subgraph, complement, cluster_dataitem, explanation.edge_mask.to(device)
 
     elif scale == "loc":
         loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
@@ -1460,7 +1483,9 @@ class Present:
         self.plot_present = [True, True, True, True]
 
 
-def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
+def visualise_explanation(
+    pos, edge_index, node_imp=None, edge_imp=None, overlay=False, file_loc=None
+):
     """Visualise dataitem.
     Visualise the nodes with edges coloured by importance
 
@@ -1469,6 +1494,11 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
         edge_index (tensor) : Tensor containing edge index
         node_imp (tensor) : Tensor denoting importance of each node from 0 to 1
         edge_imp (tensor) : Tensor denoting importance of each edge from 0 to 1
+        overlay (bool) : Whether to overlay the raw localisations
+        file_loc (string) : Raw file to visualise
+
+    Raises:
+        ValueError: Temporary fix as not written properly for edge
     """
 
     # edge_index and edge_imp to undirected
@@ -1492,8 +1522,9 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
     # edge importance
     if edge_imp is not None:
+        raise ValueError("This is not checked - visualise with matplotlib instead")
         # make edges between nodes maximum of nodes connecting them
-        edge_index, edge_imp = to_undirected(edge_index, edge_imp, reduce="max")
+        # edge_index, edge_imp = to_undirected(edge_index, edge_imp, reduce="max")
         # find nonzero/zero edges
         ind_nonzero = torch.squeeze(edge_imp.nonzero()).cpu().numpy()
         ind_zero = torch.squeeze((edge_imp == 0.0).nonzero()).cpu().numpy()
@@ -1508,7 +1539,7 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
 
         # color edges by importance
         lines = np.swapaxes(edge_index, 0, 1)
-        colormap = get_cmap("seismic")
+        colormap = get_cmap("bwr")
         rgba = colormap(edge_imp.cpu().numpy())
         colors = rgba[:, 0:3]
 
@@ -1524,7 +1555,7 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
         neg_edges.lines = o3d.utility.Vector2iVector(lines[ind_zero, :])
         neg_edges.colors = o3d.utility.Vector3dVector(colors[ind_zero])
 
-        plots.extend([pos_edges, neg_edges])
+        plots.extend([neg_edges, pos_edges])
 
     else:
         pos = pos.cpu().numpy()
@@ -1547,7 +1578,7 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
     # node importance
     if node_imp is not None:
         # colors for nodes
-        colormap = get_cmap("seismic")
+        colormap = get_cmap("bwr")
         rgba = colormap(node_imp.cpu().numpy())
         colors = rgba[:, 0:3]
 
@@ -1667,7 +1698,39 @@ def visualise_explanation(pos, edge_index, node_imp=None, edge_imp=None):
         print("Add/Remove negative nodes using Y button")
 
     _ = o3d.visualization.Visualizer()
-    o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
+    if overlay is False:
+        o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
+    else:
+        # draw raw localisations as grey spheres set back slightly from the graph
+        warnings.warn("Localisations will be slightly set back from graph")
+        x = torch.load(file_loc)
+        locs = x["locs"].pos.numpy()
+        if locs.shape[1] == 2:
+            z = np.ones(locs.shape[0])
+            plus = input(
+                "Plot localisations set back (YES) or set forward (anything else)"
+            )
+            if plus == "YES":
+                z += 0.1
+            else:
+                z -= 0.1
+            z = np.expand_dims(z, axis=1)
+            locs = np.concatenate([locs, z], axis=1)
+
+        spheres = []
+        for point in np.asarray(locs):
+            sphere = o3d.geometry.TriangleMesh.create_sphere(radius=0.01)
+            sphere.translate(point)
+            sphere.paint_uniform_color(mpl_colors.to_rgb("0.5"))
+            spheres.append(sphere)
+
+        # Combine all spheres into one mesh
+        big_points_mesh = spheres[0]
+        for sphere in spheres[1:]:
+            big_points_mesh += sphere
+
+        plots.append(big_points_mesh)
+        o3d.visualization.draw_geometries(plots)
 
 
 def induced_subgraph(data, imp_list, node_or_edge="node"):

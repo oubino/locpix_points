@@ -54,6 +54,36 @@ def cluster_data(
     return df
 
 
+def super_cluster(
+    df,
+    k=15,
+):
+    """Cluster the clusters into superclusters
+
+    Args:
+        df (polars df): Input dataframe
+        k (int): Number of superclusters
+
+    Returns:
+        df (polars df): Output dataframe with superclusters
+
+    Raises:
+        ValueError: Temporary fix as need to re-write this function"""
+
+    raise ValueError("Change accordingly")
+
+    kmeans = KMeans(n_clusters=k)
+    dataframe = cudf.DataFrame()
+    dataframe["x"] = df["x_mean"].to_numpy()
+    dataframe["y"] = df["y_mean"].to_numpy()
+    kmeans.fit(dataframe)
+    df = df.with_columns(
+        pl.lit(kmeans.labels_.to_numpy().astype("int32")).alias("superclusterID")
+    )
+
+    return df
+
+
 def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
     """Calculate basic cluster features for the dataframe:
         locs per cluster, cluster COM, radius of gyration
