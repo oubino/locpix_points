@@ -65,7 +65,12 @@ def super_cluster(
         k (int): Number of superclusters
 
     Returns:
-        df (polars df): Output dataframe with superclusters"""
+        df (polars df): Output dataframe with superclusters
+
+    Raises:
+        ValueError: Temporary fix as need to re-write this function"""
+
+    raise ValueError("Change accordingly")
 
     kmeans = KMeans(n_clusters=k)
     dataframe = cudf.DataFrame()
