@@ -276,14 +276,7 @@ class ClusterNet(torch.nn.Module):
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
         )
 
-        if 0:
-            # pooling step so end up with one feature vector per fov
-            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
-
-            # linear layer on each fov feature vector
-            return self.linear(x_dict["clusters"])
-
-        elif 1:
+        if supercluster_ID_0 is not None and supercluster_ID_1 is not None:
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
             x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
@@ -312,6 +305,13 @@ class ClusterNet(torch.nn.Module):
             x = global_max_pool(x, batch)
 
             return self.linear_new(x)
+
+        else:
+            # pooling step so end up with one feature vector per fov
+            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+
+            # linear layer on each fov feature vector
+            return self.linear(x_dict["clusters"])
 
 
 def gen_cluster(clusterID, batch):
@@ -1105,6 +1105,11 @@ class LocClusterNet(torch.nn.Module):
             raise NotImplementedError(
                 "Loc conv type should be pointnet or pointtransformer"
             )
+        if "superclusters" in config.keys():
+            if config["superclusters"] is True:
+                self.superclusters = True
+            else:
+                self.superclusters = False
 
         # wrong input channel size 2 might change if locs have features
         self.loc_net = LocNet(config, transformer=transformer)
@@ -1272,14 +1277,20 @@ class LocClusterNet(torch.nn.Module):
             x_dict["clusters"] = x_cluster
 
         # operate graph net on clusters
+        if not self.superclusters:
+            supercluster_ID_0 = None
+            supercluster_ID_1 = None
+        elif self.superclusters:
+            supercluster_ID_0 = data["superclusters_0"].index
+            supercluster_ID_1 = data["superclusters_1"].index
         output = self.cluster_net(
             x_dict,
             pos_dict,
             edge_index_dict,
             data["clusters"].batch,
             self.add_cluster_pos,
-            supercluster_ID_0=data["superclusters_0"].index,
-            supercluster_ID_1=data["superclusters_1"].index,
+            supercluster_ID_0=supercluster_ID_0,
+            supercluster_ID_1=supercluster_ID_1,
         )
 
         return output.log_softmax(dim=-1)
