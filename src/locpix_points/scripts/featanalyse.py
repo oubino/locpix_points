@@ -765,8 +765,27 @@ def visualise_umap_embedding(
         warnings.warn(
             "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
         )
-        ax = umap.plot.points(embedding, labels=df.type.map(label_map))
-        ax.collections[0].set_sizes(len(df) * [point_size])
+        try:
+            ax = umap.plot.points(embedding, labels=df.type.map(label_map))
+            ax.collections[0].set_sizes(len(df) * [point_size])
+        except:
+            print("Too many points - replotting with matplotlib ")
+            fig, ax = plt.subplots(figsize=(10, 10))
+            points = embedding.embedding_
+            unique_labels = np.unique(df.type.map(label_map))
+            num_labels = unique_labels.shape[0]
+            color_key_cmap = "Spectral"
+            color_key = _to_hex(
+                plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
+            )
+            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+            color_key_map = {i: val for i, val in enumerate(color_key)}
+            colors = pd.Series(df.type.map(label_map)).map(color_key_map)
+            ax.scatter(points[:, 0], points[:, 1], s=point_size, c=colors)
+            legend_elements = [
+                mpatches.Patch(facecolor=color_key[k], label=k) for k in unique_labels
+            ]
+            ax.legend(handles=legend_elements)
         legend = ax.get_legend()
         new_handles = []
         # get circular labels in legend
