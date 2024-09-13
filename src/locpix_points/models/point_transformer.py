@@ -186,7 +186,7 @@ class PointTransformerEmbedding(torch.nn.Module):
                 TransitionDown(
                     in_channels=dim_model[i],
                     out_channels=dim_model[i + 1],
-                    ratio=ratio,
+                    ratio=ratio[i],
                     k=self.k,
                 )
             )
