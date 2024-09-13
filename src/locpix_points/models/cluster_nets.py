@@ -264,6 +264,9 @@ class ClusterNet(torch.nn.Module):
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
                 for that FOV
+
+        Raises:
+            ValueError: Temporary fix to stop superclusters running
         """
         x_dict["clusters"] = self.cluster_encoder_0(
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
@@ -282,6 +285,9 @@ class ClusterNet(torch.nn.Module):
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
             x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
+            raise ValueError(
+                "Double check here do we want self loops and what should k be k+1 ?"
+            )
             edge_index = knn_graph(pos_dict["superclusters_0"], k=3, batch=batch)
 
             # clusterencoders
@@ -294,6 +300,9 @@ class ClusterNet(torch.nn.Module):
             # ---- SC1 -----
             cluster = gen_cluster(supercluster_ID_1, batch)
             x_superclusters_1, batch = max_pool_x(cluster, x, batch)
+            raise ValueError(
+                "Double check here do we want self loops and what should k be k+1 ?"
+            )
             edge_index = knn_graph(pos_dict["superclusters_1"], k=3, batch=batch)
 
             # clusterencoders
