@@ -63,7 +63,7 @@ def model_choice(name, *args, **kwargs):
         device = kwargs["device"]
         return LocNetClassifyFOV(*args, device=device, transformer=True)
     elif name == "loconlynet":
-        return LocOnlyNet(*args)
+        return LocOnlyNet(*args, **kwargs)
 
     # elif name == "locpointnet":
     #    device = kwargs["device"]
