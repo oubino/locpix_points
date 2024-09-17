@@ -1385,12 +1385,20 @@ def saliency_eval(cluster_model, config, cluster_dataitem, device):
 
 
 def custom_fidelity_measure(
-    cluster_model, cluster_dataitem, imp_list, node_or_edge, device
+    cluster_model,
+    cluster_dataitem,
+    imp_list,
+    node_or_edge,
+    device,
+    batch=None,
 ):
+    if batch is None:
+        batch = torch.tensor([0], device=device)
+
     graph_pred = cluster_model(
         cluster_dataitem.x,
         cluster_dataitem.edge_index,
-        torch.tensor([0], device=device),
+        batch,
         cluster_dataitem.pos,
         logits=False,
     )
@@ -1409,10 +1417,24 @@ def custom_fidelity_measure(
     subgraph.to(device)
     complement.to(device)
 
+    # rest assumes only only batch item otherwise breaks
+    if batch is None:
+        batch_subgraph = torch.tensor([0], device=device)
+        batch_complement = torch.tensor([0], device=device)
+    else:
+        batch_complement = torch.zeros(
+            complement.pos.shape[0], device=device, dtype=torch.int64
+        )
+        batch_subgraph = torch.zeros(
+            subgraph.pos.shape[0], device=device, dtype=torch.int64
+        )
+
+    assert batch.unique().item() == 0.0 or batch.unique().item() == 0
+
     complement_pred = cluster_model(
         complement.x,
         complement.edge_index,
-        torch.tensor([0], device=device),
+        batch_complement,
         complement.pos,
         logits=False,
     )
@@ -1423,7 +1445,7 @@ def custom_fidelity_measure(
     subgraph_pred = cluster_model(
         subgraph.x,
         subgraph.edge_index,
-        torch.tensor([0], device=device),
+        batch_subgraph,
         subgraph.pos,
         logits=False,
     )
