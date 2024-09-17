@@ -48,6 +48,7 @@ class SAModule(torch.nn.Module):
         self.static = static
 
     def forward(self, x, pos, batch, edge_index=None):
+        raise ValueError("This radius has a bug in it")
         if not self.static:
             idx = fps(pos, batch, ratio=self.ratio)
             row, col = radius(
@@ -63,9 +64,9 @@ class SAModule(torch.nn.Module):
             # remove duplicate edges
             # edge_index = coalesce(edge_index)
             x_dst = None if x is None else x[idx]
-            assert contains_self_loops(
-                torch.stack([edge_index[0, :], idx[edge_index[1, :]]])
-            )
+            # assert contains_self_loops(
+            #    torch.stack([edge_index[0, :], idx[edge_index[1, :]]])
+            # )
             x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
             pos, batch = pos[idx], batch[idx]
         else:
