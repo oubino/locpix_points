@@ -186,7 +186,7 @@ class PointTransformerEmbedding(torch.nn.Module):
                 TransitionDown(
                     in_channels=dim_model[i],
                     out_channels=dim_model[i + 1],
-                    ratio=ratio,
+                    ratio=ratio[i],
                     k=self.k,
                 )
             )
@@ -209,14 +209,15 @@ class PointTransformerEmbedding(torch.nn.Module):
             act="relu",
         )
 
-    def forward(self, x, pos, batch=None):
+    def forward(self, x, pos, batch=None, edge_index=None):
         # add dummy features in case there is none
         if x is None:
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
         # first block
         x = self.mlp_input(x)
-        edge_index = knn_graph(pos, k=self.k, batch=batch)
+        if edge_index is None:
+            edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
         # backbone
