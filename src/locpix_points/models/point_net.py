@@ -47,8 +47,8 @@ class SAModule(torch.nn.Module):
         self.conv = PointNetConv(local_nn, global_nn, add_self_loops=False)
 
     def forward(self, x, pos, batch):
-        raise ValueError("This radius has a bug in it")
         idx = fps(pos, batch, ratio=self.ratio)
+        raise ValueError("This radius has a bug in it")
         row, col = radius(
             # add one to nearest neighs as nearest neighs includes itself
             pos,
@@ -122,22 +122,22 @@ class PointNetEmbedding(torch.nn.Module):
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
         self.sa1_module = SAModule(
-            ratio,
-            radius,
+            ratio[0],
+            radius[0],
             k,
             MLP(local_channels[0], plain_last=True),  # BN
             MLP(global_channels[0], plain_last=True),  # BN
         )
         self.sa2_module = SAModule(
-            ratio,
-            radius,
+            ratio[1],
+            radius[1],
             k,
             MLP(local_channels[1], plain_last=True),  # BN
             MLP(global_channels[1], plain_last=True),  # BN
         )
         self.sa3_module = SAModule(
-            ratio,
-            radius,
+            ratio[2],
+            radius[2],
             k,
             MLP(local_channels[2], plain_last=True),  # BN
             MLP(global_channels[2], plain_last=True),  # BN
