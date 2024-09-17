@@ -152,7 +152,11 @@ class PointNetEmbedding(torch.nn.Module):
         warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
     def forward(self, x, pos, batch):
-        x = self.sa1_module(x, pos, batch)
+        x = self.sa1_module(
+            x,
+            pos,
+            batch,
+        )
         x = self.sa2_module(*x)
         x = self.sa3_module(*x)
         sa4_out = self.sa4_module(*x)
