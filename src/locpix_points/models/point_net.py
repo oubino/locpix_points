@@ -39,38 +39,34 @@ class SAModule(torch.nn.Module):
             is the PointNet architecture defining function applied to each
             point"""
 
-    def __init__(self, ratio, r, k, local_nn, global_nn, static=False):
+    def __init__(self, ratio, r, k, local_nn, global_nn):
         super().__init__()
         self.ratio = ratio
         self.r = r
         self.k = k
         self.conv = PointNetConv(local_nn, global_nn, add_self_loops=False)
-        self.static = static
 
-    def forward(self, x, pos, batch, edge_index=None):
+    def forward(self, x, pos, batch):
         raise ValueError("This radius has a bug in it")
-        if not self.static:
-            idx = fps(pos, batch, ratio=self.ratio)
-            row, col = radius(
-                # add one to nearest neighs as nearest neighs includes itself
-                pos,
-                pos[idx],
-                self.r,
-                batch,
-                batch[idx],
-                max_num_neighbors=self.k + 1,
-            )
-            edge_index = torch.stack([col, row], dim=0)
-            # remove duplicate edges
-            # edge_index = coalesce(edge_index)
-            x_dst = None if x is None else x[idx]
-            # assert contains_self_loops(
-            #    torch.stack([edge_index[0, :], idx[edge_index[1, :]]])
-            # )
-            x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
-            pos, batch = pos[idx], batch[idx]
-        else:
-            x = self.conv(x, pos, edge_index)
+        idx = fps(pos, batch, ratio=self.ratio)
+        row, col = radius(
+            # add one to nearest neighs as nearest neighs includes itself
+            pos,
+            pos[idx],
+            self.r,
+            batch,
+            batch[idx],
+            max_num_neighbors=self.k + 1,
+        )
+        edge_index = torch.stack([col, row], dim=0)
+        # remove duplicate edges
+        # edge_index = coalesce(edge_index)
+        x_dst = None if x is None else x[idx]
+        # assert contains_self_loops(
+        #    torch.stack([edge_index[0, :], idx[edge_index[1, :]]])
+        # )
+        x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
+        pos, batch = pos[idx], batch[idx]
         return x, pos, batch
 
 
@@ -108,10 +104,9 @@ class PointNetEmbedding(torch.nn.Module):
         radius (list) : Radius of neighbourhood to consider for each layer
         channels (list) : Channel sizes for each layer
         dropout (float) : Dropout for the final layer
-        static (bool): If true edge index is precaculated
     """
 
-    def __init__(self, config, static=False):
+    def __init__(self, config):
         super().__init__()
         self.name = "PointNetEmbedding"
 
@@ -123,7 +118,6 @@ class PointNetEmbedding(torch.nn.Module):
         k = config["k"]
         radius = config["radius"]
         ratio = config["ratio"]
-        self.static = static
 
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
@@ -133,7 +127,6 @@ class PointNetEmbedding(torch.nn.Module):
             k,
             MLP(local_channels[0], plain_last=True),  # BN
             MLP(global_channels[0], plain_last=True),  # BN
-            static=static,
         )
         self.sa2_module = SAModule(
             ratio,
@@ -141,7 +134,6 @@ class PointNetEmbedding(torch.nn.Module):
             k,
             MLP(local_channels[1], plain_last=True),  # BN
             MLP(global_channels[1], plain_last=True),  # BN
-            static=static,
         )
         self.sa3_module = SAModule(
             ratio,
@@ -149,7 +141,6 @@ class PointNetEmbedding(torch.nn.Module):
             k,
             MLP(local_channels[2], plain_last=True),  # BN
             MLP(global_channels[2], plain_last=True),  # BN
-            static=static,
         )
         self.sa4_module = GlobalSAModule(MLP(global_sa_channels, plain_last=True))  # BN
 
@@ -160,12 +151,14 @@ class PointNetEmbedding(torch.nn.Module):
 
         warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
-    def forward(self, x, pos, batch, edge_index=None):
-        if self.static:
-            assert edge_index is not None
-        x = self.sa1_module(x, pos, batch, edge_index=edge_index)
-        x = self.sa2_module(*x, edge_index=edge_index)
-        x = self.sa3_module(*x, edge_index=edge_index)
+    def forward(self, x, pos, batch):
+        x = self.sa1_module(
+            x,
+            pos,
+            batch,
+        )
+        x = self.sa2_module(*x)
+        x = self.sa3_module(*x)
         sa4_out = self.sa4_module(*x)
         x, pos, batch = sa4_out
 
