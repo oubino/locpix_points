@@ -14,6 +14,7 @@ This repository then does the following:
     - Train
     - Evaluate
     - Allow visualisation
+    - Analysis of manual features, neural network output, explainability etc. via jupyter notebook
 
 Installation
 ============
@@ -173,13 +174,13 @@ Quickstart (Linux)
 
     bash scripts/k_fold.sh
 
-9. Analyse manual features
+9. Analyse manual features [prefer analysis notebooks instead]
 
 .. code-block:: shell
 
     bash scripts/featanalyse_manual.sh
 
-10. Analyse neural network features for one fold
+10. Analyse neural network features for one fold [prefer analysis notebooks instead]
 
 Adjust config file to choose fold
 
@@ -192,6 +193,11 @@ Adjust config file to choose fold
 .. code-block:: shell
 
     visualise [ARGS] 
+
+12. Analysis notebooks 
+
+Two notebooks: scripts/analysis.ipynb and scripts/analysis_locs.ipynb
+
 
 Longer description
 ==================
@@ -552,8 +558,8 @@ The final models are saved in
 
     - project_folder/models/fold_{index}/
 
-Featanalyse
------------
+Featanalyse [prefer analysis notebooks instead]
+-----------------------------------------------
 
 .. code-block:: python
 
@@ -579,6 +585,14 @@ This includes
     - SVM 
     - KNN  
 
+
+Analysis notebooks
+------------------
+
+analysis.ipynb and analysis_locs.ipynb allow analysis of manual features, neural network features and explainability of the algorithms.
+These should be run in preference to the featanalyse script.
+
+
 Visualise
 ---------
 
@@ -599,6 +613,7 @@ Visualise
 Can load in .pt pytorch geometric file and visualise the nodes and edges [RECOMMENDED]
 
 OR load in .parquet file and visualise just the points.
+
 
 Clean up
 --------
