@@ -3,16 +3,28 @@
 This module contains functions to extract features from the data
 """
 
-import cudf
 import dask
 import dask.array as da
 import math
 import numpy as np
 import polars as pl
-from cuml.cluster import DBSCAN, KMeans
-from dask_ml.decomposition import PCA
 from scipy.spatial import ConvexHull
 from sklearn.neighbors import NearestNeighbors
+
+from numba import cuda
+from dask_ml.decomposition import PCA
+import pandas as pd
+
+if cuda.is_available():
+    from cuml.cluster import DBSCAN, KMeans
+    import cudf
+
+    gpu = True
+
+else:
+    from sklearn.cluster import DBSCAN, KMeans
+
+    gpu = False
 
 
 def cluster_data(
@@ -32,7 +44,10 @@ def cluster_data(
     Returns:
         df (polars df) : Dataframe with additional column for cluster"""
 
-    dataframe = cudf.DataFrame()
+    if gpu:
+        dataframe = cudf.DataFrame()
+    else:
+        dataframe = pd.DataFrame()
     dataframe["x"] = df[x_col].to_numpy()
     dataframe["y"] = df[y_col].to_numpy()
 
@@ -40,15 +55,25 @@ def cluster_data(
         dbscan = DBSCAN(eps=eps, min_samples=minpts)
         dbscan.fit(dataframe)
 
-        df = df.with_columns(
-            pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
-        )
+        if gpu:
+            df = df.with_columns(
+                pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
+            )
+        else:
+            df = df.with_columns(
+                pl.lit(dbscan.labels_.astype("int32")).alias("clusterID")
+            )
     elif method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters)
         kmeans.fit(dataframe)
-        df = df.with_columns(
-            pl.lit(kmeans.labels_.to_numpy().astype("int32")).alias("clusterID")
-        )
+        if gpu:
+            df = df.with_columns(
+                pl.lit(kmeans.labels_.to_numpy().astype("int32")).alias("clusterID")
+            )
+        else:
+            df = df.with_columns(
+                pl.lit(kmeans.labels_.astype("int32")).alias("clusterID")
+            )
 
     # return the original df with cluster id for each loc
     return df
@@ -103,8 +128,8 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
     cluster_df = df.group_by(col_name).agg(
         [
             pl.count(),
-            pl.col(x_name).mean().suffix("_mean"),
-            pl.col(y_name).mean().suffix("_mean"),
+            pl.col(x_name).mean().name.suffix("_mean"),
+            pl.col(y_name).mean().name.suffix("_mean"),
             (
                 (
                     ((pl.col(x_name) - pl.col(x_name).mean()) ** 2).sum()

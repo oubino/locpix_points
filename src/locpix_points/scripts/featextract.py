@@ -150,7 +150,7 @@ def main(argv=None):
         # remap the clusterIDs
         unique_clusters = list(df["clusterID"].unique(maintain_order=True))
         map = {value: i for i, value in enumerate(unique_clusters)}
-        df = df.with_columns(pl.col("clusterID").map_dict(map).alias("clusterID"))
+        df = df.with_columns(pl.col("clusterID").replace(map).alias("clusterID"))
 
         # warnings.warn("If no clusters then rest will fail")
 
