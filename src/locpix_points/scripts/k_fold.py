@@ -47,6 +47,14 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-f",
+        "--fold",
+        type=int,
+        help="if provided then start from this fold",
+        required=False,
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -96,6 +104,9 @@ def main(argv=None):
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):
+        if args.fold is not None:
+            if index < args.fold:
+                continue
         print(f"Fold {index}")
 
         val_fold = val_folds[index]

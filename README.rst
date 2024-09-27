@@ -529,6 +529,7 @@ k-fold
 
     - -i Path to the project folder
     - -c Path to folder with configuration .yaml file
+    - -f Fold to start from (Optional)
 
 *Description*
 
