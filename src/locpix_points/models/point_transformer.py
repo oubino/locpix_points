@@ -158,6 +158,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         ratio = config["ratio"]
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
+        dropout = config["dropout"]
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -207,6 +208,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
             act="relu",
+            dropout=dropout,
         )
 
     def forward(self, x, pos, batch=None, edge_index=None):
