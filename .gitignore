@@ -141,3 +141,6 @@ renal_*/*
 
 # ignore sandpit
 sandpit/*
+
+# ignore eclipse
+eclipse/*
