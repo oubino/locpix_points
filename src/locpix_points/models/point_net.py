@@ -156,7 +156,10 @@ class SAModule(torch.nn.Module):
         row = torch.tensor([mapping[int(x)] for x in row], device=row.device)
         print(torch.equal(row, row_old))
         print(torch.equal(col, col_old))
-        raise ValueError("bug here")
+        raise ValueError(
+            "bug here as ignore same index is not implemented\
+                         yet in the version of pytorch cluster i can install"
+        )
         edge_index = torch.stack([col, row], dim=0)
         # remove duplicate edges
         # edge_index = coalesce(edge_index)
