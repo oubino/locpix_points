@@ -4,9 +4,8 @@
 source /root/micromamba/etc/profile.d/micromamba.sh
 
 # Activate correct environment
-micromamba activate rapids=23.10
+micromamba activate feat_extract
 
 # Test feat extract
 python scripts/featextract_train.py
 python scripts/featextract_test.py
-
