@@ -222,8 +222,17 @@ def main():
         help="final test",
     )
 
+    parser.add_argument(
+        "-m",
+        "--map_file",
+        action="store",
+        type=str,
+        required=True,
+        help="location of the map file",
+    )
+
     args = parser.parse_args()
-    file_map = pl.read_csv("maps/linked_files.csv")
+    file_map = pl.read_csv(args.map_file)
 
     project_directory = args.project_directory
     config_loc = os.path.join(project_directory, "config/evaluate.yaml")
