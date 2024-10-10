@@ -13,48 +13,28 @@ from torchsummary import summary
 from locpix_points.data_loading import datastruc
 from locpix_points.evaluation import evaluate
 from locpix_points.models import model_choice
+from sklearn.metrics import class_likelihood_ratios, accuracy_score
 
 import torch
 from torchmetrics import (
     Accuracy,
-    F1Score,
+    #    F1Score,
     MetricCollection,
-    Precision,
+    #    Precision,
+    Specificity,
     Recall,
     ROC,
     AUROC,
-    AveragePrecision,
+    #    AveragePrecision,
 )
-from torchmetrics.classification import (
-    MulticlassConfusionMatrix,
-    MulticlassJaccardIndex,
-    MulticlassStatScores,
-)
+
+# from torchmetrics.classification import (
+#    ConfusionMatrix,
+#    MulticlassJaccardIndex,
+#    StatScores,
+# )
 
 import warnings
-
-
-def normalise_ap(tp, fp, tn, fn, auc):
-    """Normalise the average precision == area under precision
-    recall curve.
-    From PMID: 24350304
-
-    Args:
-        tp (float): True positives
-        fp (float): False positives
-        tn (float): True negatives
-        fn (float): False negatives
-        auc (float): This the area under the curve or equivalently
-            the average precision
-
-    Returns:
-        auc_norm (float): Normalised area under the curve"""
-
-    ones = tp + fn
-    zeros = fp + tn
-    skew = ones / (zeros + ones)
-    aucprmin = 1 + ((1 - skew) * torch.log(1 - skew)) / skew
-    return (auc - aucprmin) / (1 - aucprmin)
 
 
 def make_prediction_wt(
@@ -87,28 +67,36 @@ def make_prediction_wt(
         metrics_roc (dict) : Dict containing ROC metrics
         file_list (list) : Names of files"""
 
+    # currently set up metrics for binary
+    # if want to change to multiclass look for lines need to change
+    # MULTICLASS
+    assert num_classes == 2
+
     model.to(device)
 
     metrics = MetricCollection(
-        MulticlassConfusionMatrix(num_classes=num_classes),
-        Recall(task="multiclass", num_classes=num_classes, average="none"),
-        Precision(task="multiclass", num_classes=num_classes, average="none"),
-        F1Score(task="multiclass", num_classes=num_classes, average="none"),
-        MulticlassJaccardIndex(num_classes=num_classes, average="none"),
-        Accuracy(task="multiclass", num_classes=num_classes, average="none"),
-        MulticlassStatScores(num_classes=num_classes, average="none"),
+        # ConfusionMatrix(task="binary"),     # MULTICLASS
+        Recall(task="binary"),  # MULTICLASS
+        Specificity(task="binary"),  # MULTICLASS
+        # Precision(task="multiclass", num_classes=num_classes, average="none"),
+        # F1Score(task="multiclass", num_classes=num_classes, average="none"),
+        # MulticlassJaccardIndex(num_classes=num_classes, average="none"),
+        Accuracy(task="binary"),  # MULTICLASS
+        # StatScores(task="binary"),     # MULTICLASS
     ).to(device)
 
     metrics_roc = MetricCollection(
-        ROC(task="multiclass", num_classes=num_classes),
-        AUROC(task="multiclass", num_classes=num_classes, average="none"),
-        AveragePrecision(task="multiclass", num_classes=num_classes, average="none"),
+        ROC(task="binary"),  # MULTICLASS
+        AUROC(task="binary"),  # MULTICLASS
+        # AveragePrecision(task="multiclass", num_classes=num_classes, average="none"),
     ).to(device)
 
     # test data
     model.eval()
     stds = []
     file_list = []
+    predictions_list = []
+    gt_list = []
     for index, data in enumerate(loader):
         if only_wt:
             name = data.name[0]
@@ -159,11 +147,16 @@ def make_prediction_wt(
                     # output = torch.unsqueeze(output,0)
 
                 # output is log softmax therefore convert back to prob
-                metrics_roc.update(output, data.y)
+                metrics_roc.update(
+                    output[:, 1], data.y
+                )  # MULTICLASS - CHANGE output[:,1] -> output
 
                 # argmax predictions
                 predictions = output.argmax(dim=1)
+                predictions_list.append(predictions.item())
                 metrics.update(predictions, data.y)
+
+                gt_list.append(data.y.item())
 
     print("Average standard deviations: ", torch.mean(torch.stack(stds)))
 
@@ -171,7 +164,11 @@ def make_prediction_wt(
     metrics = metrics.compute()
     metrics_roc = metrics_roc.compute()
 
-    return metrics, metrics_roc, file_list
+    metrics["pos_lr"] = metrics["BinaryRecall"].item() / (
+        1 - metrics["BinarySpecificity"].item()
+    )  # MULTICLASS
+
+    return metrics, metrics_roc, file_list, predictions_list, gt_list
 
 
 def main():
@@ -246,6 +243,8 @@ def main():
     eval_on_gpu = config["eval_on_gpu"]
     num_classes = config["num_classes"]
 
+    assert num_classes == 2  # MULTICLASS
+
     # if data is on gpu then don't need to pin memory
     pin_memory = True
 
@@ -256,6 +255,10 @@ def main():
 
     if args.final_test:
         raise NotImplementedError("Not implemented yet!")
+
+    final_test_file_list = []
+    final_test_predictions = []
+    final_test_gt = []
 
     # For each fold
     for fold in range(5):
@@ -483,7 +486,7 @@ def main():
         print("\n")
         print("---- Predict on train set... ----")
         print("\n")
-        metrics, roc_metrics, train_file_list = make_prediction_wt(
+        metrics, roc_metrics, train_file_list, _, _ = make_prediction_wt(
             file_map,
             model,
             train_loader,
@@ -494,13 +497,14 @@ def main():
             repeats=repeats,
         )
 
-        print("AUROC: ", roc_metrics["MulticlassAUROC"])
-        # print(metrics)
+        print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
+        print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
+        print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
 
         print("\n")
         print("---- Predict on val set... ----")
         print("\n")
-        metrics, roc_metrics, val_file_list = make_prediction_wt(
+        metrics, roc_metrics, val_file_list, _, _ = make_prediction_wt(
             file_map,
             model,
             val_loader,
@@ -511,13 +515,20 @@ def main():
             repeats=repeats,
         )
 
-        print(roc_metrics["MulticlassAUROC"])
-        # print(metrics)
+        print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
+        print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
+        print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
 
         print("\n")
         print("---- Predict on test set... ----")
         print("\n")
-        metrics, roc_metrics, test_file_list = make_prediction_wt(
+        (
+            metrics,
+            roc_metrics,
+            test_file_list,
+            test_predictions,
+            test_gt,
+        ) = make_prediction_wt(
             file_map,
             model,
             test_loader,
@@ -528,6 +539,10 @@ def main():
             repeats=repeats,
         )
 
+        final_test_file_list.extend(test_file_list)
+        final_test_predictions.extend(test_predictions)
+        final_test_gt.extend(test_gt)
+
         out = set(train_file_list) & set(val_file_list)
         assert not out
         out = set(train_file_list) & set(test_file_list)
@@ -535,8 +550,12 @@ def main():
         out = set(val_file_list) & set(test_file_list)
         assert not out
 
-        print(roc_metrics["MulticlassAUROC"])
-        # print(metrics)
+        print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
+        print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
+        print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
+
+    print(final_test_file_list)
+    print(final_test_predictions)
 
 
 if __name__ == "__main__":
