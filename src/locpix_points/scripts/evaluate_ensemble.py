@@ -164,9 +164,12 @@ def make_prediction_wt(
     metrics = metrics.compute()
     metrics_roc = metrics_roc.compute()
 
-    metrics["pos_lr"] = metrics["BinaryRecall"].item() / (
-        1 - metrics["BinarySpecificity"].item()
-    )  # MULTICLASS
+    if metrics["BinarySpecificity"].item() == 1:
+        metrics["pos_lr"] = "infinity"
+    else:
+        metrics["pos_lr"] = metrics["BinaryRecall"].item() / (
+            1 - metrics["BinarySpecificity"].item()
+        )  # MULTICLASS
 
     return metrics, metrics_roc, file_list, predictions_list, gt_list
 
