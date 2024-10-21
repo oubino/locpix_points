@@ -198,6 +198,11 @@ Adjust config file to choose fold
 
 Two notebooks: scripts/analysis.ipynb and scripts/analysis_locs.ipynb
 
+13. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
+
+.. code-block:: shell
+
+     evaluate_ensemble [ARGS]
 
 Longer description
 ==================
@@ -586,6 +591,27 @@ This includes
     - SVM 
     - KNN  
 
+Ensemble evaluate [custom to our analysis]
+------------------------------------------
+
+.. code-block:: python
+
+    evaluate_ensemble
+
+*Arguments*
+
+- -i Path to the project folder
+- -m Location of the file map for mapping files to their mutation status/outcomes
+- -w (Optional) If given then only run on the WT files
+- -n (Optional) Name of the model in each fold - if not given then assumes only one model present in each fold folder
+- -r (Optional) Number of times to run each dataitem through the model, default = 25
+- -f (Optional) Whether running for final test 
+
+*Description*
+
+Evaluate the model on the train/val/test sets for each fold OR alternatively for train/test if final test.
+Note runs each graph through the model multiple times (default=25) and takes average 
+Further, there is the option to only evaluate on the WT samples.
 
 Analysis notebooks
 ------------------
