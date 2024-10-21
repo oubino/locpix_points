@@ -745,6 +745,7 @@ def visualise_umap_embedding(
     save=False,
     save_name="UMAP",
     project_directory="..",
+    format="svg",
 ):
     """Visualise UMAP results
 
@@ -757,6 +758,7 @@ def visualise_umap_embedding(
         save (bool): Whether to save UMAP plot
         save_name (string): Name of file to save
         project_directory (string): Project directory to save plot in
+        format (string): What format to save UMAP as
 
     Returns:
         p (umap plot): Returns the umap plot"""
@@ -817,7 +819,7 @@ def visualise_umap_embedding(
         ax.legend(handles=new_handles)
         plt.show()
         if save:
-            save_path = os.path.join(project_directory, f"output/{save_name}.svg")
+            save_path = os.path.join(project_directory, f"output/{save_name}.{format}")
             ax.figure.savefig(save_path)
     else:
         hover_data = pd.DataFrame(
