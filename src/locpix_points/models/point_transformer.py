@@ -52,7 +52,7 @@ class TransformerBlock(torch.nn.Module):
             out_channels,
             pos_nn=self.pos_nn,
             attn_nn=self.attn_nn,
-            aggr="max",
+            aggr="add",
             add_self_loops=True,
         )
 
