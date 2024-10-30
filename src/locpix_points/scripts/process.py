@@ -12,9 +12,12 @@ import random
 import time
 import warnings
 from functools import partial
+from collections import Counter
 
 import numpy as np
 import polars as pl
+import pyarrow.parquet as pq
+from sklearn.model_selection import StratifiedShuffleSplit
 import torch
 import yaml
 
@@ -122,7 +125,8 @@ def main(argv=None):
         argv : Custom arguments to run script with
 
     Raises:
-        NotImplementedError: If model type not recognised"""
+        NotImplementedError: If model type not recognised
+        ValueError: temporary"""
 
     # parse arugments
     parser = argparse.ArgumentParser(
@@ -292,10 +296,39 @@ def main(argv=None):
         # check ratio
         assert config["train_ratio"] + config["val_ratio"] == 1.0
 
-        # split into train/val
-        train_length = int(len(train_val_list) * config["train_ratio"])
-        train_list = train_val_list[0:train_length]
-        val_list = train_val_list[train_length : len(train_val_list)]
+        # split in correct proportions for class
+        classes = []
+        for file in train_val_list:
+            file = pq.read_table(
+                os.path.join(
+                    project_directory,
+                    args.final_test[0][0],
+                    "gt_label",
+                    file + ".parquet",
+                )
+            )
+            classes.append(int(file.schema.metadata[b"gt_label"]))
+        sss = StratifiedShuffleSplit(
+            n_splits=1, test_size=config["val_ratio"], random_state=0
+        )
+        x = np.zeros(len(classes))
+        for i in sss.split(x, classes):
+            train, val = i
+        train_val_list = np.array(train_val_list)
+        train_list = train_val_list[train.tolist()]
+        val_list = train_val_list[val.tolist()]
+
+        train_list_check = [x.split("_")[0] for x in train_list]
+        val_list_check = [x.split("_")[0] for x in val_list]
+        counter_train = Counter(train_list_check)
+        counter_val = Counter(val_list_check)
+        print(counter_train.keys())
+        print(counter_train.values())
+        print(counter_val.keys())
+        print(counter_val.values())
+        raise ValueError(
+            "Need to check above method returns correct proportions of each class in validation set & sets are disjoint"
+        )
 
     # bind arguments to functions
     train_pre_filter = partial(pre_filter, inclusion_list=train_list)
