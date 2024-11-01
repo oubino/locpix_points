@@ -230,7 +230,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling
-        x = global_max_pool(x, batch)
+        x = global_mean_pool(x, batch)
 
         # Class score
         out = self.mlp_output(x)
