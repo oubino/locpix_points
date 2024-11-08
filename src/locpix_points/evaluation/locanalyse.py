@@ -29,7 +29,7 @@ from torch_geometric.nn import knn_graph
 from torch_geometric.data import Data
 from locpix_points.data_loading import datastruc
 from locpix_points.models import loc_only_nets
-from locpix_points.evaluate.featanalyse import (
+from locpix_points.evaluation.featanalyse import (
     visualise_explanation,
     custom_fidelity_measure,
 )
