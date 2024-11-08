@@ -146,7 +146,7 @@ def analyse_manual_feats(
         )
 
 
-def analyse_nn_feats(project_directory, config, final_test, automatic):
+def analyse_nn_feats(project_directory, config, final_test, automatic, n_repeats=1):
     """Analyse the features of the clusters from neural network
 
     Args:
@@ -154,6 +154,7 @@ def analyse_nn_feats(project_directory, config, final_test, automatic):
         config (dict): Configuration for this script
         final_test (bool): Whether final test
         automatic (bool): Whether automatic select model
+        n_repeats (int): number of times to run data through loc model for averaging
 
     Raises:
         ValueError: If device specified is neither cpu or gpu OR
@@ -270,6 +271,7 @@ def analyse_nn_feats(project_directory, config, final_test, automatic):
         fov_y=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
+        n_repeats=n_repeats,
         device=device,
     )
 
@@ -285,6 +287,7 @@ def analyse_nn_feats(project_directory, config, final_test, automatic):
         fov_y=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
+        n_repeats=n_repeats,
         device=device,
     )
 
@@ -300,6 +303,7 @@ def analyse_nn_feats(project_directory, config, final_test, automatic):
         fov_y=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
+        n_repeats=n_repeats,
         device=device,
     )
 
@@ -804,11 +808,8 @@ def get_prediction(
     file_name,
     cluster_model,
     cluster_train_set,
-    loc_train_set,
     cluster_val_set,
-    loc_val_set,
     cluster_test_set,
-    loc_test_set,
     project_directory,
     device,
     gt_label_map,
@@ -820,20 +821,16 @@ def get_prediction(
         cluster_model (pyg model): PyGeometric model
         cluster_train_set (pyg dataset): Training set with clusters having
             gone through a locnet
-        loc_train_set (pyg dataset): Training set with raw localisations
         cluster_val_set (pyg dataset): Validation set with clusters having
             gone through a locnet
-        loc_val_set (pyg dataset): Validation set with raw localisations
         cluster_test_set (pyg dataset): Test set with clusters having
             gone through a locnet
-        loc_test_set (pyg dataset): Test set with raw localisations
         project_directory (string): Location of the project directory
         device (string): Device to run on
         gt_label_map (dict): Map from labels to real concepts
 
     Returns:
         cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
-        loc_dataitem (pyg dataitem): Cluster graph raw
         prediction (float): Predicted label
     """
 
@@ -869,19 +866,14 @@ def get_prediction(
     if len(train_out) > 0:
         file_name = train_out["idx"].values[0]
         cluster_dataitem = cluster_train_set.get(file_name)
-        loc_dataitem = loc_train_set.get(file_name)
 
     if len(val_out) > 0:
         file_name = val_out["idx"].values[0]
         cluster_dataitem = cluster_val_set.get(file_name)
-        loc_dataitem = loc_val_set.get(file_name)
 
     if len(test_out) > 0:
         file_name = test_out["idx"].values[0]
         cluster_dataitem = cluster_test_set.get(file_name)
-        loc_dataitem = loc_test_set.get(file_name)
-
-    loc_dataitem.to(device)
 
     # generate prediction for the graph
     logits = cluster_model(
@@ -899,7 +891,7 @@ def get_prediction(
     print("Predicted label: ", gt_label_map[prediction])
     print("GT label: ", gt_label_map[cluster_dataitem.y.cpu().item()])
 
-    return cluster_dataitem, loc_dataitem, prediction
+    return cluster_dataitem, prediction
 
 
 def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
@@ -1037,7 +1029,7 @@ def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
     )
 
 
-def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem):
+def attention_eval(cluster_model, config, cluster_dataitem, device):
     """Evaluate attention explainability algo
 
     Args:
@@ -1045,7 +1037,6 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
         device (string): Device to run on
         config (dict): Parameters for algo
         cluster_dataitem (pyg dataitem): Cluster graph to pass through network
-        loc_dataitem (pyg dataitem): Localisation graph to pass through network
 
     Raises:
         NotImplementedError: If try to run attention on Loc or
@@ -1142,41 +1133,46 @@ def attention_eval(cluster_model, config, cluster_dataitem, device, loc_dataitem
 
         return subgraph, complement, cluster_dataitem, explanation.edge_mask.to(device)
 
-    elif scale == "loc":
-        loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
-            loc_dataitem, None
+    else:
+        raise NotImplementedError(
+            "Scale can only be cluster level, for loc level use analyse_locs notebook"
         )
-        explanation = explainer(
-            x=loc_x_dict["locs"],
-            edge_index=loc_edge_index_dict["locs", "in", "clusters"],
-            pos_locs=loc_pos_dict["locs"],
-            target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
-            # batch=torch.tensor([0], device=device),
-            logits=False,
-        )
-        # metrics
-        print(
-            f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
-        )
-        explanation.edge_mask = torch.where(
-            explanation.edge_mask > config["edge_mask_threshold"],
-            explanation.edge_mask,
-            0.0,
-        )
-        print(
-            f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
-        )
-        # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
-        # print(f"Positive fidelity closer to 1 better: {pos_fid})")
-        # print(f"Negative fidelity closer to 0 better: {neg_fid})")
-        unf = metric.unfaithfulness(explainer, explanation)
-        print(f"Unfaithfulness, closer to 0 better {unf}")
-        visualise_explanation(
-            loc_pos_dict["locs"],
-            loc_edge_index_dict["locs", "in", "clusters"],
-            node_imp=None,
-            edge_imp=explanation.edge_mask.to(device),
-        )
+
+    # elif scale == "loc":
+    #    loc_x_dict, loc_pos_dict, loc_edge_index_dict, _ = parse_data(
+    #        loc_dataitem, None
+    #    )
+    #    explanation = explainer(
+    #        x=loc_x_dict["locs"],
+    #        edge_index=loc_edge_index_dict["locs", "in", "clusters"],
+    #        pos_locs=loc_pos_dict["locs"],
+    #        target=None,  # attention doesn't use the target nor the return type which is used to generate the target therefore this argument is irrelevant
+    #        # batch=torch.tensor([0], device=device),
+    #        logits=False,
+    #    )
+    #    # metrics
+    #    print(
+    #        f"Warning there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    #    )
+    #    explanation.edge_mask = torch.where(
+    #        explanation.edge_mask > config["edge_mask_threshold"],
+    #        explanation.edge_mask,
+    #        0.0,
+    #    )
+    #    print(
+    #        f"Post thresholding there are {torch.count_nonzero(explanation.edge_mask)} non zero elements in the edge mask out of {len(explanation.edge_mask)} elements"
+    #    )
+    #    # pos_fid, neg_fid = metric.fidelity(explainer, explanation)
+    #    # print(f"Positive fidelity closer to 1 better: {pos_fid})")
+    #    # print(f"Negative fidelity closer to 0 better: {neg_fid})")
+    #    unf = metric.unfaithfulness(explainer, explanation)
+    #    print(f"Unfaithfulness, closer to 0 better {unf}")
+    #    visualise_explanation(
+    #        loc_pos_dict["locs"],
+    #        loc_edge_index_dict["locs", "in", "clusters"],
+    #        node_imp=None,
+    #        edge_imp=explanation.edge_mask.to(device),
+    #    )
 
 
 def saliency_eval(cluster_model, config, cluster_dataitem, device):
@@ -1729,7 +1725,12 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
 
 
 def explain(
-    project_directory, config, neuralnet=False, automatic=False, final_test=False
+    project_directory,
+    config,
+    neuralnet=False,
+    automatic=False,
+    final_test=False,
+    n_repeats=1,
 ):
     """Main script for the module with variable arguments
 
@@ -1739,6 +1740,7 @@ def explain(
         neuralnet (bool): If TRUE output of neural net is analyse rather than manual features
         automatic (bool): If TRUE should only be one model in the folder
         final_test (bool): If TRUE running final_test
+        n_repeats (int): Number of times to run data through locnet if neuralnet=True
 
     Raises:
         ValueError: If no files present to open"""
@@ -1807,6 +1809,8 @@ def explain(
             project_directory, train_loc_files, test_loc_files, final_test
         )
     elif neuralnet:
-        analyse_nn_feats(project_directory, config, final_test, automatic)
+        analyse_nn_feats(
+            project_directory, config, final_test, automatic, n_repeats=n_repeats
+        )
     else:
         raise ValueError("Should be neural net or manual")

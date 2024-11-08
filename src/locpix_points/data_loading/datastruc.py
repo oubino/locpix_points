@@ -404,6 +404,7 @@ class ClusterDataset(SMLMDataset):
         from_hetero_loc_cluster (bool): If True then processes heterogeneous loc cluster processed
             data item into a homogeneous graph
         loc_net (torch network): The localisation network which is applied to the heterogeneous data
+        n_repeats (int): Number of times to sample from LocNet for averaging
         device (torch device): The device to store data on"""
 
     def __init__(
@@ -419,10 +420,12 @@ class ClusterDataset(SMLMDataset):
         fov_y,
         from_hetero_loc_cluster=False,
         loc_net=None,
+        n_repeats=1,
         device=torch.device("cpu"),
     ):
         self.from_hetero_loc_cluster = from_hetero_loc_cluster
         self.loc_net = loc_net
+        self.n_repeats = n_repeats
         self.device = device
 
         super().__init__(
@@ -439,7 +442,10 @@ class ClusterDataset(SMLMDataset):
         )
 
     def process(self):
-        """Processes data with just clusters"""
+        """Processes data with just clusters
+
+        Raises:
+            ValueError: TEMPORARY"""
 
         # Processes data into homogeneous graph
         if self.from_hetero_loc_cluster:
@@ -470,12 +476,28 @@ class ClusterDataset(SMLMDataset):
                 x_dict, pos_dict, edge_index_dict, _ = parse_data(
                     hetero_data, self.device
                 )
-                x_cluster = self.loc_net(
-                    x_locs=x_dict["locs"],
-                    edge_index_locs=edge_index_dict["locs", "in", "clusters"],
-                    pos_locs=pos_dict["locs"],
+
+                x_cluster_list = []
+                print("remove this but just check its 25")
+                print(self.n_repeats)
+                for _ in self.n_repeats:
+                    x_cluster = self.loc_net(
+                        x_locs=x_dict["locs"],
+                        edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+                        pos_locs=pos_dict["locs"],
+                    )
+                    x_cluster = x_cluster.sigmoid()
+                    x_cluster_list.append(x_cluster)
+                print(x_cluster_list)
+                print(x_cluster.shape)
+                x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
+                print(x_cluster)
+                print(x_cluster.shape)
+                raise ValueError("check")
+                raise ValueError(
+                    "Note: Here we calculate average feature vector and then later push through cluster model WHEREAS for calculating prediction\
+                                 we put through whole network 25 times and calculate average probability - there may/probably will be difference in how this performs"
                 )
-                x_cluster = x_cluster.sigmoid()
 
                 # if have manual cluster features as well
                 try:
