@@ -480,7 +480,7 @@ class ClusterDataset(SMLMDataset):
                 x_cluster_list = []
                 print("remove this but just check its 25")
                 print(self.n_repeats)
-                for _ in self.n_repeats:
+                for _ in range(self.n_repeats):
                     x_cluster = self.loc_net(
                         x_locs=x_dict["locs"],
                         edge_index_locs=edge_index_dict["locs", "in", "clusters"],
