@@ -5,18 +5,20 @@ Module takes in the .parquet files and analyses features
 Config file at top specifies the analyses we want to run
 """
 
-import argparse
+# import argparse
 from dig.xgraph.method import SubgraphX
 from dig.xgraph.method.subgraphx import find_closest_node_result
 from dig.xgraph.evaluation import XCollector
 import json
 import os
-import time
+
+# import time
 from matplotlib.cm import get_cmap
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpl_colors
-import mplcursors
+
+# import mplcursors
 import numpy as np
 import open3d as o3d
 from locpix_points.data_loading import datastruc
@@ -52,141 +54,6 @@ import yaml
 
 def _to_hex(arr):
     return [mpl_colors.to_hex(c) for c in arr]
-
-
-def main(argv=None):
-    """Main script for the module with variable arguments
-
-    Args:
-        argv : Custom arguments to run script with
-
-    Raises:
-        ValueError: If no files present to open"""
-
-    # parse arugments
-    parser = argparse.ArgumentParser(description="Analyse features")
-
-    parser.add_argument(
-        "-i",
-        "--project_directory",
-        action="store",
-        type=str,
-        help="location of the project directory",
-        required=True,
-    )
-
-    parser.add_argument(
-        "-c",
-        "--config",
-        action="store",
-        type=str,
-        help="the location of the .yaml configuaration file\
-                             for evaluating",
-        required=True,
-    )
-
-    parser.add_argument(
-        "-n",
-        "--neuralnet",
-        action="store_true",
-        help="if present then the output of the neural"
-        "net is analysed rather than the manual features",
-    )
-
-    parser.add_argument(
-        "-a",
-        "--automatic",
-        action="store_true",
-        help="if present then there should be only one model present in the folder"
-        "which we load in",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--final_test",
-        action="store_true",
-        help="if specified then running final test",
-    )
-
-    args = parser.parse_args(argv)
-
-    project_directory = args.project_directory
-
-    # load config
-    with open(args.config, "r") as ymlfile:
-        config = yaml.safe_load(ymlfile)
-    label_map = config["label_map"]
-
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        file = os.path.basename(__file__)
-        if file not in metadata:
-            metadata[file] = time.asctime(time.gmtime(time.time()))
-        else:
-            print("Overwriting metadata...")
-            metadata[file] = time.asctime(time.gmtime(time.time()))
-        with open(metadata_path, "w") as outfile:
-            json.dump(metadata, outfile)
-
-    # list items
-    try:
-        if not args.final_test:
-            train_loc_files = os.listdir(
-                os.path.join(project_directory, "preprocessed/featextract/locs")
-            )
-            test_loc_files = None
-        else:
-            train_loc_files = os.listdir(
-                os.path.join(project_directory, "preprocessed/train/featextract/locs")
-            )
-            test_loc_files = os.listdir(
-                os.path.join(project_directory, "preprocessed/test/featextract/locs")
-            )
-    except FileNotFoundError:
-        raise ValueError("There should be some loc files to open")
-
-    try:
-        if not args.final_test:
-            train_cluster_files = os.listdir(
-                os.path.join(project_directory, "preprocessed/featextract/clusters")
-            )
-            test_cluster_files = None
-        else:
-            train_cluster_files = os.listdir(
-                os.path.join(
-                    project_directory, "preprocessed/train/featextract/clusters"  # edit
-                )
-            )
-            test_cluster_files = os.listdir(
-                os.path.join(
-                    project_directory, "preprocessed/test/featextract/clusters"  # edit
-                )
-            )
-    except FileNotFoundError:
-        raise ValueError("There should be some cluster files to open")
-
-    assert train_loc_files == train_cluster_files
-    assert test_loc_files == test_cluster_files
-
-    # make seaborn plots pretty
-    # sns.set_style("darkgrid")
-
-    # make output folder
-    output_folder = os.path.join(project_directory, "output")
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    # ---- Analyse cluster features -------
-    if not args.neuralnet:
-        analyse_manual_feats(project_directory, train_loc_files, test_loc_files, args)
-    elif args.neuralnet:
-        analyse_nn_feats(project_directory, config, args)
-    else:
-        raise ValueError("Should be neural net or manual")
 
 
 def analyse_manual_feats(
@@ -1860,5 +1727,141 @@ def induced_subgraph(data, imp_list, node_or_edge="node"):
         raise ValueError("node or edge should be node or edge")
 
 
-if __name__ == "__main__":
-    main()
+#### --- ARCHIVE -----
+
+# if __name__ == "__main__":
+#    main()
+
+# def main(argv=None):
+#     """Main script for the module with variable arguments
+#
+#     Args:
+#         argv : Custom arguments to run script with
+#
+#     Raises:
+#         ValueError: If no files present to open"""
+#
+#     # parse arugments
+#     parser = argparse.ArgumentParser(description="Analyse features")
+#
+#     parser.add_argument(
+#         "-i",
+#         "--project_directory",
+#         action="store",
+#         type=str,
+#         help="location of the project directory",
+#         required=True,
+#     )
+#
+#     parser.add_argument(
+#         "-c",
+#         "--config",
+#         action="store",
+#         type=str,
+#         help="the location of the .yaml configuaration file\
+#                              for evaluating",
+#         required=True,
+#     )
+#
+#     parser.add_argument(
+#         "-n",
+#         "--neuralnet",
+#         action="store_true",
+#         help="if present then the output of the neural"
+#         "net is analysed rather than the manual features",
+#     )
+#
+#     parser.add_argument(
+#         "-a",
+#         "--automatic",
+#         action="store_true",
+#         help="if present then there should be only one model present in the folder"
+#         "which we load in",
+#     )
+#
+#     parser.add_argument(
+#         "-f",
+#         "--final_test",
+#         action="store_true",
+#         help="if specified then running final test",
+#     )
+#
+#     args = parser.parse_args(argv)
+#
+#     project_directory = args.project_directory
+#
+#     # load config
+#     with open(args.config, "r") as ymlfile:
+#         config = yaml.safe_load(ymlfile)
+#     label_map = config["label_map"]
+#
+#     metadata_path = os.path.join(project_directory, "metadata.json")
+#     with open(
+#         metadata_path,
+#     ) as file:
+#         metadata = json.load(file)
+#         # add time ran this script to metadata
+#         file = os.path.basename(__file__)
+#         if file not in metadata:
+#             metadata[file] = time.asctime(time.gmtime(time.time()))
+#         else:
+#             print("Overwriting metadata...")
+#             metadata[file] = time.asctime(time.gmtime(time.time()))
+#         with open(metadata_path, "w") as outfile:
+#             json.dump(metadata, outfile)
+#
+#     # list items
+#     try:
+#         if not args.final_test:
+#             train_loc_files = os.listdir(
+#                 os.path.join(project_directory, "preprocessed/featextract/locs")
+#             )
+#             test_loc_files = None
+#         else:
+#             train_loc_files = os.listdir(
+#                 os.path.join(project_directory, "preprocessed/train/featextract/locs")
+#             )
+#             test_loc_files = os.listdir(
+#                 os.path.join(project_directory, "preprocessed/test/featextract/locs")
+#             )
+#     except FileNotFoundError:
+#         raise ValueError("There should be some loc files to open")
+#
+#     try:
+#         if not args.final_test:
+#             train_cluster_files = os.listdir(
+#                 os.path.join(project_directory, "preprocessed/featextract/clusters")
+#             )
+#             test_cluster_files = None
+#         else:
+#             train_cluster_files = os.listdir(
+#                 os.path.join(
+#                     project_directory, "preprocessed/train/featextract/clusters"  # edit
+#                 )
+#             )
+#             test_cluster_files = os.listdir(
+#                 os.path.join(
+#                     project_directory, "preprocessed/test/featextract/clusters"  # edit
+#                 )
+#             )
+#     except FileNotFoundError:
+#         raise ValueError("There should be some cluster files to open")
+#
+#     assert train_loc_files == train_cluster_files
+#     assert test_loc_files == test_cluster_files
+#
+#     # make seaborn plots pretty
+#     # sns.set_style("darkgrid")
+#
+#     # make output folder
+#     output_folder = os.path.join(project_directory, "output")
+#     if not os.path.exists(output_folder):
+#         os.makedirs(output_folder)
+#
+#     # ---- Analyse cluster features -------
+#     if not args.neuralnet:
+#         analyse_manual_feats(project_directory, train_loc_files, test_loc_files, args)
+#     elif args.neuralnet:
+#         analyse_nn_feats(project_directory, config, args)
+#     else:
+#         raise ValueError("Should be neural net or manual")

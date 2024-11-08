@@ -29,7 +29,7 @@ from torch_geometric.nn import knn_graph
 from torch_geometric.data import Data
 from locpix_points.data_loading import datastruc
 from locpix_points.models import loc_only_nets
-from locpix_points.scripts.featanalyse import (
+from locpix_points.evaluate.featanalyse import (
     visualise_explanation,
     custom_fidelity_measure,
 )
@@ -39,91 +39,6 @@ import torch
 import torch_geometric.loader as L
 from torch_geometric.nn.conv.message_passing import MessagePassing
 from torch import Tensor
-
-
-def main(argv=None):
-    """Main script for the module with variable arguments
-
-    Args:
-        argv : Custom arguments to run script with"""
-
-    # parse arugments
-    parser = argparse.ArgumentParser(description="Analyse features")
-
-    parser.add_argument(
-        "-i",
-        "--project_directory",
-        action="store",
-        type=str,
-        help="location of the project directory",
-        required=True,
-    )
-
-    parser.add_argument(
-        "-c",
-        "--config",
-        action="store",
-        type=str,
-        help="the location of the .yaml configuaration file\
-                             for evaluating",
-        required=True,
-    )
-
-    parser.add_argument(
-        "-a",
-        "--automatic",
-        action="store_true",
-        help="if present then there should be only one model present in the folder"
-        "which we load in",
-    )
-
-    parser.add_argument(
-        "-f",
-        "--final_test",
-        action="store_true",
-        help="if specified then running final test",
-    )
-
-    parser.add_argument(
-        "-if",
-        "--files_to_test_on",
-        action="store",
-        nargs="+",
-        help="stores list of names of files want to evaluate",
-        required=True,
-    )
-
-    args = parser.parse_args(argv)
-
-    project_directory = args.project_directory
-
-    # load config
-    with open(args.config, "r") as ymlfile:
-        config = yaml.safe_load(ymlfile)
-    label_map = config["label_map"]
-
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        file = os.path.basename(__file__)
-        if file not in metadata:
-            metadata[file] = time.asctime(time.gmtime(time.time()))
-        else:
-            print("Overwriting metadata...")
-            metadata[file] = time.asctime(time.gmtime(time.time()))
-        with open(metadata_path, "w") as outfile:
-            json.dump(metadata, outfile)
-
-    # make output folder
-    output_folder = os.path.join(project_directory, "output")
-    if not os.path.exists(output_folder):
-        os.makedirs(output_folder)
-
-    # ---- Analyse loc features -------
-    analyse_locs(project_directory, config, args)
 
 
 def analyse_locs(project_directory, config, final_test, automatic):
@@ -591,5 +506,93 @@ def attention_eval(data, model):
     return positions, edge_indices, alphas
 
 
-if __name__ == "__main__":
-    main()
+### - ARCHIVE ---
+
+
+# def main(argv=None):
+#    """Main script for the module with variable arguments
+#
+#    Args:
+#        argv : Custom arguments to run script with"""
+#
+#    # parse arugments
+#    parser = argparse.ArgumentParser(description="Analyse features")
+#
+#    parser.add_argument(
+#        "-i",
+#        "--project_directory",
+#        action="store",
+#        type=str,
+#        help="location of the project directory",
+#        required=True,
+#    )
+#
+#    parser.add_argument(
+#        "-c",
+#        "--config",
+#        action="store",
+#        type=str,
+#        help="the location of the .yaml configuaration file\
+#                             for evaluating",
+#        required=True,
+#    )
+#
+#    parser.add_argument(
+#        "-a",
+#        "--automatic",
+#        action="store_true",
+#        help="if present then there should be only one model present in the folder"
+#        "which we load in",
+#    )
+#
+#    parser.add_argument(
+#        "-f",
+#        "--final_test",
+#        action="store_true",
+#        help="if specified then running final test",
+#    )
+#
+#    parser.add_argument(
+#        "-if",
+#        "--files_to_test_on",
+#        action="store",
+#        nargs="+",
+#        help="stores list of names of files want to evaluate",
+#        required=True,
+#    )
+#
+#    args = parser.parse_args(argv)
+#
+#    project_directory = args.project_directory
+#
+#    # load config
+#    with open(args.config, "r") as ymlfile:
+#        config = yaml.safe_load(ymlfile)
+#    label_map = config["label_map"]
+#
+#    metadata_path = os.path.join(project_directory, "metadata.json")
+#    with open(
+#        metadata_path,
+#    ) as file:
+#        metadata = json.load(file)
+#        # add time ran this script to metadata
+#        file = os.path.basename(__file__)
+#        if file not in metadata:
+#            metadata[file] = time.asctime(time.gmtime(time.time()))
+#        else:
+#            print("Overwriting metadata...")
+#            metadata[file] = time.asctime(time.gmtime(time.time()))
+#        with open(metadata_path, "w") as outfile:
+#            json.dump(metadata, outfile)
+#
+#    # make output folder
+#    output_folder = os.path.join(project_directory, "output")
+#    if not os.path.exists(output_folder):
+#        os.makedirs(output_folder)
+#
+#    # ---- Analyse loc features -------
+#    analyse_locs(project_directory, config, args)
+
+
+# if __name__ == "__main__":
+#    main()

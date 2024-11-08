@@ -174,19 +174,17 @@ Quickstart (Linux)
 
     bash scripts/k_fold.sh
 
-9. Analyse manual features [prefer analysis notebooks instead]
+9. Analyse manual and neural network features
 
 .. code-block:: shell
 
-    bash scripts/featanalyse_manual.sh
+    scripts/analysis.ipynb
 
-10. Analyse neural network features for one fold [prefer analysis notebooks instead]
-
-Adjust config file to choose fold
+10. Analyse locs
 
 .. code-block:: shell
 
-    bash scripts/featanalyse_nn.sh
+    scripts/analysis_locs.ipynb
 
 11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
@@ -194,11 +192,7 @@ Adjust config file to choose fold
 
     visualise [ARGS] 
 
-12. Analysis notebooks 
-
-Two notebooks: scripts/analysis.ipynb and scripts/analysis_locs.ipynb
-
-13. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
+12. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
 
 .. code-block:: shell
 
@@ -564,32 +558,6 @@ The final models are saved in
 
     - project_folder/models/fold_{index}/
 
-Featanalyse [prefer analysis notebooks instead]
------------------------------------------------
-
-.. code-block:: python
-
-    featanalyse
-
-*Arguments*
-
-    - -i Path to the project folder
-    - -c Path to configuration .yaml file
-    - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
-    - -a (Optional) If present we use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
-
-*Description*
-
-Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
-This includes
-  - Box plots of the features 
-  - Graph explainability for the neural network features
-  - UMAP
-  - Classification of the fields of view using scikit-learn
-    - Logisitic regression
-    - Decision trees 
-    - SVM 
-    - KNN  
 
 Ensemble evaluate [custom to our analysis]
 ------------------------------------------
@@ -617,7 +585,6 @@ Analysis notebooks
 ------------------
 
 analysis.ipynb and analysis_locs.ipynb allow analysis of manual features, neural network features and explainability of the algorithms.
-These should be run in preference to the featanalyse script.
 
 
 Visualise
@@ -758,72 +725,19 @@ Trains of all the training data
 *Notes*
 Evaluate on the test set
 
-10. Analyse manual features
+10. Analyse manual, NN features and locs
 
 .. code-block:: shell
 
-    bash scripts/featanalyse_manual.sh
+    scripts/analysis.ipynb
+    scripts/analysis_locs.ipynb
 
-*Notes*
-Analyse the manual features just for the TEST set
-No sklearn prediction models as this requires further changes
-
-10. Analyse neural network features for one fold
-
-Adjust config file to choose fold
-
-.. code-block:: shell
-
-    bash scripts/featanalyse_nn.sh
-
-*Notes*
-For XAI algos that need training will train of train dataset but all evaluation and 
-results are on the test set
-No sklearn prediction models as this requires further changes
 
 11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
 .. code-block:: shell
 
     visualise [ARGS] 
-
-Generate figures using OriginPro
-================================
-
-1. File > New > Project
-2. File > Open > [Change file type to ASCII data] > [Open cluster_features.csv located in output folder in project_directory]
-3. File > Open > [Change file type to ASCII data] > [Open fov_features.csv located in output folder in project_directory]
-4. File > Save > Research Project/results/piccolo_tma/FOLDER/manual_features
-5. Move cluster_features.csv and fov_features.csv into top of directory
-6. Create two sub folders from top directory called clusters and fov i.e. manual_features/clusters AND manual_features/fov
-7. Create two sub folders within clusters called no_outliers and outliers
-
-For cluster_features.csv and fov_features.csv 
-1. Highlight each column (in case of fov_features only mean columns) > Plot Grouped Box Charts - Indexed > Click play button in Group Column(s) - Click type > Click OK
-2. Double click on vertical axis label and set Tick Labels > Display to Scientific:10^3 
-3. Click Scale and change Type to log10 if necessary
-4. Close dialogue box 
-5. Right click vertical axis and click Rescale to Show All
-6. Change y_axis label to the name of the feature if necessary plotted and add /[UNITS] i.e. Length/m
-7. If changed scale to log_10 add this to the y_axis label in brackets (Ticks placed on log10 scale) - in size 12 font
-8. Change name of graph to the name of the features being plotted
-9. Move graph to outliers
-10. Then right click graph file and click duplicate 
-11. Move this to no_outliers and remove [- Copy]
-12. Double click an outlier and click Box tab 
-13. Then unclick outliers
-14. Right click vertical axis and click Rescale to Show All
-15. Double click y-axis label and change scale to Linear if necessary and change y-axis label accordingly
-
-Cluster type count
-1. Open cluster_type_count.csv
-
-FOV cluster count
-1. Open fov_cluster_count.csv
-2. Plot Grouped Box Charts - Indexed by type to get number of clusters per fov (y-axis) against type (x-axis)
-
-Model architectures
-===================
 
 
 Mixed precision training
