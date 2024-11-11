@@ -894,6 +894,150 @@ def get_prediction(
     return cluster_dataitem, prediction
 
 
+def get_prediction_ensemble(
+    file_name,
+    model,
+    cluster_model,
+    train_set,
+    val_set,
+    test_set,
+    project_directory,
+    device,
+    gt_label_map,
+    n_repeats,
+):
+    """Get the prediction for a file using the cluster model
+
+    Args:
+        file_name (string): Name of the file
+        model (pyg model): LocClusterNet model
+        cluster_model (pyg model): ClusterNet model
+        train_set (pyg dataset): Training set with locs and clusters
+        val_set (pyg dataset): Validation set with locs and clusters
+        test_set (pyg dataset): Test set with locs and clusters
+        project_directory (string): Location of the project directory
+        device (string): Device to run on
+        gt_label_map (dict): Map from labels to real concepts
+        n_repeats (int): Number of times to repeat to get prediction
+
+    Returns:
+        cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
+        prediction (float): Predicted label
+    """
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    train_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/train/file_map.csv"
+    )
+    val_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/val/file_map.csv"
+    )
+    test_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/test/file_map.csv"
+    )
+
+    train_file_map = pd.read_csv(train_file_map_path)
+    val_file_map = pd.read_csv(val_file_map_path)
+    test_file_map = pd.read_csv(test_file_map_path)
+
+    train_out = train_file_map[train_file_map["file_name"] == file_name]
+    val_out = val_file_map[val_file_map["file_name"] == file_name]
+    test_out = test_file_map[test_file_map["file_name"] == file_name]
+
+    if len(train_out) > 0:
+        file_name = train_out["idx"].values[0]
+        dataitem = train_set.get(file_name)
+
+    if len(val_out) > 0:
+        file_name = val_out["idx"].values[0]
+        dataitem = val_set.get(file_name)
+
+    if len(test_out) > 0:
+        file_name = test_out["idx"].values[0]
+        dataitem = test_set.get(file_name)
+
+    dataitem.to(device)
+    dataitem["clusters"].batch = torch.zeros(
+        dataitem["clusters"].pos.shape[0], device=device, dtype=torch.int64
+    )
+
+    loc_model = model.loc_net
+    cluster_model.eval()
+    loc_model.eval()
+
+    # generate prediction for the graph
+    x_cluster_list = []
+    output_old_method = []
+
+    for _ in range(n_repeats):
+        x_cluster = loc_model(
+            x_locs=None,
+            edge_index_locs=dataitem.edge_index_dict["locs", "in", "clusters"],
+            pos_locs=dataitem.pos_dict["locs"],
+        )
+        x_cluster = x_cluster.sigmoid()
+
+        x_cluster_list.append(x_cluster)
+
+        # --- Averaging after the whole model ---
+
+        logits_old_method = cluster_model(
+            x_cluster,
+            dataitem.edge_index_dict["clusters", "near", "clusters"],
+            torch.tensor([0], device=device),
+            dataitem["clusters"].pos,
+            logits=True,
+        )
+        output_old_method.append(logits_old_method)
+
+    # --- Averaging after the whole model ---
+
+    logits_old_method = torch.mean(torch.stack(output_old_method), axis=0)
+
+    # print out prediction & gt label
+    print(logits_old_method.softmax(dim=-1))
+    prediction_old_method = logits_old_method.argmax(-1).item()
+    # print(f"Item {idx}")
+    print("Predicted label: ", gt_label_map[prediction_old_method])
+
+    # --- Averaging after the locnet ---
+
+    x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
+
+    logits = cluster_model(
+        x_cluster,
+        dataitem.edge_index_dict["clusters", "near", "clusters"],
+        torch.tensor([0], device=device),
+        dataitem["clusters"].pos,
+        logits=True,
+    )
+
+    # print out prediction & gt label
+    print(logits.softmax(dim=-1))
+    prediction = logits.argmax(-1).item()
+    # print(f"Item {idx}")
+    print("Predicted label: ", gt_label_map[prediction])
+
+    # --- Check predictions the same ---
+
+    assert prediction == prediction_old_method
+
+    print("GT label: ", gt_label_map[dataitem.y.cpu().item()])
+    print("\n")
+
+    return dataitem, prediction
+
+
 def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
     """Evaluate SubgraphX explainability algo
 
@@ -973,6 +1117,159 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
     )
 
     return subgraph, complement, cluster_dataitem, node_imp
+
+
+def test_ensemble_averaging(project_directory, device, fold, n_repeats, final_test):
+    """Test that averaging the loc features then running through the cluster model
+    gives similar/same output as normally running through the model and taking the average
+
+    Args:
+        project_directory (string): Location of the project directory
+        device (string): Which device running on
+        fold (int): Which fold is model from
+        n_repeats (int): Number of times to repeat for ensemble averaging
+        final_test (bool): Whether it is final test
+    """
+    # -- Load in files configuration and model
+    file_dir = os.path.join(project_directory, "preprocessed/gt_label")
+    files = os.listdir(file_dir)
+    files = [f.removesuffix(".parquet") for f in files]
+
+    with open(
+        os.path.join(project_directory, "config/featanalyse_nn.yaml"), "r"
+    ) as ymlfile:
+        config = yaml.safe_load(ymlfile)
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    model = model_choice(
+        config["model"],
+        # this should parameterise the chosen model
+        config[config["model"]],
+        dim=2,
+        device=device,
+    )
+
+    print("\n")
+    print("Loading in best model")
+    print("\n")
+
+    if not final_test:
+        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+    else:
+        model_dir = os.path.join(project_directory, "models")
+    model_list = os.listdir(model_dir)
+    assert len(model_list) == 1
+    model_name = model_list[0]
+    model_loc = os.path.join(model_dir, model_name)
+
+    model.load_state_dict(torch.load(model_loc))
+    model.to(device)
+    model.eval()
+
+    cluster_model = torch.load(
+        os.path.join(project_directory, f"output/cluster_model.pt")
+    )
+    cluster_model.to(device)
+    cluster_model.eval()
+
+    # -- Load in train/val/test datasets --
+
+    train_folder = os.path.join(project_directory, f"processed/fold_{fold}/train")
+    val_folder = os.path.join(project_directory, f"processed/fold_{fold}/val")
+    test_folder = os.path.join(project_directory, f"processed/fold_{fold}/test")
+
+    train_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        train_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+    )
+
+    val_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        val_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+    )
+
+    test_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        test_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+    )
+
+    # Get prediction
+
+    for file in files:
+        print("file")
+        print(file)
+        file_name = file
+
+        get_prediction_ensemble(
+            file_name,
+            model,
+            cluster_model,
+            train_set,
+            val_set,
+            test_set,
+            project_directory,
+            device,
+            gt_label_map,
+            n_repeats,
+        )
 
 
 def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
