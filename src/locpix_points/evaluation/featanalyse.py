@@ -905,6 +905,7 @@ def get_prediction_ensemble(
     device,
     gt_label_map,
     n_repeats,
+    post_sigmoid=True,
 ):
     """Get the prediction for a file using the cluster model
 
@@ -919,10 +920,12 @@ def get_prediction_ensemble(
         device (string): Device to run on
         gt_label_map (dict): Map from labels to real concepts
         n_repeats (int): Number of times to repeat to get prediction
+        post_sigmoid (bool): If true then average after sigmoid
 
     Returns:
         cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
         prediction (float): Predicted label
+        diff (numpy): Difference between two predictions
     """
 
     # load in gt_label_map
@@ -985,14 +988,15 @@ def get_prediction_ensemble(
             edge_index_locs=dataitem.edge_index_dict["locs", "in", "clusters"],
             pos_locs=dataitem.pos_dict["locs"],
         )
-        x_cluster = x_cluster.sigmoid()
-
-        x_cluster_list.append(x_cluster)
+        if post_sigmoid:
+            x_cluster_list.append(x_cluster.sigmoid())
+        else:
+            x_cluster_list.append(x_cluster)
 
         # --- Averaging after the whole model ---
 
         logits_old_method = cluster_model(
-            x_cluster,
+            x_cluster.sigmoid(),
             dataitem.edge_index_dict["clusters", "near", "clusters"],
             torch.tensor([0], device=device),
             dataitem["clusters"].pos,
@@ -1005,7 +1009,8 @@ def get_prediction_ensemble(
     logits_old_method = torch.mean(torch.stack(output_old_method), axis=0)
 
     # print out prediction & gt label
-    print(logits_old_method.softmax(dim=-1))
+    probs_old_method = logits_old_method.softmax(dim=-1)
+    print(probs_old_method)
     prediction_old_method = logits_old_method.argmax(-1).item()
     # print(f"Item {idx}")
     print("Predicted label: ", gt_label_map[prediction_old_method])
@@ -1013,6 +1018,9 @@ def get_prediction_ensemble(
     # --- Averaging after the locnet ---
 
     x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
+
+    if not post_sigmoid:
+        x_cluster = x_cluster.sigmoid()
 
     logits = cluster_model(
         x_cluster,
@@ -1023,19 +1031,22 @@ def get_prediction_ensemble(
     )
 
     # print out prediction & gt label
-    print(logits.softmax(dim=-1))
+    probs = logits.softmax(dim=-1)
+    print(probs)
     prediction = logits.argmax(-1).item()
     # print(f"Item {idx}")
     print("Predicted label: ", gt_label_map[prediction])
 
     # --- Check predictions the same ---
-
     assert prediction == prediction_old_method
 
     print("GT label: ", gt_label_map[dataitem.y.cpu().item()])
     print("\n")
 
-    return dataitem, prediction
+    # Calculate difference
+    diff = (probs_old_method - probs)[0][0].cpu().detach().numpy()
+
+    return dataitem, prediction, diff
 
 
 def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
@@ -1119,7 +1130,9 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
     return subgraph, complement, cluster_dataitem, node_imp
 
 
-def test_ensemble_averaging(project_directory, device, fold, n_repeats, final_test):
+def test_ensemble_averaging(
+    project_directory, device, fold, n_repeats, final_test, post_sigmoid=True
+):
     """Test that averaging the loc features then running through the cluster model
     gives similar/same output as normally running through the model and taking the average
 
@@ -1129,6 +1142,10 @@ def test_ensemble_averaging(project_directory, device, fold, n_repeats, final_te
         fold (int): Which fold is model from
         n_repeats (int): Number of times to repeat for ensemble averaging
         final_test (bool): Whether it is final test
+        post_sigmoid (bool): Whether to apply averaging after sigmoid
+
+    Returns:
+        diffs (list): List of differences between predictions
     """
     # -- Load in files configuration and model
     file_dir = os.path.join(project_directory, "preprocessed/gt_label")
@@ -1253,12 +1270,14 @@ def test_ensemble_averaging(project_directory, device, fold, n_repeats, final_te
 
     # Get prediction
 
+    diffs = []
+
     for file in files:
         print("file")
         print(file)
         file_name = file
 
-        get_prediction_ensemble(
+        _, _, diff = get_prediction_ensemble(
             file_name,
             model,
             cluster_model,
@@ -1269,7 +1288,14 @@ def test_ensemble_averaging(project_directory, device, fold, n_repeats, final_te
             device,
             gt_label_map,
             n_repeats,
+            post_sigmoid=post_sigmoid,
         )
+
+        diffs.append(diff)
+
+    diffs = np.array(diffs)
+
+    return diffs
 
 
 def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
