@@ -1,0 +1,18 @@
+# map from real terms to the integer labels
+label_map:
+  fib: 0
+  iso: 1
+
+# Features to analyse (below are entire list that can be selected)
+features:
+  - count
+  - RGyration
+  - linearity
+  - planarity
+  - length_pca
+  - area_pca
+  - density_pca
+  - perimeter
+  #- area_convex_hull
+  #- length_convex_hull
+  #- density_convex_hull
