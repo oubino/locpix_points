@@ -26,6 +26,8 @@ Below is an overview of the details for each task
 | Task 2  | No  | LocClusterNet | PointTransformer | PointTransformer |
 | Task 3  | No  | LocOnlyNet | PointNet | n/a |
 | Task 4  | No  | LocOnlyNet | PointTransformer | n/a |
+| Task 5  | Yes | ClusterNet | n/a | PointNetConv |
+| Task 6  | Yes | ClusterNet | n/a | PointTransformer |
 
 ## Download and convert data
 
@@ -65,7 +67,7 @@ If first task
 - User name = oliver-umney
 - Project name = task_ID
 - Project saved = digits_letters
-- Dataset location = /mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/data/methods_paper/SMLM 2D Digits 123 and TOL letters/- data/train
+- Dataset location = /mnt/c/Users/olive/OneDrive - University of Leeds/Research Project/data/methods_paper/SMLM 2D Digits 123 and TOL letters/data/train
 - Dataset name = digits_letters
 - Copy preprocessed = no
 - .csv files = no
