@@ -121,7 +121,7 @@ class ClusterEncoder(torch.nn.Module):
                         add_self_loops=False,
                     )
                 },
-                aggr="max",
+                aggr="add",
             )
         else:
             raise ValueError(f"{conv_type} not supported")
@@ -319,7 +319,7 @@ class ClusterNet(torch.nn.Module):
 
         else:
             # pooling step so end up with one feature vector per fov
-            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+            x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
@@ -1219,7 +1219,7 @@ class LocClusterNet(torch.nn.Module):
         elif config["cluster_conv_type"] == "pointtransformer":
             self.cluster_net = ClusterNet(
                 ClusterEncoder(
-                    dropout=config["dropout"],
+                    dropout=config["cluster_dropout"],
                     conv_type="pointtransformer",
                     pt_tr_in_channels=config["pt_tr_in_channels"][0],
                     pt_tr_out_channels=config["pt_tr_out_channels"][0],
@@ -1228,7 +1228,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
                 ClusterEncoder(
-                    dropout=config["dropout"],
+                    dropout=config["cluster_dropout"],
                     conv_type="pointtransformer",
                     pt_tr_in_channels=config["pt_tr_in_channels"][1],
                     pt_tr_out_channels=config["pt_tr_out_channels"][1],
@@ -1237,7 +1237,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
                 ClusterEncoder(
-                    dropout=config["dropout"],
+                    dropout=config["cluster_dropout"],
                     conv_type="pointtransformer",
                     pt_tr_in_channels=config["pt_tr_in_channels"][2],
                     pt_tr_out_channels=config["pt_tr_out_channels"][2],
@@ -1246,7 +1246,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
                 ClusterEncoder(
-                    dropout=config["dropout"],
+                    dropout=config["cluster_dropout"],
                     conv_type="pointtransformer",
                     pt_tr_in_channels=config["pt_tr_in_channels"][3],
                     pt_tr_out_channels=config["pt_tr_out_channels"][3],

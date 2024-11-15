@@ -231,11 +231,25 @@ def main():
         help="location of the map file",
     )
 
+    parser.add_argument(
+        "-c",
+        "--config_file",
+        action="store",
+        type=str,
+        required=False,
+        help="location of the config file",
+    )
+
     args = parser.parse_args()
     file_map = pl.read_csv(args.map_file)
 
+    config_loc = args.config_file
+
+    if config_loc is None:
+        config_loc = "config"
+
     project_directory = args.project_directory
-    config_loc = os.path.join(project_directory, "config/evaluate.yaml")
+    config_loc = os.path.join(project_directory, f"{config_loc}/evaluate.yaml")
 
     # load yaml
     with open(config_loc, "r") as ymlfile:
