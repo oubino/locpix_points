@@ -187,7 +187,7 @@ def analyse_nn_feats(project_directory, config, final_test, automatic, n_repeats
     # only works for locclusternet at the moment
     # 1. To construct datasets we use cluster_net required in model
     # 2. For explainability also assumes uses LocClusterNet
-    assert model_type == "locclusternet"
+    assert model_type == "locclusternet" or model_type == "clusternet"
 
     # initialise model
     model = model_choice(
@@ -256,8 +256,11 @@ def analyse_nn_feats(project_directory, config, final_test, automatic, n_repeats
     # note these datastructures have been passed through
     # PointNet/PointTransformer therefore localisations
     # have been embedded into cluster
-    loc_model = model.loc_net
-    loc_model.eval()
+    if model_type == "locclusternet":
+        loc_model = model.loc_net
+        loc_model.eval()
+    else:
+        loc_model = None
 
     cluster_train_set = datastruc.ClusterDataset(
         input_train_folder,
@@ -337,10 +340,15 @@ def analyse_nn_feats(project_directory, config, final_test, automatic, n_repeats
     print("Feature analysis...")
 
     # need to ensure no manual features being analysed
-    with open("config/process.yaml", "r") as ymlfile:
+    with open("../config/process.yaml", "r") as ymlfile:
         process_config = yaml.safe_load(ymlfile)
     cluster_features = process_config["cluster_feat"]
-    assert cluster_features is None
+    if cluster_features is not None:
+        inpt = input("Cluster features are present, be aware, type (YES I AM AWARE)")
+        while inpt != "YES I AM AWARE":
+            inpt = input(
+                "Cluster features are present, be aware, type (YES I AM AWARE)"
+            )
 
     # aggregate cluster features into collated df
     if not final_test:
@@ -640,7 +648,16 @@ def visualise_umap_embedding(
             "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
         )
         try:
-            ax = umap.plot.points(embedding, labels=df.type.map(label_map))
+            unique_labels = np.unique(df.type.map(label_map))
+            num_labels = unique_labels.shape[0]
+            color_key_cmap = "Spectral"
+            color_key = _to_hex(
+                plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
+            )
+            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+            ax = umap.plot.points(
+                embedding, labels=df.type.map(label_map), color_key=color_key
+            )
             ax.collections[0].set_sizes(len(df) * [point_size])
         except:
             print("Too many points - replotting with matplotlib ")
