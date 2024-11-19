@@ -831,7 +831,8 @@ class ClusterNetHetero(torch.nn.Module):
                     channel_list=config["ClusterEncoderChannels"][3],
                 ),
                 Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
                 ),
             )
         elif config["cluster_conv_type"] == "transformer":
@@ -893,7 +894,8 @@ class ClusterNetHetero(torch.nn.Module):
                     channel_list=config["ClusterEncoderChannels"][3],
                 ),
                 Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
                 ),
             )
         elif config["cluster_conv_type"] == "pointtransformer":
