@@ -1,0 +1,114 @@
+# map from real terms to the integer labels
+label_map:
+  fib: 0
+  iso: 1
+
+# whether to run on gpu or cpu
+device: gpu # Options: [cpu, gpu]
+
+# choice of model
+model: locclusternet # Options: see train.yaml
+
+# fold for which we load the model from
+fold: 0
+# if automatic flag not specified then load in specific model name
+# the name of the model can be found from weights&bias for the corresponding fold
+model_name: INSERTMODELNAME.pt
+
+# parameters for the network
+locclusternet:
+
+  # +++ LocNet parameters +++
+  loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
+  # Ratio of points to sample from the point cloud
+  ratio: 1.0
+  # For each point we sample nearest neighbours up to nearest neighbours (k)
+  k: 3
+
+  # +++++ PointNet parameters +++++
+  local_channels: [[2, 4, 6],[12, 14, 16], [22,24,26]]
+  global_channels: [[6, 8, 10],[16, 18, 20], [26,28,30]]
+  global_sa_channels: [32, 30, 28, 26]
+  final_channels: [26, 24, 22, 8]
+  # For each point we sample nearest neighbours up to radius
+  radius: 1.0
+
+  # +++++ PointTransformer parameters +++++
+  # Number of channels input to first MLP
+  in_channels: 0
+  # Number of channels out of the final layer
+  out_channels: 8
+  # Channels for the transformer/transition down blocks
+  dim_model: [16, 32, 64]
+  pos_nn_layers: 64
+  attn_nn_layers: 64
+  # Hidden channels for final MLP
+  output_mlp_layers: 128
+
+  # ++++++++++++++++++++++++++++++++++++++++
+
+  # +++++ ClusterNet parameters +++++
+  # Dropout for each layer
+  dropout: 0.0
+  cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
+  # number of final output channels
+  OutputChannels: 2
+  # add position coordinates to each cluster
+  add_cluster_pos: False
+
+  # --- if cluster_conv_type == gin OR pointnet ------------
+  ClusterEncoderChannels: [[[10, 12, 14], [14, 16, 16]],[[18, 20, 22], [22, 24, 24]],[[26, 28, 30], [30, 32, 32]],[[34, 36, 38], [38, 40, 40]]]
+  # ------------------------------------
+
+  # --- if cluster_conv_type == transformer ----
+  # Out channels for each layer
+  tr_out_channels: [16, 24, 32, 40]
+  # Number of multihead attention layers
+  tr_heads: 1
+  # If False multi-head attentions are averaged rather than being concatenated
+  tr_concat: True
+  # See https://pytorch-geometric.readthedocs.io/en/latest/generated/torch_geometric.nn.conv.TransformerConv.html for difference
+  # when beta is True
+  tr_beta: False
+  # ------------------------------------
+
+  # --- if cluster_conv_type == pointtransformer ------------
+  # input channel size for each layer
+  pt_tr_in_channels: [8, 16, 24, 32]
+  # output channel size for each layer
+  pt_tr_out_channels: [16, 24, 32, 40]
+  # size of hidden channel for position NN
+  pt_tr_pos_nn_layers: 32
+  # size of hidden channel for attention NN
+  pt_tr_attn_nn_layers: 32
+  # dimensions of data: options = [2,3]
+  pt_tr_dim: 2
+  # -------------------------------------------------
+
+# ---- Explainable AI arguments -----
+
+# if specified then run through pgexplainer
+pgex:
+  # size regularization to constrain the explanation size
+  edge_size: 0.00000001
+  # entropy regularization to constrain the connectivity of explanation
+  edge_ent: 0.00000001
+  # maximum number of networks to train explanation network
+  max_epochs: 20
+  # learning rate during training of explanation network
+  lr: 0.003
+  # batch size during training of explanation network
+  batch_size: 128
+  # each value in the the edge mask is divided by temperature
+  # i.e. lower temperature more confidence vs higher temperature
+  # more spread out confidence in masks
+  # where temperature is given by
+  # temp[0] * (temp[1]/temp[0])^ (epoch/total_epochs)
+  # i.e. at low epochs closer to temp[0]
+  # and at high epochs closer to temp[1]
+  # since temp[0] > temp[1]
+  # at low epochs higher temp, at high epochs lower temp
+  # i.e. start with more uniform sampling towards spikier sampling
+  temp: [5.0,2.0]
+  # bias - parameter for sampling
+  bias: 0.0

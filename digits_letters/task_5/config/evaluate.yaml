@@ -30,6 +30,7 @@ clusternet:
   ClusterEncoderChannels: [[[10, 12, 14], [14, 16, 16]],[[18, 20, 22], [22, 24, 24]],[[26, 28, 30], [30, 32, 32]],[[34, 36, 38], [38, 40, 40]]]
   # ------------------------------------
 
+
   # --- if cluster_conv_type == transformer ----
   # Out channels for each layer
   tr_out_channels: [16, 24, 32, 40]

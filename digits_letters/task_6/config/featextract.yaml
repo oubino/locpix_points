@@ -1,0 +1,11 @@
+# DBSCAN parameters
+dbscan:
+  # eps in original space dimensions
+  eps: 0.02
+  # minimum number of points
+  minpts: 3
+
+# KMeans parameters
+#kmeans:
+#  # n clusters
+#  n_clusters: 8
