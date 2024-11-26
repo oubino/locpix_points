@@ -121,7 +121,7 @@ class ClusterEncoder(torch.nn.Module):
                         add_self_loops=False,
                     )
                 },
-                aggr="add",
+                aggr="add",  # CHANGE
             )
         else:
             raise ValueError(f"{conv_type} not supported")
@@ -319,7 +319,7 @@ class ClusterNet(torch.nn.Module):
 
         else:
             # pooling step so end up with one feature vector per fov
-            x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)
+            x_dict["clusters"] = global_mean_pool(x_dict["clusters"], batch)  # CHANGE
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
