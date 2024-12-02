@@ -16,6 +16,18 @@ This repository then does the following:
     - Allow visualisation
     - Analysis of manual features, neural network output, explainability etc. via jupyter notebook
 
+
+Publication results
+===================
+
+To reproduce some of the results from the publication, do the following.
+
+1. Install environment 1 following instructions below
+2. Download .tar folder from https://doi.org/10.5281/zenodo.14246303
+3. Extract the .tar folder
+4. Once within the .tar folder navigate to scripts
+5. Run the analysis.ipynb notebook using jupyter notebook
+
 Installation
 ============
 
@@ -28,16 +40,19 @@ For wsl for windows - follow
 
 Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
 
+Requires anaconda, miniconda, mamba or `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended]. For all commands below repalce micromamba with conda etc. depending on which you have installed
+
 To do: release this repository as a package on PyPI
 
 Environment 1 (locpix-points)
 -----------------------------
 
-Create new environment
+Create and activate new environment
 
 .. code-block:: python
 
     micromamba create -n locpix-points -c conda-forge python=3.11
+    micromamnba activate locpix-points
 
 Then install this repository
 
@@ -45,6 +60,7 @@ Then install this repository
 
     git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
+    git checkout working [REMOVE IF HAVE MERGED BRANCHES]
     pip install -e .
     cd ..
 
@@ -57,15 +73,14 @@ We need to install our version of pytorch geometric which we do by
     git clone https://github.com/oubino/pytorch_geometric.git
     cd pytorch_geometric
     pip install -e .
+    git checkout hetero_transforms
     cd ..
 
 Install other requirements
 
 .. code-block:: python
 
-    cd locpix_points
-    pip install -r requirements.txt
-    cd ..
+    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
 Also need to install DIG
 
@@ -127,9 +142,9 @@ To navigate this we can
 1. Remove open3d, torch-scatter, torch-sparse and torch-cluster from requirements.txt
 2. For the moment no fix for open3d
 3. For torch-scatter, torch-sparse and torch-cluster - where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page
-    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
-    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
-    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
 Quickstart (Linux)
 ==================

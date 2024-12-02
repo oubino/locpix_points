@@ -1,9 +1,0 @@
-# requirements that need to be installed post set up
-
-open3d
-torch-scatter
-torch-sparse
-torch-cluster
-torch-summary
-torchmetrics
-pytest
