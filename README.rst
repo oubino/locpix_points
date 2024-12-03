@@ -76,7 +76,7 @@ We need to install our version of pytorch geometric which we do by
     git checkout hetero_transforms
     cd ..
 
-Install other requirements
+Install other requirements [note may have to change the wheels to install based on which cuda you have i.e. cu121 = cuda 12.1]
 
 .. code-block:: python
 
