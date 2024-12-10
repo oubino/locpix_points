@@ -1,7 +1,7 @@
 Overview
 ========
 
-This repository allows for analysis of SMLM data using graph neural networks.
+This repository allows for classification of SMLM data using graph neural networks and analysis of the features and structures that led to the classification.
 
 Data can be .csv or .parquet files
 
@@ -20,13 +20,39 @@ This repository then does the following:
 Publication results
 ===================
 
-To reproduce some of the results from the publication, do the following.
+To reproduce results for clusternet (with handcrafted features) AND locclusternet from the publication, do the following.
 
 1. Install environment 1 following instructions below
-2. Download .tar folder from https://doi.org/10.5281/zenodo.14246303
+2. Download .tar folder from https://doi.org/10.5281/zenodo.14246303 [upload.tar.gz = clusternet (with handcrafted features), locclusternet.tar.gz = locclusternet]
 3. Extract the .tar folder
-4. Once within the .tar folder navigate to scripts
-5. Run the analysis.ipynb notebook using jupyter notebook
+
+In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
+
+1. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
+2. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
+3. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
+4. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
+
+Or, if you would like to re-run training or evaluation (this requires being signed into wandb), you can run
+
+.. code-block:: shell
+
+    bash scripts/evaluate.sh
+
+.. code-block:: shell
+
+    bash scripts/train.sh
+
+And then use analysis.ipynb notebook to re-run the results of feature and structure analysis
+
+Alternatively for ClusterNet (with handcrafted features) we can visualise the results of this notebook after it has been run already
+
+1. Download paper/analysis.html
+2. Open this file in a suitable browser
+
+This visualises
+1. Figures 2A-C and Supplementary Figure 6 interactively
+2. The remaining figures statically
 
 Installation
 ============
@@ -52,9 +78,9 @@ Create and activate new environment
 .. code-block:: python
 
     micromamba create -n locpix-points -c conda-forge python=3.11
-    micromamnba activate locpix-points
+    micromamba activate locpix-points
 
-Then install this repository
+Install this repository
 
 .. code-block:: python
 
@@ -64,9 +90,7 @@ Then install this repository
     pip install -e .
     cd ..
 
-Before installing the remaining requirements, making sure you have activated the environment first
-
-We need to install our version of pytorch geometric which we do by
+Install our version of pytorch geometric
 
 .. code-block:: python
 
@@ -82,20 +106,11 @@ Install other requirements [note may have to change the wheels to install based 
 
     pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
-Also need to install DIG
-
-To do this clone the repository to your desired location
-
-However, we also need a custom version of this repo fixing some bugs therefore we use our fork
+Install DIG
 
 .. code-block:: python 
 
     git clone https://github.com/oubino/DIG
-
-Then navigate to the directory and install using 
-
-.. code-block:: python 
-
     cd DIG
     pip install -e .
     cd ..
