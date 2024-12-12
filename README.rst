@@ -679,7 +679,8 @@ This is different to initialise as we now ASSUME that your input data is located
 
 *Description*
 
-If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files
+If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files.
+Note can't copy files from another final_test folder for example
     
 *Warning*
 
