@@ -28,7 +28,15 @@ from torch_geometric.utils import scatter, contains_self_loops
 
 
 class TransformerBlock(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, dim, pos_nn_layers, attn_nn_layers):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        dim,
+        pos_nn_layers,
+        attn_nn_layers,
+        dropout_posattn,
+    ):
         super().__init__()
         self.lin_in = Lin(in_channels, in_channels)
         self.lin_out = Lin(out_channels, out_channels)
@@ -37,7 +45,10 @@ class TransformerBlock(torch.nn.Module):
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
         self.pos_nn = MLP(
-            [dim, pos_nn_layers, out_channels], plain_last=False, act="relu"
+            [dim, pos_nn_layers, out_channels],
+            plain_last=False,
+            act="relu",
+            dropout=dropout_posattn,
         )  # BN
 
         # HARDCODE
@@ -45,6 +56,7 @@ class TransformerBlock(torch.nn.Module):
             [out_channels, attn_nn_layers, out_channels],
             plain_last=False,
             act="relu",
+            dropout=dropout_posattn,
         )
 
         self.transformer = PointTransformerConv(
@@ -159,6 +171,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
         dropout = config["dropout"]
+        dropout_posattn = config["dropout_posattn"]
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -176,6 +189,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             dim=dim,
             pos_nn_layers=pos_nn_layers,
             attn_nn_layers=attn_nn_layers,
+            dropout_posattn=dropout_posattn,
         )
         # backbone layers
         self.transformers_down = torch.nn.ModuleList()
@@ -199,6 +213,7 @@ class PointTransformerEmbedding(torch.nn.Module):
                     dim=dim,
                     pos_nn_layers=pos_nn_layers,
                     attn_nn_layers=attn_nn_layers,
+                    dropout_posattn=dropout_posattn,
                 )
             )
 
