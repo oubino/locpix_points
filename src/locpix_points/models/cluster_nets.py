@@ -103,13 +103,13 @@ class ClusterEncoder(torch.nn.Module):
                 [pt_tr_dim, pt_tr_pos_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="relu",
+                act="leakyrelu",
             )
             attn_nn = MLP(  # BN
                 [pt_tr_out_channels, pt_tr_attn_nn_layers, pt_tr_out_channels],
                 plain_last=False,
                 dropout=dropout,
-                act="relu",
+                act="leakyrelu",
             )
             self.conv = HeteroConv(
                 {

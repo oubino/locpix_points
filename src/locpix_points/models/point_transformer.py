@@ -47,7 +47,7 @@ class TransformerBlock(torch.nn.Module):
         self.pos_nn = MLP(
             [dim, pos_nn_layers, out_channels],
             plain_last=False,
-            act="relu",
+            act="leakyrelu",
             dropout=dropout_posattn,
         )  # BN
 
@@ -55,7 +55,7 @@ class TransformerBlock(torch.nn.Module):
         self.attn_nn = MLP(  # BN
             [out_channels, attn_nn_layers, out_channels],
             plain_last=False,
-            act="relu",
+            act="leakyrelu",
             dropout=dropout_posattn,
         )
 
@@ -69,10 +69,12 @@ class TransformerBlock(torch.nn.Module):
         )
 
     def forward(self, x, pos, edge_index):
-        x = self.lin_in(x).relu()
+        x = self.lin_in(x)
+        x = F.leaky_relu(x)
         assert not contains_self_loops(edge_index)
         x = self.transformer(x, pos, edge_index)
-        x = self.lin_out(x).relu()
+        x = self.lin_out(x)
+        x = F.leaky_relu(x)
         return x
 
 
@@ -87,12 +89,12 @@ class TransitionUp(torch.nn.Module):
         self.mlp_sub = MLP(
             [in_channels, out_channels],
             plain_last=False,
-            act="relu",
+            act="leakyrelu",
         )
         self.mlp = MLP(
             [out_channels, out_channels],
             plain_last=False,
-            act="relu",
+            act="leakyrelu",
         )
         self.k = k
 
@@ -124,7 +126,7 @@ class TransitionDown(torch.nn.Module):
             [in_channels, out_channels],
             plain_last=False,
             norm="instance_norm",
-            act="relu",
+            act="leakyrelu",
         )  # BN
 
     def forward(self, x, pos, batch):
@@ -180,7 +182,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_input = MLP(
             [in_channels, dim_model[0]],
             plain_last=False,
-            act="relu",
+            act="leakyrelu",
         )  # BN
 
         self.transformer_input = TransformerBlock(
@@ -222,7 +224,7 @@ class PointTransformerEmbedding(torch.nn.Module):
         self.mlp_output = MLP(  # BN
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
-            act="relu",
+            act="leakyrelu",
             dropout=dropout,
         )
 
