@@ -368,6 +368,12 @@ def main(argv=None):
             config, "cluster_feat", file_directory, train_list
         )
 
+        if "superclusters" in config.keys():
+            input("check got here")
+            superclusters = True
+        else:
+            superclusters = False
+
         print("Train set...")
         # create train dataset
         _ = datastruc.ClusterLocDataset(
@@ -389,6 +395,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
+            superclusters=superclusters,
         )
 
         print("Val set...")
@@ -412,6 +419,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
+            superclusters=superclusters,
         )
 
         print("Test set...")
@@ -435,6 +443,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
+            superclusters=superclusters,
         )
 
         # save yaml file

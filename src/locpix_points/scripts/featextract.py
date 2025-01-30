@@ -184,6 +184,9 @@ def main(argv=None):
 
         # identify superclusters
         if "superclusters" in config.keys():
+            raise ValueError(
+                "Currently we calculate superclusters as an add-on via the supercluster script"
+            )
             if config["superclusters"]:
                 cluster_df = featextract.super_cluster(
                     cluster_df,

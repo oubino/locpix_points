@@ -95,7 +95,9 @@ def super_cluster(
     Raises:
         ValueError: Temporary fix as need to re-write this function"""
 
-    raise ValueError("Change accordingly")
+    raise ValueError(
+        "Incorporate the supercluster.py script and delete the supercluster.py script"
+    )
 
     kmeans = KMeans(n_clusters=k)
     dataframe = cudf.DataFrame()

@@ -47,12 +47,12 @@ for file in os.listdir(folder):
 
     clusters.append(len(df))
 
-    if len(df) < 250:
-        raise ValueError("Should not have fewer than 250 clusters")
+    if len(df) < 42:
+        raise ValueError("Should not have fewer than 42 clusters")
 
     if type == "KMEANS":
         # n_clusters = int(df["clusterID"].max()/2)
-        n_clusters = 250
+        n_clusters = 42
         cluster_algo = KMeans(n_clusters=n_clusters)
     elif type == "DBSCAN":
         cluster_algo = DBSCAN(eps=750, min_samples=3)
@@ -80,7 +80,7 @@ for file in os.listdir(folder):
 
     if type == "KMEANS":
         # n_clusters = int(df["superclusters_0"].max()/2)
-        n_clusters = 25
+        n_clusters = 12
         cluster_algo = KMeans(n_clusters=n_clusters)
     elif type == "DBSCAN":
         cluster_algo = DBSCAN(eps=5000, min_samples=2)
