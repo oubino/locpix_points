@@ -571,6 +571,7 @@ class ClusterLocDataset(SMLMDataset):
         kneighbours (int) : Number of neighbours each cluster connected to
         fov_x (float) : Size of fov in units for data (x)
         fov_y (float) : Size of fov in units for data (y)
+        superclusters (bool) : Whether to include superclusters
     """
 
     def __init__(
@@ -593,6 +594,7 @@ class ClusterLocDataset(SMLMDataset):
         fov_x,
         fov_y,
         kneighbourslocs,
+        superclusters=False,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -603,6 +605,7 @@ class ClusterLocDataset(SMLMDataset):
         self.max_feat_clusters = max_feat_clusters
         self.kneighboursclusters = kneighboursclusters
         self.kneighbourslocs = kneighbourslocs
+        self.superclusters = superclusters
 
         super().__init__(
             raw_loc_dir_root,
@@ -683,7 +686,7 @@ class ClusterLocDataset(SMLMDataset):
                 self.fov_x,
                 self.fov_y,
                 self.kneighbourslocs,
-                superclusters=False,
+                superclusters=self.superclusters,
             )
 
             # load in gt label

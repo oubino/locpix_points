@@ -179,62 +179,126 @@ class ClusterNet(torch.nn.Module):
         self.cluster_encoder_3 = cluster_encoder_3
         self.linear = linear
 
+        HIDDEN = 32
+        DIM = 2
+        OUTA = 48
+        INA = 40
+        INB = OUTA
+        OUTB = 56
+        INC = OUTB
+        OUTC = 64
+        IND = OUTC
+        OUTD = 72
+        INE = OUTD
+        OUTE = 80
+        INF = OUTE
+        OUTF = 88
+        DROPOUT_supercluster = 0.0
+
         # dim, pos, out
-        pos_nn_0_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_0_0 = MLP(
+            [DIM, HIDDEN, OUTA],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         # out, attn, out
         attn_nn_0_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTA, HIDDEN, OUTA],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
+            INA, OUTA, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_1_0 = MLP(
+            [DIM, HIDDEN, OUTB],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_1_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTB, HIDDEN, OUTB],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_1_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
+            INB, OUTB, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_2_0 = MLP(
+            [DIM, HIDDEN, OUTC],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_2_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTC, HIDDEN, OUTC],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
+            INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
         )
 
         # dim, pos, out
-        pos_nn_0_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_0_1 = MLP(
+            [DIM, HIDDEN, OUTD],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         # out, attn, out
         attn_nn_0_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTD, HIDDEN, OUTD],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         # in, out
         self.cluster_encoder_0_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
+            IND, OUTD, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_1_1 = MLP(
+            [DIM, HIDDEN, OUTE],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_1_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTE, HIDDEN, OUTE],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_1_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
+            INE, OUTE, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_2_1 = MLP(
+            [DIM, HIDDEN, OUTF],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_2_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTF, HIDDEN, OUTF],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_2_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
+            INF, OUTF, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
         )
 
         warnings.warn("Change back to number of classes")
-        self.linear_new = Linear(64, 2)
+        self.linear_new = Linear(OUTF, 2)
 
     def forward(
         self,
@@ -264,9 +328,6 @@ class ClusterNet(torch.nn.Module):
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
                 for that FOV
-
-        Raises:
-            ValueError: Temporary fix to stop superclusters running
         """
         x_dict["clusters"] = self.cluster_encoder_0(
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
@@ -285,10 +346,10 @@ class ClusterNet(torch.nn.Module):
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
             x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
-            raise ValueError(
-                "Double check here do we want self loops and what should k be k+1 ?"
+
+            edge_index = knn_graph(
+                pos_dict["superclusters_0"], k=5 + 1, batch=batch, loop=True
             )
-            edge_index = knn_graph(pos_dict["superclusters_0"], k=3, batch=batch)
 
             # clusterencoders
             x = self.cluster_encoder_0_0_new(
@@ -300,10 +361,10 @@ class ClusterNet(torch.nn.Module):
             # ---- SC1 -----
             cluster = gen_cluster(supercluster_ID_1, batch)
             x_superclusters_1, batch = max_pool_x(cluster, x, batch)
-            raise ValueError(
-                "Double check here do we want self loops and what should k be k+1 ?"
+
+            edge_index = knn_graph(
+                pos_dict["superclusters_1"], k=5 + 1, batch=batch, loop=True
             )
-            edge_index = knn_graph(pos_dict["superclusters_1"], k=3, batch=batch)
 
             # clusterencoders
             x = self.cluster_encoder_0_1_new(
@@ -1119,10 +1180,7 @@ class LocClusterNet(torch.nn.Module):
                 "Loc conv type should be pointnet or pointtransformer"
             )
         if "superclusters" in config.keys():
-            if config["superclusters"] is True:
-                self.superclusters = True
-            else:
-                self.superclusters = False
+            self.superclusters = True
         else:
             self.superclusters = False
 
