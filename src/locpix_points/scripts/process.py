@@ -369,7 +369,6 @@ def main(argv=None):
         )
 
         if "superclusters" in config.keys():
-            input("check got here")
             superclusters = True
         else:
             superclusters = False
