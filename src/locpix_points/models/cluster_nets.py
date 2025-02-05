@@ -193,7 +193,7 @@ class ClusterNet(torch.nn.Module):
         OUTE = 80
         INF = OUTE
         OUTF = 88
-        DROPOUT_supercluster = 0.0
+        DROPOUT_supercluster = 0.2
 
         # dim, pos, out
         pos_nn_0_0 = MLP(
