@@ -13,7 +13,7 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, conv, knn_graph
-from torch_geometric.nn.aggr import MaxAggregation
+from torch_geometric.nn.aggr import MaxAggregation, AttentionalAggregation
 from torch_geometric.nn.pool import (
     global_mean_pool,
     global_max_pool,
@@ -162,6 +162,9 @@ class ClusterNet(torch.nn.Module):
         cluster_encoder_3 (torch.nn.module): Fourth encoder for the clusters
         linear (torch.nn.module): Linear layer that operates on cluster embeddings
             and returns a classification
+        attention_readout (bool): Whether to use attention_readout
+        attention_readout_node_level (bool): If true then node level gating else feature level
+
     """
 
     def __init__(
@@ -171,6 +174,8 @@ class ClusterNet(torch.nn.Module):
         cluster_encoder_2,
         cluster_encoder_3,
         linear,
+        attention_readout=False,
+        attention_readout_node_level=True,
     ):
         super().__init__()
         self.cluster_encoder_0 = cluster_encoder_0
@@ -178,6 +183,20 @@ class ClusterNet(torch.nn.Module):
         self.cluster_encoder_2 = cluster_encoder_2
         self.cluster_encoder_3 = cluster_encoder_3
         self.linear = linear
+
+        self.attention_readout = attention_readout
+
+        if self.attention_readout:
+            chans = self.linear.in_features
+            attention_readout_nn = Linear(chans, chans)
+            if attention_readout_node_level:
+                attention_readout_gate = Linear(chans, 1)
+            else:
+                attention_readout_gate = attention_readout_nn
+
+            self.attention_readout_fn = AttentionalAggregation(
+                attention_readout_gate, attention_readout_nn
+            )
 
         HIDDEN = 32
         DIM = 2
@@ -328,6 +347,9 @@ class ClusterNet(torch.nn.Module):
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
                 for that FOV
+
+        Raises:
+            NotImplementedError: If try and do attention readout with superclusters
         """
         x_dict["clusters"] = self.cluster_encoder_0(
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
@@ -343,6 +365,11 @@ class ClusterNet(torch.nn.Module):
         )
 
         if supercluster_ID_0 is not None and supercluster_ID_1 is not None:
+            if self.attention_readout:
+                raise NotImplementedError(
+                    "Not implemented attention readout for SC yet"
+                )
+
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
             x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
@@ -380,7 +407,15 @@ class ClusterNet(torch.nn.Module):
 
         else:
             # pooling step so end up with one feature vector per fov
-            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)  # CHANGE
+            if self.attention_readout:
+                x_dict["clusters"] = self.attention_readout_fn(
+                    x_dict["clusters"], index=batch
+                )
+
+            else:
+                x_dict["clusters"] = global_max_pool(
+                    x_dict["clusters"], batch
+                )  # CHANGE
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
@@ -1277,6 +1312,12 @@ class LocClusterNet(torch.nn.Module):
                 ),
             )
         elif config["cluster_conv_type"] == "pointtransformer":
+            if "attention_readout" in config.keys():
+                attention_readout = True
+                attention_readout_node_level = config["attention_readout_node_level"]
+            else:
+                attention_readout = False
+                attention_readout_node_level = None
             self.cluster_net = ClusterNet(
                 ClusterEncoder(
                     dropout=config["cluster_dropout"],
@@ -1315,6 +1356,8 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_dim=config["pt_tr_dim"],
                 ),
                 Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
+                attention_readout=attention_readout,
+                attention_readout_node_level=attention_readout_node_level,
             )
         else:
             raise ValueError("conv_type should be gin or transformer")
