@@ -432,6 +432,11 @@ This has two types of nodes: localisations and clusters.
 
 The features for the localisations and clusters are loaded into these nodes.
 
+The positions of the nodes come from the xy coordinates of the localisations.
+These are normalised to between -1 and +1 for each dataitem, independently of other dataitems.
+i.e. if Item A has x_range 1000nm and Item B has x_range 2000nm, both are scaled to -1 and +1 
+independently of each other, without taking into consideration the FOV width either.
+
 Then edges are added between
 
     - Localisations to localisations within the same cluster

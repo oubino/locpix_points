@@ -43,6 +43,12 @@ kneighboursclusters: 3
 kneighbourslocs: 3
 
 # size of fov in x/y in original units e.g. nm
+# Note:
+# - Each item will be checked to see if it's x and y range are less than 95% of the FOV width
+# - However, these values are NOT used to normalise each item
+# - Each item is normalised independently to between -1 and +1 i.e. if Item A has x_range 1000nm
+#   and item B has x_range 5000nm both are scaled to between -1 and +1 independently of each other
+#   not using the fox_x or fov_y range.
 fov_x: 50000.0
 fov_y: 80000.0
 
