@@ -153,6 +153,7 @@ def analyse_locs(project_directory, config, final_test, automatic):
         fov_x=None,
         fov_y=None,
         kneighbours=None,
+        range_xy=False,
     )
 
     # load in val dataset
@@ -170,6 +171,7 @@ def analyse_locs(project_directory, config, final_test, automatic):
         fov_x=None,
         fov_y=None,
         kneighbours=None,
+        range_xy=False,
     )
 
     # load in test dataset
@@ -187,6 +189,7 @@ def analyse_locs(project_directory, config, final_test, automatic):
         fov_x=None,
         fov_y=None,
         kneighbours=None,
+        range_xy=False,
     )
 
     train_map = pl.read_csv(

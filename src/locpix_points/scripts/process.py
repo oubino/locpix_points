@@ -118,6 +118,36 @@ def minmax(config, feat_str, file_directory, train_list):
     return min_vals, max_vals
 
 
+def minmaxpos(file_directory, train_list):
+    """Calculate minimum and maximum values of the positions
+    in the file
+
+    Args:
+        file_directory (str): Directory containing the files
+        train_list (list): List of files to load in
+
+    Returns:
+        range_xy (float): Range of the xy data
+    """
+
+    range_xy = -1
+    for _, file in enumerate(train_list):
+        df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
+        # load in positions
+        x_locs = torch.tensor(df["x"].to_numpy())
+        y_locs = torch.tensor(df["y"].to_numpy())
+
+        min_x = x_locs.min()
+        min_y = y_locs.min()
+        x_range = x_locs.max() - min_x
+        y_range = y_locs.max() - min_y
+        range_xy_temp = max(x_range, y_range)
+
+        range_xy = max(range_xy_temp, range_xy)
+
+    return range_xy
+
+
 def main(argv=None):
     """Main script for the module with variable arguments
 
@@ -363,6 +393,15 @@ def main(argv=None):
         min_feat_locs, max_feat_locs = minmax(
             config, "loc_feat", file_directory, train_list
         )
+
+        if config["normalise"] == "per_dataset":
+            # calculate xy range
+            range_xy = minmaxpos(file_directory, train_list)
+        elif config["normalise"] == "per_item":
+            range_xy = None
+        else:
+            raise NotImplementedError("Normalise should be per-item or per-dataset")
+
         file_directory = os.path.join(input_folder_train, "featextract/clusters")
         min_feat_clusters, max_feat_clusters = minmax(
             config, "cluster_feat", file_directory, train_list
@@ -395,6 +434,7 @@ def main(argv=None):
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
+            range_xy=range_xy,
         )
 
         print("Val set...")
@@ -419,6 +459,7 @@ def main(argv=None):
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
+            range_xy=range_xy,
         )
 
         print("Test set...")
@@ -443,6 +484,7 @@ def main(argv=None):
             config["fov_y"],
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
+            range_xy=range_xy,
         )
 
         # save yaml file
@@ -451,6 +493,9 @@ def main(argv=None):
             yaml.dump(config, outfile)
 
     elif config["model"] == "Loc":
+        raise NotImplementedError("I can see errors that need fixing")
+        # 1. file_directory not defined
+        # 2. input folder gt label what happens for the minmaxpos
         if os.path.exists(os.path.join(input_folder_train, "featextract/locs")):
             input_folder = "featextract/locs"
             min_feat, max_feat = minmax(config, "loc_feat", file_directory, train_list)
@@ -458,6 +503,14 @@ def main(argv=None):
             input_folder = "gt_label"
             min_feat = None
             max_feat = None
+
+        if config["normalise"] == "per_dataset":
+            # calculate xy range
+            range_xy = minmaxpos(file_directory, train_list)
+        elif config["normalise"] == "per_item":
+            range_xy = None
+        else:
+            raise NotImplementedError("Normalise should be per-item or per-dataset")
 
         print("Train set...")
         # create train dataset
@@ -475,6 +528,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbours=config["kneighbours"],
+            range_xy=range_xy,
         )
 
         print("Val set...")
@@ -493,6 +547,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbours=config["kneighbours"],
+            range_xy=range_xy,
         )
 
         print("Test set...")
@@ -511,6 +566,7 @@ def main(argv=None):
             config["fov_x"],
             config["fov_y"],
             kneighbours=config["kneighbours"],
+            range_xy=range_xy,
         )
 
         # save yaml file

@@ -37,9 +37,15 @@ kneighboursclusters: 3
 
 # number of nearest neighbours to connect locs to in graph
 # note localisations are only connected to other localisations in the same cluster
-# if null then connects all locs within each cluster
+# if "all" then connects all locs within each cluster
+# if null then no connections
 # note if using PointNet or PointTransformer - these connections are not used!
 kneighbourslocs: 3
+
+# how to normalise the data
+# 1. per_item - i.e. each item normalised to between -1 and +1 ignoring other items
+# 2. per_dataset - i.e. each item normalised to between -1 and +1 using range of data from other items
+normalise: per_item # per_dataset
 
 # size of fov in x/y in original units e.g. nm
 # Note:
