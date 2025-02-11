@@ -259,11 +259,13 @@ class LocDataset(SMLMDataset):
         fov_x,
         fov_y,
         kneighbours,
+        range_xy=False,
     ):
         self.min_feat = min_feat
         self.max_feat = max_feat
         self.feat = feat
         self.kneighbours = kneighbours
+        self.range_xy = range_xy
 
         super().__init__(
             raw_loc_dir_root,
@@ -329,6 +331,7 @@ class LocDataset(SMLMDataset):
                 self.fov_x,
                 self.fov_y,
                 self.kneighbours,
+                range_xy=self.range_xy,
             )
 
             # load in gt label
@@ -572,6 +575,7 @@ class ClusterLocDataset(SMLMDataset):
         fov_x (float) : Size of fov in units for data (x)
         fov_y (float) : Size of fov in units for data (y)
         superclusters (bool) : Whether to include superclusters
+        range_xy (int) : Range of the data
     """
 
     def __init__(
@@ -595,6 +599,7 @@ class ClusterLocDataset(SMLMDataset):
         fov_y,
         kneighbourslocs,
         superclusters=False,
+        range_xy=False,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -606,6 +611,7 @@ class ClusterLocDataset(SMLMDataset):
         self.kneighboursclusters = kneighboursclusters
         self.kneighbourslocs = kneighbourslocs
         self.superclusters = superclusters
+        self.range_xy = range_xy
 
         super().__init__(
             raw_loc_dir_root,
@@ -687,6 +693,7 @@ class ClusterLocDataset(SMLMDataset):
                 self.fov_y,
                 self.kneighbourslocs,
                 superclusters=self.superclusters,
+                range_xy=self.range_xy,
             )
 
             # load in gt label
