@@ -433,9 +433,20 @@ This has two types of nodes: localisations and clusters.
 The features for the localisations and clusters are loaded into these nodes.
 
 The positions of the nodes come from the xy coordinates of the localisations.
-These are normalised to between -1 and +1 for each dataitem, independently of other dataitems.
-i.e. if Item A has x_range 1000nm and Item B has x_range 2000nm, both are scaled to -1 and +1 
-independently of each other, without taking into consideration the FOV width either.
+
+The nodes can be normalised either:
+
+    per_item:
+        These are normalised to between -1 and +1 for each dataitem, independently of other dataitems.
+        i.e. if Item A has x_range 1000nm and Item B has x_range 2000nm, both are scaled to -1 and +1 
+        independently of each other, without taking into consideration the FOV width either.
+
+    per_dataset:
+        Calculates the maximum x/y range for the cells i.e. which is the largest cell.
+        This defines the normalisation for all other cells 
+        e.g. Cell C has x_width = 1000nm 
+             1000nm -> -1 to +1 i.e. 1000nm = 2 units
+             All cells defined by this.
 
 Then edges are added between
 
