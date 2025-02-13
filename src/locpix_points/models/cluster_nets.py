@@ -20,7 +20,7 @@ from torch_geometric.nn.pool import (
     max_pool_x,
     avg_pool_x,
 )
-from torch_geometric.utils import contains_self_loops
+from torch_geometric.utils import contains_self_loops, to_undirected
 import torch_scatter
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
@@ -212,7 +212,15 @@ class ClusterNet(torch.nn.Module):
         OUTE = 80
         INF = OUTE
         OUTF = 88
+        HIDDEN_MLP = 128
         DROPOUT_supercluster = 0.2
+
+        self.sc_mlp_0 = MLP(
+            [INA, HIDDEN_MLP, INA],
+            norm=None,
+            act="relu",
+            dropout=DROPOUT_supercluster,
+        )
 
         # dim, pos, out
         pos_nn_0_0 = MLP(
@@ -263,6 +271,13 @@ class ClusterNet(torch.nn.Module):
         )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
             INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
+        )
+
+        self.sc_mlp_1 = MLP(
+            [IND, HIDDEN_MLP, IND],
+            norm=None,
+            act="relu",
+            dropout=DROPOUT_supercluster,
         )
 
         # dim, pos, out
@@ -372,11 +387,17 @@ class ClusterNet(torch.nn.Module):
 
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
-            x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
+            x_superclusters_0, batch = avg_pool_x(cluster, x_dict["clusters"], batch)
+
+            x_superclusters_0 = self.sc_mlp_0(x_superclusters_0)
+
+            x_superclusters_0 = x_superclusters_0.sigmoid()
 
             edge_index = knn_graph(
                 pos_dict["superclusters_0"], k=5 + 1, batch=batch, loop=True
             )
+
+            edge_index = to_undirected(edge_index)
 
             # clusterencoders
             x = self.cluster_encoder_0_0_new(
@@ -387,11 +408,17 @@ class ClusterNet(torch.nn.Module):
 
             # ---- SC1 -----
             cluster = gen_cluster(supercluster_ID_1, batch)
-            x_superclusters_1, batch = max_pool_x(cluster, x, batch)
+            x_superclusters_1, batch = avg_pool_x(cluster, x, batch)
+
+            x_superclusters_1 = self.sc_mlp_1(x_superclusters_1)
+
+            x_superclusters_1 = x_superclusters_1.sigmoid()
 
             edge_index = knn_graph(
                 pos_dict["superclusters_1"], k=5 + 1, batch=batch, loop=True
             )
+
+            edge_index = to_undirected(edge_index)
 
             # clusterencoders
             x = self.cluster_encoder_0_1_new(
