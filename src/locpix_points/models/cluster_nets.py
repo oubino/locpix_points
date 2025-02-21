@@ -215,12 +215,13 @@ class ClusterNet(torch.nn.Module):
         HIDDEN_MLP = 128
         DROPOUT_supercluster = 0.2
 
-        self.sc_mlp_0 = MLP(
-            [INA, HIDDEN_MLP, INA],
-            norm=None,
-            act="relu",
-            dropout=DROPOUT_supercluster,
-        )
+        # comment out MLPs for backwards compatability with old models
+        # self.sc_mlp_0 = MLP(
+        #    [INA, HIDDEN_MLP, INA],
+        #    norm=None,
+        #    act="relu",
+        #    dropout=DROPOUT_supercluster,
+        # )
 
         # dim, pos, out
         pos_nn_0_0 = MLP(
@@ -273,12 +274,12 @@ class ClusterNet(torch.nn.Module):
             INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
         )
 
-        self.sc_mlp_1 = MLP(
-            [IND, HIDDEN_MLP, IND],
-            norm=None,
-            act="relu",
-            dropout=DROPOUT_supercluster,
-        )
+        # self.sc_mlp_1 = MLP(
+        #    [IND, HIDDEN_MLP, IND],
+        #    norm=None,
+        #    act="relu",
+        #    dropout=DROPOUT_supercluster,
+        # )
 
         # dim, pos, out
         pos_nn_0_1 = MLP(
