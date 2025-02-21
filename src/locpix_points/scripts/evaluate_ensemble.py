@@ -95,6 +95,7 @@ def make_prediction_wt(
     model.eval()
     stds = []
     file_list = []
+    probs_list = []
     predictions_list = []
     gt_list = []
     for index, data in enumerate(loader):
@@ -151,6 +152,9 @@ def make_prediction_wt(
                     output[:, 1], data.y
                 )  # MULTICLASS - CHANGE output[:,1] -> output
 
+                # prob list update
+                probs_list.append(output[:, 1].item())
+
                 # argmax predictions
                 predictions = output.argmax(dim=1)
                 predictions_list.append(predictions.item())
@@ -171,10 +175,10 @@ def make_prediction_wt(
             1 - metrics["BinarySpecificity"].item()
         )  # MULTICLASS
 
-    return metrics, metrics_roc, file_list, predictions_list, gt_list
+    return metrics, metrics_roc, file_list, probs_list, predictions_list, gt_list
 
 
-def main():
+def main(argv=None):
     # load config
 
     # parse arugments
@@ -240,7 +244,7 @@ def main():
         help="location of the config file",
     )
 
-    args = parser.parse_args()
+    args = parser.parse_args(argv)
     file_map = pl.read_csv(args.map_file)
 
     config_loc = args.config_file
@@ -274,6 +278,7 @@ def main():
         raise NotImplementedError("Not implemented yet!")
 
     final_test_file_list = []
+    final_test_probs = []
     final_test_predictions = []
     final_test_gt = []
 
@@ -509,7 +514,7 @@ def main():
         print("\n")
         print("---- Predict on train set... ----")
         print("\n")
-        metrics, roc_metrics, train_file_list, _, _ = make_prediction_wt(
+        metrics, roc_metrics, train_file_list, _, _, _ = make_prediction_wt(
             file_map,
             model,
             train_loader,
@@ -527,7 +532,7 @@ def main():
         print("\n")
         print("---- Predict on val set... ----")
         print("\n")
-        metrics, roc_metrics, val_file_list, _, _ = make_prediction_wt(
+        metrics, roc_metrics, val_file_list, _, _, _ = make_prediction_wt(
             file_map,
             model,
             val_loader,
@@ -549,6 +554,7 @@ def main():
             metrics,
             roc_metrics,
             test_file_list,
+            test_probs,
             test_predictions,
             test_gt,
         ) = make_prediction_wt(
@@ -563,6 +569,7 @@ def main():
         )
 
         final_test_file_list.extend(test_file_list)
+        final_test_probs.extend(test_probs)
         final_test_predictions.extend(test_predictions)
         final_test_gt.extend(test_gt)
 
@@ -578,7 +585,11 @@ def main():
         print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
 
     print(final_test_file_list)
+    print(final_test_probs)
     print(final_test_predictions)
+    print(final_test_gt)
+
+    return final_test_file_list, final_test_probs, final_test_predictions, final_test_gt
 
 
 if __name__ == "__main__":
