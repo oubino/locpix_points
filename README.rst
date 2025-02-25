@@ -632,6 +632,8 @@ Analysis notebooks
 
 analysis.ipynb and analysis_locs.ipynb allow analysis of manual features, neural network features and explainability of the algorithms.
 
+Note we now include ability to generate the features after multiple runs through the model.
+
 
 Visualise
 ---------

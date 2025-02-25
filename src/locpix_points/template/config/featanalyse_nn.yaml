@@ -3,14 +3,15 @@ label_map:
   fib: 0
   iso: 1
 
+# whether making node or whole graph predictions
+label_level: graph # Options: [node, graph]
+
 # whether to run on gpu or cpu
 device: gpu # Options: [cpu, gpu]
 
 # choice of model
 model: locclusternet # Options: see train.yaml
 
-# fold for which we load the model from
-fold: 0
 # if automatic flag not specified then load in specific model name
 # the name of the model can be found from weights&bias for the corresponding fold
 model_name: INSERTMODELNAME.pt
