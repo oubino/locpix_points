@@ -282,8 +282,11 @@ def visualise_umap_embedding(
         ax.legend(handles=new_handles)
         plt.show()
         if save:
+            plt.subplots_adjust(wspace=0, hspace=0)
             save_path = os.path.join(project_directory, f"output/{save_name}.{format}")
-            ax.figure.savefig(save_path)
+            ax.figure.savefig(
+                save_path, transparent=True, bbox_inches="tight", pad_inches=0
+            )
     else:
         hover_data = pd.DataFrame(
             {
