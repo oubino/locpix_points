@@ -100,8 +100,9 @@ def generate(
                 loc_data = []
                 cluster_data = []
                 fov_data = []
+                output = []
                 for _ in range(repeats):
-                    model(data)
+                    output.append(torch.exp(model(data)).cpu().numpy())
                     loc_data.append(activation["locencoder"].cpu().numpy())
                     cluster_data.append(activation["clusterencoder"].cpu().numpy())
                     fov_data.append(activation["globalpool"].cpu().numpy())
@@ -109,6 +110,9 @@ def generate(
                 loc_data = np.mean(np.stack(loc_data), axis=0)
                 cluster_data = np.mean(np.stack(cluster_data), axis=0)
                 fov_data = np.mean(np.stack(fov_data), axis=0)
+                output = np.mean(np.stack(output), axis=0)
+                prediction = output.argmax()
+                prediction = gt_label_map[prediction]
 
                 loc_df = pl.DataFrame(loc_data)
                 cluster_df = pl.DataFrame(cluster_data)
@@ -119,6 +123,9 @@ def generate(
                     pl.lit(f"{data.name[0]}").alias("file_name")
                 )
                 loc_df = loc_df.with_columns(pl.lit(f"{fold}").alias("fold"))
+                loc_df = loc_df.with_columns(
+                    pl.lit(f"{prediction}").alias("prediction")
+                )
                 loc_dfs.append(loc_df)
 
                 cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
@@ -126,6 +133,9 @@ def generate(
                     pl.lit(f"{data.name[0]}").alias("file_name")
                 )
                 cluster_df = cluster_df.with_columns(pl.lit(f"{fold}").alias("fold"))
+                cluster_df = cluster_df.with_columns(
+                    pl.lit(f"{prediction}").alias("prediction")
+                )
                 cluster_dfs.append(cluster_df)
 
                 fov_df = fov_df.with_columns(pl.lit(label).alias("type"))
@@ -133,6 +143,9 @@ def generate(
                     pl.lit(f"{data.name[0]}").alias("file_name")
                 )
                 fov_df = fov_df.with_columns(pl.lit(f"{fold}").alias("fold"))
+                fov_df = fov_df.with_columns(
+                    pl.lit(f"{prediction}").alias("prediction")
+                )
                 fov_dfs.append(fov_df)
 
     # remove foward hook
