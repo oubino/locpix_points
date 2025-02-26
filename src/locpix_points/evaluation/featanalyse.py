@@ -176,6 +176,7 @@ def visualise_umap_embedding(
     save_name="UMAP",
     project_directory="..",
     format="svg",
+    colour_by="response",
 ):
     """Visualise UMAP results
 
@@ -189,39 +190,61 @@ def visualise_umap_embedding(
         save_name (string): Name of file to save
         project_directory (string): Project directory to save plot in
         format (string): What format to save UMAP as
+        colour_by (string): How to colour the UMAP [response, patient, wt, wt_resposne, prediction, correct]
 
     Returns:
-        p (umap plot): Returns the umap plot"""
+        p (umap plot): Returns the umap plot
+
+    Raises:
+        ValueError: If colour_by option unsupported"""
+
+    if colour_by == "response":
+        labels = df["type"]
+    elif colour_by == "patient":
+        labels = df["patient"]
+    elif colour_by == "wt":
+        labels = df["all_wt"]
+    elif colour_by == "wt_response":
+        labels = df["wt_response"]
+    elif colour_by == "prediction":
+        labels = df["prediction"]
+    elif colour_by == "correct":
+        df["correct"] = df["type"] == df["prediction"]
+        labels = df["correct"]
+    else:
+        raise ValueError(f"{colour_by} not supported")
 
     if not interactive:
         warnings.warn(
             "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
         )
         try:
-            unique_labels = np.unique(df.type.map(label_map))
+            unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
             color_key_cmap = "Spectral"
             color_key = _to_hex(
                 plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
             )
-            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
-            ax = umap.plot.points(
-                embedding, labels=df.type.map(label_map), color_key=color_key
-            )
+            if "#ffffbe" in color_key:
+                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+
+            ax = umap.plot.points(embedding, labels=labels, color_key=color_key)
             ax.collections[0].set_sizes(len(df) * [point_size])
         except:
             print("Too many points - replotting with matplotlib ")
             fig, ax = plt.subplots(figsize=(10, 10))
             points = embedding.embedding_
-            unique_labels = np.unique(df.type.map(label_map))
+
+            unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
             color_key_cmap = "Spectral"
             color_key = _to_hex(
                 plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
             )
-            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+            if "#ffffbe" in color_key:
+                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
             color_key_map = {i: val for i, val in enumerate(color_key)}
-            colors = pd.Series(df.type.map(label_map)).map(color_key_map)
+            colors = pd.Series(labels).map(color_key_map)
             ax.scatter(points[:, 0], points[:, 1], s=point_size, c=colors)
             legend_elements = [
                 mpatches.Patch(facecolor=color_key[k], label=k) for k in unique_labels
@@ -230,18 +253,19 @@ def visualise_umap_embedding(
         legend = ax.get_legend()
         new_handles = []
         # get circular labels in legend
-        for item in label_map.items():
+        for id, label in enumerate(unique_labels):
             new_handles.append(
                 plt.Line2D(
                     [],
                     [],
                     marker="o",
                     color="w",
-                    markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
+                    markerfacecolor=color_key[id],
                     # markersize=point_size,
-                    label=item[0].capitalize(),
+                    label=label,
                 )
             )
+
         ax.get_legend().remove()
         ax.tick_params(
             axis="both",
@@ -263,24 +287,30 @@ def visualise_umap_embedding(
     else:
         hover_data = pd.DataFrame(
             {
-                "index": np.arange(len(df)),
-                "label": df.type.map(label_map),
-                "item": df.type,
+                "GT label": df.type,
+                "prediction": df.prediction,
+                "all-WT": df.all_wt,
+                "all-WT response": df.wt_response,
                 "file_name": df.file_name,
+                "patient": df.patient,
+                "fold": df.fold,
+                "GT label (integer)": df.type.map(label_map),
+                "index": np.arange(len(df)),
             }
         )
         umap.plot.output_notebook()
 
         # replace yellow with pink for better visualisation
-        unique_labels = np.unique(df.type.map(label_map))
+        unique_labels = np.unique(labels)
         num_labels = unique_labels.shape[0]
         color_key_cmap = "Spectral"
         color_key = _to_hex(plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels)))
-        color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+        if "#ffffbe" in color_key:
+            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
 
         p = umap.plot.interactive(
             embedding,
-            labels=df.type.map(label_map),
+            labels=labels,
             hover_data=hover_data,
             point_size=point_size,
             color_key=color_key,
