@@ -1,6 +1,6 @@
 """Feature analysis module
 
-Module takes in the .parquet files and analyses features
+Module takes in the .parquet files and analyses features/structures
 
 Config file at top specifies the analyses we want to run
 """
@@ -22,7 +22,10 @@ import matplotlib.colors as mpl_colors
 import numpy as np
 import open3d as o3d
 from locpix_points.data_loading import datastruc
-from locpix_points.models.cluster_nets import ClusterNetHomogeneous
+from locpix_points.models.cluster_nets import (
+    ClusterNetHomogeneous,
+    ClusterNetHomogeneousLegacy,
+)
 from locpix_points.models.cluster_nets import parse_data
 from locpix_points.models import model_choice
 import pandas as pd
@@ -402,6 +405,155 @@ def k_means_fn(X, df, label_map):
 
     print("--- K means report (NO PCA reduction) ---")
     print(classification_report(y_true, y_pred))
+
+
+def struc_analysis_prep(
+    project_directory,
+    fold,
+    final_test,
+    model_type,
+    model_name,
+    model_config,
+    n_repeats,
+    device,
+):
+    """Prepares for structure analysis by generating a homogeneous dataset and model
+
+    Args:
+        project_directory (str): Location of the project directory
+        fold (int): Fold being analysed
+        final_test (bool) : Whether final test
+        model_type (str): Type of model
+        model_name (str): Name of the model to be loaded in
+        model_config (dict): Parameters for the model
+        n_repeats (int): Number of times to run through the LocNet model
+        device (str): Device to run things on
+
+    """
+
+    # ---- Generate homogeneous cluster model ---- #
+
+    ## Load in LocClusterNet model
+    assert model_type == "locclusternet" or model_type == "clusternet"
+
+    # initialise model
+    model = model_choice(
+        model_type,
+        model_config,
+        device=device,
+    )
+
+    # load in best model
+    if final_test:
+        model_loc = os.path.join(project_directory, "models", model_name)
+    else:
+        model_loc = os.path.join(
+            project_directory, "models", f"fold_{fold}", model_name
+        )
+    model.load_state_dict(torch.load(model_loc))
+    model.to(device)
+    model.eval()
+
+    # load loc_net
+    if model_type == "locclusternet":
+        loc_model = model.loc_net
+        loc_model.eval()
+    else:
+        loc_model = None
+
+    # need to create a model that acts on the homogeneous data for cluster and locs
+    cluster_model = ClusterNetHomogeneous(model.cluster_net, model_config)
+    output_folder = os.path.join(project_directory, f"output/homogeneous_dataset")
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    torch.save(
+        cluster_model,
+        os.path.join(project_directory, f"output/homogeneous_dataset/cluster_model.pt"),
+    )
+
+    # ---- Generate dataset ---- #
+
+    ##  Prepare folders
+
+    if not final_test:
+        input_train_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "train"
+        )
+        input_val_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "val"
+        )
+        input_test_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "test"
+        )
+    else:
+        input_train_folder = os.path.join(project_directory, "processed", "train")
+        input_val_folder = os.path.join(project_directory, "processed", "val")
+        input_test_folder = os.path.join(project_directory, "processed", "test")
+
+    output_train_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "train"
+    )
+    output_val_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "val"
+    )
+    output_test_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "test"
+    )
+
+    output_folders = [output_train_folder, output_val_folder, output_test_folder]
+    for folder in output_folders:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+    ## Prepare datasets
+
+    datastruc.ClusterDataset(
+        input_train_folder,
+        output_train_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    datastruc.ClusterDataset(
+        input_val_folder,
+        output_val_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    datastruc.ClusterDataset(
+        input_test_folder,
+        output_test_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
 
 
 def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
@@ -1542,7 +1694,7 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
     )
 
     # need to create a model that acts on the homogeneous data for cluster and locs
-    cluster_model = ClusterNetHomogeneous(model.cluster_net, config[model_type])
+    cluster_model = ClusterNetHomogeneousLegacy(model.cluster_net, config[model_type])
     torch.save(
         cluster_model, os.path.join(project_directory, f"output/cluster_model.pt")
     )
