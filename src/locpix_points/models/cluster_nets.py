@@ -601,7 +601,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
         state_dict_saved = cluster_net_hetero.linear.state_dict()
         self.linear.load_state_dict(state_dict_saved)
 
-        # define pool as part of model so can access
+        # attentional aggregation
         chans = self.linear.in_features
         attention_readout_nn = Linear(chans, chans)
         attention_readout_node_level = config["attention_readout_node_level"]
@@ -613,6 +613,8 @@ class ClusterNetHomogeneous(torch.nn.Module):
         self.attention_readout_fn = AttentionalAggregation(
             attention_readout_gate, attention_readout_nn
         )
+        state_dict_saved = cluster_net_hetero.attention_readout_fn.state_dict()
+        self.attention_readout_fn.load_state_dict(state_dict_saved)
 
     def forward(self, x, edge_index, batch, pos, logits=True):
         """The method called when ClusterNetHomogeneous is used on a dataitem
