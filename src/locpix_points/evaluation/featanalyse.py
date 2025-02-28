@@ -66,6 +66,9 @@ def get_prediction(
     cluster_val_set,
     cluster_test_set,
     project_directory,
+    cluster_train_folder,
+    cluster_val_folder,
+    cluster_test_folder,
     device,
     gt_label_map,
 ):
@@ -81,6 +84,12 @@ def get_prediction(
         cluster_test_set (pyg dataset): Test set with clusters having
             gone through a locnet
         project_directory (string): Location of the project directory
+        cluster_train_folder (string): Location of train folder for homogeneous
+            cluster graphs
+        cluster_val_folder (string): Location of val folder for homogeneous
+            cluster graphs
+        cluster_test_folder (string): Location of test folder for homogeneous
+            cluster graphs
         device (string): Device to run on
         gt_label_map (dict): Map from labels to real concepts
 
@@ -89,26 +98,9 @@ def get_prediction(
         prediction (float): Predicted label
     """
 
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
-
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
-
-    train_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/train/file_map.csv"
-    )
-    val_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/val/file_map.csv"
-    )
-    test_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/test/file_map.csv"
-    )
+    train_file_map_path = os.path.join(cluster_train_folder, "file_map.csv")
+    val_file_map_path = os.path.join(cluster_val_folder, "file_map.csv")
+    test_file_map_path = os.path.join(cluster_test_folder, "file_map.csv")
 
     train_file_map = pd.read_csv(train_file_map_path)
     val_file_map = pd.read_csv(val_file_map_path)
