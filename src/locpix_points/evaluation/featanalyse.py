@@ -1,6 +1,6 @@
 """Feature analysis module
 
-Module takes in the .parquet files and analyses features
+Module takes in the .parquet files and analyses features/structures
 
 Config file at top specifies the analyses we want to run
 """
@@ -22,7 +22,10 @@ import matplotlib.colors as mpl_colors
 import numpy as np
 import open3d as o3d
 from locpix_points.data_loading import datastruc
-from locpix_points.models.cluster_nets import ClusterNetHomogeneous
+from locpix_points.models.cluster_nets import (
+    ClusterNetHomogeneous,
+    ClusterNetHomogeneousLegacy,
+)
 from locpix_points.models.cluster_nets import parse_data
 from locpix_points.models import model_choice
 import pandas as pd
@@ -56,544 +59,86 @@ def _to_hex(arr):
     return [mpl_colors.to_hex(c) for c in arr]
 
 
-def analyse_manual_feats(
-    project_directory,
-    train_loc_files,
-    test_loc_files,
-    final_test,
-):
-    """Analyse the features of the clusters manually extracted
-
-    Args:
-        project_directory (str): Location of the project directory
-        train_loc_files (list): List of the TRAIN files with the protein
-            localisations
-        test_loc_files (list): List of the TEST files with the protein
-            localisations
-        final_test (bool): Whether final test
-    """
-
-    # aggregate cluster features into collated df
-    train_dfs = []
-
-    if not final_test:
-        train_cluster_root = os.path.join(
-            project_directory, f"preprocessed/featextract/clusters"
-        )
-    else:
-        train_cluster_root = os.path.join(
-            project_directory, f"preprocessed/train/featextract/clusters"
-        )
-        # process test data
-        test_cluster_root = os.path.join(
-            project_directory, f"preprocessed/test/featextract/clusters"
-        )
-        test_dfs = []
-        for index, file in enumerate(test_loc_files):
-            test_cluster_path = os.path.join(test_cluster_root, file)
-
-            cluster_df = pq.read_table(test_cluster_path)
-            # extract metadata
-            gt_label_map = json.loads(
-                cluster_df.schema.metadata[b"gt_label_map"].decode("utf-8")
-            )
-            gt_label_map = {int(key): value for key, value in gt_label_map.items()}
-            gt_label = cluster_df.schema.metadata[b"gt_label"]
-            gt_label = int(gt_label)
-            label = gt_label_map[gt_label]
-
-            # convert to polars
-            cluster_df = pl.from_arrow(cluster_df)
-            cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
-            cluster_df = cluster_df.with_columns(pl.lit(f"{file}").alias("file_name"))
-            test_dfs.append(cluster_df)
-
-    # process training data
-    for index, file in enumerate(train_loc_files):
-        train_cluster_path = os.path.join(train_cluster_root, file)
-
-        cluster_df = pq.read_table(train_cluster_path)
-
-        # extract metadata
-        gt_label_map = json.loads(
-            cluster_df.schema.metadata[b"gt_label_map"].decode("utf-8")
-        )
-        gt_label_map = {int(key): value for key, value in gt_label_map.items()}
-        gt_label = cluster_df.schema.metadata[b"gt_label"]
-        gt_label = int(gt_label)
-        label = gt_label_map[gt_label]
-
-        # convert to polars
-        cluster_df = pl.from_arrow(cluster_df)
-        cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
-        cluster_df = cluster_df.with_columns(pl.lit(f"{file}").alias("file_name"))
-        train_dfs.append(cluster_df)
-
-    # aggregate dfs into one big df
-    train_df = pl.concat(train_dfs)
-    train_df = train_df.to_pandas()
-    if final_test:
-        test_df = pl.concat(test_dfs)
-        test_df = test_df.to_pandas()
-
-    # save train and test df
-    train_df.to_csv(
-        os.path.join(project_directory, "output/train_df_manual.csv"), index=False
-    )
-    if final_test:
-        test_df.to_csv(
-            os.path.join(project_directory, "output/test_df_manual.csv"), index=False
-        )
-
-
-def analyse_nn_feats(project_directory, config, final_test, automatic, n_repeats=1):
-    """Analyse the features of the clusters from neural network
-
-    Args:
-        project_directory (str): Location of the project directory
-        config (dict): Configuration for this script
-        final_test (bool): Whether final test
-        automatic (bool): Whether automatic select model
-        n_repeats (int): number of times to run data through loc model for averaging
-
-    Raises:
-        ValueError: If device specified is neither cpu or gpu OR
-            if attention to examine is not correctly specified OR
-            if encoder not loc or cluster or fov
-    """
-
-    # ----------------------------
-
-    if config["device"] == "gpu":
-        device = torch.device("cuda")
-    elif config["device"] == "cpu":
-        device = torch.device("cpu")
-    else:
-        raise ValueError("Device should be cpu or gpu")
-
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
-
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
-
-    model_type = config["model"]
-
-    # only works for locclusternet at the moment
-    # 1. To construct datasets we use cluster_net required in model
-    # 2. For explainability also assumes uses LocClusterNet
-    assert model_type == "locclusternet" or model_type == "clusternet"
-
-    # initialise model
-    model = model_choice(
-        model_type,
-        # this should parameterise the chosen model
-        config[model_type],
-        device=device,
-    )
-
-    # load in best model
-    print("\n")
-    print("Loading in best model")
-    print("\n")
-    if not final_test:
-        # needs to be from same fold as below
-        fold = config["fold"]
-    model_name = config["model_name"]
-    if not automatic:
-        if not final_test:
-            model_loc = os.path.join(
-                project_directory, "models", f"fold_{fold}", model_name
-            )
-        else:
-            model_loc = os.path.join(project_directory, "models", model_name)
-    elif automatic:
-        if not final_test:
-            model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
-        else:
-            model_dir = os.path.join(project_directory, "models")
-        model_list = os.listdir(model_dir)
-        assert len(model_list) == 1
-        model_name = model_list[0]
-        model_loc = os.path.join(model_dir, model_name)
-    model.load_state_dict(torch.load(model_loc))
-    model.to(device)
-    model.eval()
-
-    # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
-    data_folder = os.path.join(project_directory, "processed", "featanalysis")
-
-    if not final_test:
-        input_train_folder = os.path.join(
-            project_directory, "processed", f"fold_{fold}", "train"
-        )
-        input_val_folder = os.path.join(
-            project_directory, "processed", f"fold_{fold}", "val"
-        )
-        input_test_folder = os.path.join(
-            project_directory, "processed", f"fold_{fold}", "test"
-        )
-    else:
-        input_train_folder = os.path.join(project_directory, "processed", "train")
-        input_val_folder = os.path.join(project_directory, "processed", "val")
-        input_test_folder = os.path.join(project_directory, "processed", "test")
-    output_train_folder = os.path.join(data_folder, "train")
-    output_val_folder = os.path.join(data_folder, "val")
-    output_test_folder = os.path.join(data_folder, "test")
-
-    output_folders = [output_train_folder, output_val_folder, output_test_folder]
-    for folder in output_folders:
-        if not os.path.exists(folder):
-            os.makedirs(folder)
-
-    # initialise train/validation and test sets
-
-    # note these datastructures have been passed through
-    # PointNet/PointTransformer therefore localisations
-    # have been embedded into cluster
-    if model_type == "locclusternet":
-        loc_model = model.loc_net
-        loc_model.eval()
-    else:
-        loc_model = None
-
-    cluster_train_set = datastruc.ClusterDataset(
-        input_train_folder,
-        output_train_folder,
-        label_level=None,
-        pre_filter=None,
-        save_on_gpu=None,
-        transform=None,
-        pre_transform=None,
-        fov_x=None,
-        fov_y=None,
-        from_hetero_loc_cluster=True,
-        loc_net=loc_model,
-        n_repeats=n_repeats,
-        device=device,
-    )
-
-    cluster_val_set = datastruc.ClusterDataset(
-        input_val_folder,
-        output_val_folder,
-        label_level=None,
-        pre_filter=None,
-        save_on_gpu=None,
-        transform=None,
-        pre_transform=None,
-        fov_x=None,
-        fov_y=None,
-        from_hetero_loc_cluster=True,
-        loc_net=loc_model,
-        n_repeats=n_repeats,
-        device=device,
-    )
-
-    cluster_test_set = datastruc.ClusterDataset(
-        input_test_folder,
-        output_test_folder,
-        label_level=None,
-        pre_filter=None,
-        save_on_gpu=None,
-        transform=None,
-        pre_transform=None,
-        fov_x=None,
-        fov_y=None,
-        from_hetero_loc_cluster=True,
-        loc_net=loc_model,
-        n_repeats=n_repeats,
-        device=device,
-    )
-
-    warnings.warn(
-        "Assumes\
-                      1. Using a ClusterNet \
-                      2. Embedding is in a final cluster encoder layer\
-                      3. Graph level explanation"
-    )
-
-    # need to create a model that acts on the homogeneous data for cluster and locs
-    cluster_model = ClusterNetHomogeneous(model.cluster_net, config[model_type])
-    torch.save(
-        cluster_model, os.path.join(project_directory, f"output/cluster_model.pt")
-    )
-    cluster_model.to(device)
-    cluster_model.eval()
-
-    # ------- GRAPHXAI --------
-    # train pgexplainer
-    if "pgex" in config.keys():
-        pg_explainer = train_pgex(
-            config, cluster_model, cluster_train_set, cluster_val_set, device
-        )
-        torch.save(
-            pg_explainer, os.path.join(project_directory, f"output/pg_explainer.pt")
-        )
-
-    # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
-
-    print("Feature analysis...")
-
-    # need to ensure no manual features being analysed
-    with open("../config/process.yaml", "r") as ymlfile:
-        process_config = yaml.safe_load(ymlfile)
-    cluster_features = process_config["cluster_feat"]
-    if cluster_features is not None:
-        inpt = input("Cluster features are present, be aware, type (YES I AM AWARE)")
-        while inpt != "YES I AM AWARE":
-            inpt = input(
-                "Cluster features are present, be aware, type (YES I AM AWARE)"
-            )
-
-    # aggregate cluster features into collated df
-    if not final_test:
-        train_dataset = torch.utils.data.ConcatDataset(
-            [cluster_train_set, cluster_val_set, cluster_test_set]
-        )
-        test_dataset = None
-    else:
-        train_dataset = torch.utils.data.ConcatDataset(
-            [cluster_train_set, cluster_val_set]
-        )
-        test_dataset = cluster_test_set
-
-    features_to_csv(
-        train_dataset,
-        test_dataset,
-        cluster_model,
-        gt_label_map,
-        "loc",
-        device,
-        project_directory,
-        final_test,
-    )
-    features_to_csv(
-        train_dataset,
-        test_dataset,
-        cluster_model,
-        gt_label_map,
-        "cluster",
-        device,
-        project_directory,
-        final_test,
-    )
-    features_to_csv(
-        train_dataset,
-        test_dataset,
-        cluster_model,
-        gt_label_map,
-        "fov",
-        device,
-        project_directory,
-        final_test,
-    )
-
-
-def train_pgex(config, cluster_model, cluster_train_set, cluster_val_set, device):
-    print("Training PGEX...")
-    max_epochs = config["pgex"]["max_epochs"]
-    lr = config["pgex"]["lr"]
-    edge_size = config["pgex"]["edge_size"]
-    edge_ent = config["pgex"]["edge_ent"]
-    temp = config["pgex"]["temp"]
-    bias = config["pgex"]["bias"]
-
-    # PGExplainer make it return logprobs
-    pg_explainer = Explainer(
-        model=cluster_model,
-        algorithm=PGExplainer(
-            epochs=max_epochs,
-            lr=lr,
-            edge_size=edge_size,
-            edge_ent=edge_ent,
-            temp=temp,
-            bias=bias,
-        ),
-        explanation_type="phenomenon",
-        edge_mask_type="object",
-        model_config=dict(
-            mode="multiclass_classification",
-            task_level="graph",
-            return_type="log_probs",
-        ),
-    )
-    pg_explainer.algorithm.mlp.to(device)
-
-    ## Required to first train PGExplainer on the dataset:
-    pgex_train_set = torch.utils.data.ConcatDataset(
-        [cluster_train_set, cluster_val_set]
-    )
-
-    batch_size = config["pgex"]["batch_size"]
-
-    # initialise loader
-    train_loader = L.DataLoader(
-        pgex_train_set,
-        batch_size=batch_size,  # change in config
-        shuffle=True,
-        drop_last=True,
-    )
-
-    # train pgexplainer
-    print("Training")
-    for epoch in range(max_epochs):
-        total_loss = 0
-        items = 0
-        for index, item in enumerate(train_loader):
-            loss = pg_explainer.algorithm.train(
-                epoch,
-                cluster_model,
-                item.x,
-                item.edge_index,
-                target=item.y,
-                pos=item.pos,
-                batch=item.batch,
-                # return logprobs
-                logits=False,
-            )
-            items += index * batch_size
-            total_loss += loss
-        print(f"Epoch: {epoch}; Loss : {total_loss/items}")
-
-    return pg_explainer
-
-
-def features_to_csv(
-    train_dataset,
-    test_dataset,
+def get_prediction(
+    file_name,
     cluster_model,
-    gt_label_map,
-    encoder,
-    device,
+    cluster_train_set,
+    cluster_val_set,
+    cluster_test_set,
     project_directory,
-    final_test,
+    cluster_train_folder,
+    cluster_val_folder,
+    cluster_test_folder,
+    device,
+    gt_label_map,
 ):
-    """Convert features to .csv file
+    """Get the prediction for a file using the cluster model
 
     Args:
-        train_dataset (dataset): Training dataset
-        test_dataset (dataset): Test dataset
-        cluster_model (pyg model): PyG model
-        gt_label_map (dict): GT label map
-        encoder (string): Which encoder to use
-        device (torch deive): What device its on
-        project_directory (string): Where is project directory
-        final_test (bool): Whether is final test or not"""
-
-    train_dfs = get_features(
-        train_dataset, cluster_model, gt_label_map, encoder, device
-    )
-    if final_test:
-        test_dfs = get_features(
-            test_dataset, cluster_model, gt_label_map, encoder, device
-        )
-
-    # aggregate dfs into one big df
-    train_df = pl.concat(train_dfs)
-    train_df = train_df.to_pandas()
-    if final_test:
-        test_df = pl.concat(test_dfs)
-        test_df = test_df.to_pandas()
-
-    # save train and test df
-    train_df.to_csv(
-        os.path.join(project_directory, f"output/train_df_nn_{encoder}.csv"),
-        index=False,
-    )
-    if final_test:
-        test_df.to_csv(
-            os.path.join(project_directory, f"output/test_df_nn_{encoder}.csv"),
-            index=False,
-        )
-
-
-def get_features(dataset, cluster_model, gt_label_map, encoder, device):
-    """Get features from the neural network
-
-    Args:
-        dataset (dataset): PyG dataset to get features for
-        cluster_model (model): PyG model to get features out of
-        gt_label_map (dict): Dictionary mapping gt labels
-        encoder (string): Either loc, cluster or fov
-        device (torch device): Device running on
+        file_name (string): Name of the file
+        cluster_model (pyg model): PyGeometric model
+        cluster_train_set (pyg dataset): Training set with clusters having
+            gone through a locnet
+        cluster_val_set (pyg dataset): Validation set with clusters having
+            gone through a locnet
+        cluster_test_set (pyg dataset): Test set with clusters having
+            gone through a locnet
+        project_directory (string): Location of the project directory
+        cluster_train_folder (string): Location of train folder for homogeneous
+            cluster graphs
+        cluster_val_folder (string): Location of val folder for homogeneous
+            cluster graphs
+        cluster_test_folder (string): Location of test folder for homogeneous
+            cluster graphs
+        device (string): Device to run on
+        gt_label_map (dict): Map from labels to real concepts
 
     Returns:
-        dfs (list): Dataframes with features from encoding
-
-    Raises:
-        ValueError: If encoder not loc, fov or cluster
+        cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
+        prediction (float): Predicted label
     """
 
-    dfs = []
+    train_file_map_path = os.path.join(cluster_train_folder, "file_map.csv")
+    val_file_map_path = os.path.join(cluster_val_folder, "file_map.csv")
+    test_file_map_path = os.path.join(cluster_test_folder, "file_map.csv")
 
-    # a dict to store the activations
-    activation = {}
+    train_file_map = pd.read_csv(train_file_map_path)
+    val_file_map = pd.read_csv(val_file_map_path)
+    test_file_map = pd.read_csv(test_file_map_path)
 
-    def getActivation(name):
-        # the hook signature
-        def hook(model, input, output):
-            activation[name] = output.detach()
+    train_out = train_file_map[train_file_map["file_name"] == file_name]
+    val_out = val_file_map[val_file_map["file_name"] == file_name]
+    test_out = test_file_map[test_file_map["file_name"] == file_name]
 
-        return hook
+    if len(train_out) > 0:
+        file_name = train_out["idx"].values[0]
+        cluster_dataitem = cluster_train_set.get(file_name)
 
-    # register forward hook
-    h_0 = cluster_model.cluster_encoder_3.register_forward_hook(
-        getActivation("clusterencoder")
+    if len(val_out) > 0:
+        file_name = val_out["idx"].values[0]
+        cluster_dataitem = cluster_val_set.get(file_name)
+
+    if len(test_out) > 0:
+        file_name = test_out["idx"].values[0]
+        cluster_dataitem = cluster_test_set.get(file_name)
+
+    # generate prediction for the graph
+    logits = cluster_model(
+        cluster_dataitem.x,
+        cluster_dataitem.edge_index,
+        torch.tensor([0], device=device),
+        cluster_dataitem.pos,
+        logits=True,
     )
-    h_1 = cluster_model.pool.register_forward_hook(getActivation("globalpool"))
+    prediction = logits.argmax(-1).item()
 
-    print("Encoder: ", encoder)
-    predictions = []
-    labels = []
+    # print out prediction & gt label
+    print("-----")
+    # print(f"Item {idx}")
+    print("Predicted label: ", gt_label_map[prediction])
+    print("GT label: ", gt_label_map[cluster_dataitem.y.cpu().item()])
 
-    for _, data in enumerate(dataset):
-        # gt label
-        gt_label = int(data.y)
-        label = gt_label_map[gt_label]
-        data.to(device)
-
-        # file name
-        file_name = data.name + ".parquet"
-
-        # forward through network
-        logits = cluster_model(
-            data.x,
-            data.edge_index,
-            torch.tensor([0], device=device),
-            data.pos,
-            logits=True,
-        )
-
-        prediction = logits.argmax(-1).item()
-        labels.append(gt_label)
-        predictions.append(prediction)
-
-        # convert to polars
-        if encoder == "loc":
-            data = data.x.detach().cpu().numpy()
-        elif encoder == "cluster":
-            data = activation["clusterencoder"].cpu().numpy()
-        elif encoder == "fov":
-            data = activation["globalpool"].cpu().numpy()
-        else:
-            raise ValueError("encoder should be loc or cluster")
-        cluster_df = pl.DataFrame(data)
-        cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
-        cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
-        dfs.append(cluster_df)
-
-    print("accuracy: ", accuracy_score(labels, predictions))
-
-    # remove foward hook
-    h_0.remove()
-    h_1.remove()
-
-    return dfs
+    return cluster_dataitem, prediction
 
 
 def generate_umap_embedding(X, min_dist, n_neighbours):
@@ -626,6 +171,7 @@ def visualise_umap_embedding(
     save_name="UMAP",
     project_directory="..",
     format="svg",
+    colour_by="response",
 ):
     """Visualise UMAP results
 
@@ -639,39 +185,61 @@ def visualise_umap_embedding(
         save_name (string): Name of file to save
         project_directory (string): Project directory to save plot in
         format (string): What format to save UMAP as
+        colour_by (string): How to colour the UMAP [response, patient, wt, wt_resposne, prediction, correct]
 
     Returns:
-        p (umap plot): Returns the umap plot"""
+        p (umap plot): Returns the umap plot
+
+    Raises:
+        ValueError: If colour_by option unsupported"""
+
+    if colour_by == "response":
+        labels = df["type"]
+    elif colour_by == "patient":
+        labels = df["patient"]
+    elif colour_by == "wt":
+        labels = df["all_wt"]
+    elif colour_by == "wt_response":
+        labels = df["wt_response"]
+    elif colour_by == "prediction":
+        labels = df["prediction"]
+    elif colour_by == "correct":
+        df["correct"] = df["type"] == df["prediction"]
+        labels = df["correct"]
+    else:
+        raise ValueError(f"{colour_by} not supported")
 
     if not interactive:
         warnings.warn(
             "Will fail if too many points as has no collections[0], therefore set to interactive to avoid failing"
         )
         try:
-            unique_labels = np.unique(df.type.map(label_map))
+            unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
             color_key_cmap = "Spectral"
             color_key = _to_hex(
                 plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
             )
-            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
-            ax = umap.plot.points(
-                embedding, labels=df.type.map(label_map), color_key=color_key
-            )
+            if "#ffffbe" in color_key:
+                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+
+            ax = umap.plot.points(embedding, labels=labels, color_key=color_key)
             ax.collections[0].set_sizes(len(df) * [point_size])
         except:
             print("Too many points - replotting with matplotlib ")
             fig, ax = plt.subplots(figsize=(10, 10))
             points = embedding.embedding_
-            unique_labels = np.unique(df.type.map(label_map))
+
+            unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
             color_key_cmap = "Spectral"
             color_key = _to_hex(
                 plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
             )
-            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+            if "#ffffbe" in color_key:
+                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
             color_key_map = {i: val for i, val in enumerate(color_key)}
-            colors = pd.Series(df.type.map(label_map)).map(color_key_map)
+            colors = pd.Series(labels).map(color_key_map)
             ax.scatter(points[:, 0], points[:, 1], s=point_size, c=colors)
             legend_elements = [
                 mpatches.Patch(facecolor=color_key[k], label=k) for k in unique_labels
@@ -680,18 +248,19 @@ def visualise_umap_embedding(
         legend = ax.get_legend()
         new_handles = []
         # get circular labels in legend
-        for item in label_map.items():
+        for id, label in enumerate(unique_labels):
             new_handles.append(
                 plt.Line2D(
                     [],
                     [],
                     marker="o",
                     color="w",
-                    markerfacecolor=legend.get_patches()[item[1]].get_facecolor(),
+                    markerfacecolor=color_key[id],
                     # markersize=point_size,
-                    label=item[0].capitalize(),
+                    label=label,
                 )
             )
+
         ax.get_legend().remove()
         ax.tick_params(
             axis="both",
@@ -708,29 +277,38 @@ def visualise_umap_embedding(
         ax.legend(handles=new_handles)
         plt.show()
         if save:
+            plt.subplots_adjust(wspace=0, hspace=0)
             save_path = os.path.join(project_directory, f"output/{save_name}.{format}")
-            ax.figure.savefig(save_path)
+            ax.figure.savefig(
+                save_path, transparent=True, bbox_inches="tight", pad_inches=0
+            )
     else:
         hover_data = pd.DataFrame(
             {
-                "index": np.arange(len(df)),
-                "label": df.type.map(label_map),
-                "item": df.type,
+                "GT label": df.type,
+                "prediction": df.prediction,
+                "all-WT": df.all_wt,
+                "all-WT response": df.wt_response,
                 "file_name": df.file_name,
+                "patient": df.patient,
+                "fold": df.fold,
+                "GT label (integer)": df.type.map(label_map),
+                "index": np.arange(len(df)),
             }
         )
         umap.plot.output_notebook()
 
         # replace yellow with pink for better visualisation
-        unique_labels = np.unique(df.type.map(label_map))
+        unique_labels = np.unique(labels)
         num_labels = unique_labels.shape[0]
         color_key_cmap = "Spectral"
         color_key = _to_hex(plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels)))
-        color_key[color_key.index("#ffffbe")] = "#ee2a7b"
+        if "#ffffbe" in color_key:
+            color_key[color_key.index("#ffffbe")] = "#ee2a7b"
 
         p = umap.plot.interactive(
             embedding,
-            labels=df.type.map(label_map),
+            labels=labels,
             hover_data=hover_data,
             point_size=point_size,
             color_key=color_key,
@@ -821,249 +399,153 @@ def k_means_fn(X, df, label_map):
     print(classification_report(y_true, y_pred))
 
 
-def get_prediction(
-    file_name,
-    cluster_model,
-    cluster_train_set,
-    cluster_val_set,
-    cluster_test_set,
+def struc_analysis_prep(
     project_directory,
-    device,
-    gt_label_map,
-):
-    """Get the prediction for a file using the cluster model
-
-    Args:
-        file_name (string): Name of the file
-        cluster_model (pyg model): PyGeometric model
-        cluster_train_set (pyg dataset): Training set with clusters having
-            gone through a locnet
-        cluster_val_set (pyg dataset): Validation set with clusters having
-            gone through a locnet
-        cluster_test_set (pyg dataset): Test set with clusters having
-            gone through a locnet
-        project_directory (string): Location of the project directory
-        device (string): Device to run on
-        gt_label_map (dict): Map from labels to real concepts
-
-    Returns:
-        cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
-        prediction (float): Predicted label
-    """
-
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
-
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
-
-    train_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/train/file_map.csv"
-    )
-    val_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/val/file_map.csv"
-    )
-    test_file_map_path = os.path.join(
-        project_directory, f"processed/featanalysis/test/file_map.csv"
-    )
-
-    train_file_map = pd.read_csv(train_file_map_path)
-    val_file_map = pd.read_csv(val_file_map_path)
-    test_file_map = pd.read_csv(test_file_map_path)
-
-    train_out = train_file_map[train_file_map["file_name"] == file_name]
-    val_out = val_file_map[val_file_map["file_name"] == file_name]
-    test_out = test_file_map[test_file_map["file_name"] == file_name]
-
-    if len(train_out) > 0:
-        file_name = train_out["idx"].values[0]
-        cluster_dataitem = cluster_train_set.get(file_name)
-
-    if len(val_out) > 0:
-        file_name = val_out["idx"].values[0]
-        cluster_dataitem = cluster_val_set.get(file_name)
-
-    if len(test_out) > 0:
-        file_name = test_out["idx"].values[0]
-        cluster_dataitem = cluster_test_set.get(file_name)
-
-    # generate prediction for the graph
-    logits = cluster_model(
-        cluster_dataitem.x,
-        cluster_dataitem.edge_index,
-        torch.tensor([0], device=device),
-        cluster_dataitem.pos,
-        logits=True,
-    )
-    prediction = logits.argmax(-1).item()
-
-    # print out prediction & gt label
-    print("-----")
-    # print(f"Item {idx}")
-    print("Predicted label: ", gt_label_map[prediction])
-    print("GT label: ", gt_label_map[cluster_dataitem.y.cpu().item()])
-
-    return cluster_dataitem, prediction
-
-
-def get_prediction_ensemble(
-    file_name,
-    model,
-    cluster_model,
-    train_set,
-    val_set,
-    test_set,
-    project_directory,
-    device,
-    gt_label_map,
+    fold,
+    final_test,
+    model_type,
+    model_name,
+    model_config,
     n_repeats,
-    post_sigmoid=True,
+    device,
 ):
-    """Get the prediction for a file using the cluster model
+    """Prepares for structure analysis by generating a homogeneous dataset and model
 
     Args:
-        file_name (string): Name of the file
-        model (pyg model): LocClusterNet model
-        cluster_model (pyg model): ClusterNet model
-        train_set (pyg dataset): Training set with locs and clusters
-        val_set (pyg dataset): Validation set with locs and clusters
-        test_set (pyg dataset): Test set with locs and clusters
-        project_directory (string): Location of the project directory
-        device (string): Device to run on
-        gt_label_map (dict): Map from labels to real concepts
-        n_repeats (int): Number of times to repeat to get prediction
-        post_sigmoid (bool): If true then average after sigmoid
+        project_directory (str): Location of the project directory
+        fold (int): Fold being analysed
+        final_test (bool) : Whether final test
+        model_type (str): Type of model
+        model_name (str): Name of the model to be loaded in
+        model_config (dict): Parameters for the model
+        n_repeats (int): Number of times to run through the LocNet model
+        device (str): Device to run things on
 
-    Returns:
-        cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
-        prediction (float): Predicted label
-        diff (numpy): Difference between two predictions
     """
 
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
+    # ---- Generate homogeneous cluster model ---- #
 
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+    ## Load in LocClusterNet model
+    assert model_type == "locclusternet" or model_type == "clusternet"
 
-    train_file_map_path = os.path.join(
-        project_directory, f"processed/fold_0/train/file_map.csv"
-    )
-    val_file_map_path = os.path.join(
-        project_directory, f"processed/fold_0/val/file_map.csv"
-    )
-    test_file_map_path = os.path.join(
-        project_directory, f"processed/fold_0/test/file_map.csv"
+    # initialise model
+    model = model_choice(
+        model_type,
+        model_config,
+        device=device,
     )
 
-    train_file_map = pd.read_csv(train_file_map_path)
-    val_file_map = pd.read_csv(val_file_map_path)
-    test_file_map = pd.read_csv(test_file_map_path)
-
-    train_out = train_file_map[train_file_map["file_name"] == file_name]
-    val_out = val_file_map[val_file_map["file_name"] == file_name]
-    test_out = test_file_map[test_file_map["file_name"] == file_name]
-
-    if len(train_out) > 0:
-        file_name = train_out["idx"].values[0]
-        dataitem = train_set.get(file_name)
-
-    if len(val_out) > 0:
-        file_name = val_out["idx"].values[0]
-        dataitem = val_set.get(file_name)
-
-    if len(test_out) > 0:
-        file_name = test_out["idx"].values[0]
-        dataitem = test_set.get(file_name)
-
-    dataitem.to(device)
-    dataitem["clusters"].batch = torch.zeros(
-        dataitem["clusters"].pos.shape[0], device=device, dtype=torch.int64
-    )
-
-    loc_model = model.loc_net
-    cluster_model.eval()
-    loc_model.eval()
-
-    # generate prediction for the graph
-    x_cluster_list = []
-    output_old_method = []
-
-    for _ in range(n_repeats):
-        x_cluster = loc_model(
-            x_locs=None,
-            edge_index_locs=dataitem.edge_index_dict["locs", "in", "clusters"],
-            pos_locs=dataitem.pos_dict["locs"],
+    # load in best model
+    if final_test:
+        model_loc = os.path.join(project_directory, "models", model_name)
+    else:
+        model_loc = os.path.join(
+            project_directory, "models", f"fold_{fold}", model_name
         )
-        if post_sigmoid:
-            x_cluster_list.append(x_cluster.sigmoid())
-        else:
-            x_cluster_list.append(x_cluster)
+    model.load_state_dict(torch.load(model_loc))
+    model.to(device)
+    model.eval()
 
-        # --- Averaging after the whole model ---
+    # load loc_net
+    if model_type == "locclusternet":
+        loc_model = model.loc_net
+        loc_model.eval()
+    else:
+        loc_model = None
 
-        logits_old_method = cluster_model(
-            x_cluster.sigmoid(),
-            dataitem.edge_index_dict["clusters", "near", "clusters"],
-            torch.tensor([0], device=device),
-            dataitem["clusters"].pos,
-            logits=True,
-        )
-        output_old_method.append(logits_old_method)
-
-    # --- Averaging after the whole model ---
-
-    logits_old_method = torch.mean(torch.stack(output_old_method), axis=0)
-
-    # print out prediction & gt label
-    probs_old_method = logits_old_method.softmax(dim=-1)
-    print(probs_old_method)
-    prediction_old_method = logits_old_method.argmax(-1).item()
-    # print(f"Item {idx}")
-    print("Predicted label: ", gt_label_map[prediction_old_method])
-
-    # --- Averaging after the locnet ---
-
-    x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
-
-    if not post_sigmoid:
-        x_cluster = x_cluster.sigmoid()
-
-    logits = cluster_model(
-        x_cluster,
-        dataitem.edge_index_dict["clusters", "near", "clusters"],
-        torch.tensor([0], device=device),
-        dataitem["clusters"].pos,
-        logits=True,
+    # need to create a model that acts on the homogeneous data for cluster and locs
+    cluster_model = ClusterNetHomogeneous(model.cluster_net, model_config)
+    output_folder = os.path.join(project_directory, f"output/homogeneous_dataset")
+    if not os.path.exists(output_folder):
+        os.makedirs(output_folder)
+    torch.save(
+        cluster_model,
+        os.path.join(project_directory, f"output/homogeneous_dataset/cluster_model.pt"),
     )
 
-    # print out prediction & gt label
-    probs = logits.softmax(dim=-1)
-    print(probs)
-    prediction = logits.argmax(-1).item()
-    # print(f"Item {idx}")
-    print("Predicted label: ", gt_label_map[prediction])
+    # ---- Generate dataset ---- #
 
-    # --- Check predictions the same ---
-    assert prediction == prediction_old_method
+    ##  Prepare folders
 
-    print("GT label: ", gt_label_map[dataitem.y.cpu().item()])
-    print("\n")
+    if not final_test:
+        input_train_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "train"
+        )
+        input_val_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "val"
+        )
+        input_test_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "test"
+        )
+    else:
+        input_train_folder = os.path.join(project_directory, "processed", "train")
+        input_val_folder = os.path.join(project_directory, "processed", "val")
+        input_test_folder = os.path.join(project_directory, "processed", "test")
 
-    # Calculate difference
-    diff = (probs_old_method - probs)[0][0].cpu().detach().numpy()
+    output_train_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "train"
+    )
+    output_val_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "val"
+    )
+    output_test_folder = os.path.join(
+        project_directory, "output", "homogeneous_dataset", f"fold_{fold}", "test"
+    )
 
-    return dataitem, prediction, diff
+    output_folders = [output_train_folder, output_val_folder, output_test_folder]
+    for folder in output_folders:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+    ## Prepare datasets
+
+    datastruc.ClusterDataset(
+        input_train_folder,
+        output_train_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    datastruc.ClusterDataset(
+        input_val_folder,
+        output_val_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    datastruc.ClusterDataset(
+        input_test_folder,
+        output_test_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
 
 
 def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
@@ -1147,175 +629,73 @@ def subgraph_eval(cluster_model, device, config, cluster_dataitem, prediction):
     return subgraph, complement, cluster_dataitem, node_imp
 
 
-def test_ensemble_averaging(
-    project_directory, device, fold, n_repeats, final_test, post_sigmoid=True
-):
-    """Test that averaging the loc features then running through the cluster model
-    gives similar/same output as normally running through the model and taking the average
+def train_pgex(config, cluster_model, cluster_train_set, cluster_val_set, device):
+    print("Training PGEX...")
+    max_epochs = config["pgex"]["max_epochs"]
+    lr = config["pgex"]["lr"]
+    edge_size = config["pgex"]["edge_size"]
+    edge_ent = config["pgex"]["edge_ent"]
+    temp = config["pgex"]["temp"]
+    bias = config["pgex"]["bias"]
 
-    Args:
-        project_directory (string): Location of the project directory
-        device (string): Which device running on
-        fold (int): Which fold is model from
-        n_repeats (int): Number of times to repeat for ensemble averaging
-        final_test (bool): Whether it is final test
-        post_sigmoid (bool): Whether to apply averaging after sigmoid
+    # PGExplainer make it return logprobs
+    pg_explainer = Explainer(
+        model=cluster_model,
+        algorithm=PGExplainer(
+            epochs=max_epochs,
+            lr=lr,
+            edge_size=edge_size,
+            edge_ent=edge_ent,
+            temp=temp,
+            bias=bias,
+        ),
+        explanation_type="phenomenon",
+        edge_mask_type="object",
+        model_config=dict(
+            mode="multiclass_classification",
+            task_level="graph",
+            return_type="log_probs",
+        ),
+    )
+    pg_explainer.algorithm.mlp.to(device)
 
-    Returns:
-        diffs (list): List of differences between predictions
-    """
-    # -- Load in files configuration and model
-    file_dir = os.path.join(project_directory, "preprocessed/gt_label")
-    files = os.listdir(file_dir)
-    files = [f.removesuffix(".parquet") for f in files]
-
-    with open(
-        os.path.join(project_directory, "config/featanalyse_nn.yaml"), "r"
-    ) as ymlfile:
-        config = yaml.safe_load(ymlfile)
-
-    # load in gt_label_map
-    metadata_path = os.path.join(project_directory, "metadata.json")
-    with open(
-        metadata_path,
-    ) as file:
-        metadata = json.load(file)
-        # add time ran this script to metadata
-        gt_label_map = metadata["gt_label_map"]
-
-    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
-
-    model = model_choice(
-        config["model"],
-        # this should parameterise the chosen model
-        config[config["model"]],
-        dim=2,
-        device=device,
+    ## Required to first train PGExplainer on the dataset:
+    pgex_train_set = torch.utils.data.ConcatDataset(
+        [cluster_train_set, cluster_val_set]
     )
 
-    print("\n")
-    print("Loading in best model")
-    print("\n")
+    batch_size = config["pgex"]["batch_size"]
 
-    if not final_test:
-        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
-    else:
-        model_dir = os.path.join(project_directory, "models")
-    model_list = os.listdir(model_dir)
-    assert len(model_list) == 1
-    model_name = model_list[0]
-    model_loc = os.path.join(model_dir, model_name)
-
-    model.load_state_dict(torch.load(model_loc))
-    model.to(device)
-    model.eval()
-
-    cluster_model = torch.load(
-        os.path.join(project_directory, f"output/cluster_model.pt")
-    )
-    cluster_model.to(device)
-    cluster_model.eval()
-
-    # -- Load in train/val/test datasets --
-
-    train_folder = os.path.join(project_directory, f"processed/fold_{fold}/train")
-    val_folder = os.path.join(project_directory, f"processed/fold_{fold}/val")
-    test_folder = os.path.join(project_directory, f"processed/fold_{fold}/test")
-
-    train_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        train_folder,  # processed_dir_root
-        label_level=None,  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=False,
-        transform=None,  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-        range_xy=False,
+    # initialise loader
+    train_loader = L.DataLoader(
+        pgex_train_set,
+        batch_size=batch_size,  # change in config
+        shuffle=True,
+        drop_last=True,
     )
 
-    val_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        val_folder,  # processed_dir_root
-        label_level=None,  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=False,
-        transform=None,  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-        range_xy=False,
-    )
+    # train pgexplainer
+    print("Training")
+    for epoch in range(max_epochs):
+        total_loss = 0
+        items = 0
+        for index, item in enumerate(train_loader):
+            loss = pg_explainer.algorithm.train(
+                epoch,
+                cluster_model,
+                item.x,
+                item.edge_index,
+                target=item.y,
+                pos=item.pos,
+                batch=item.batch,
+                # return logprobs
+                logits=False,
+            )
+            items += index * batch_size
+            total_loss += loss
+        print(f"Epoch: {epoch}; Loss : {total_loss/items}")
 
-    test_set = datastruc.ClusterLocDataset(
-        None,  # raw_loc_dir_root
-        None,  # raw_cluster_dir_root
-        test_folder,  # processed_dir_root
-        label_level=None,  # label_level
-        pre_filter=None,  # pre_filter
-        save_on_gpu=False,
-        transform=None,  # transform
-        pre_transform=None,  # pre_transform
-        loc_feat=None,
-        cluster_feat=None,
-        min_feat_locs=None,
-        max_feat_locs=None,
-        min_feat_clusters=None,
-        max_feat_clusters=None,
-        kneighboursclusters=None,
-        fov_x=None,
-        fov_y=None,
-        kneighbourslocs=None,
-        range_xy=False,
-    )
-
-    # Get prediction
-
-    diffs = []
-
-    for file in files:
-        print("file")
-        print(file)
-        file_name = file
-
-        _, _, diff = get_prediction_ensemble(
-            file_name,
-            model,
-            cluster_model,
-            train_set,
-            val_set,
-            test_set,
-            project_directory,
-            device,
-            gt_label_map,
-            n_repeats,
-            post_sigmoid=post_sigmoid,
-        )
-
-        diffs.append(diff)
-
-    diffs = np.array(diffs)
-
-    return diffs
+    return pg_explainer
 
 
 def pgex_eval(cluster_model, pg_explainer, cluster_dataitem, device, config):
@@ -1593,6 +973,145 @@ def saliency_eval(cluster_model, config, cluster_dataitem, device):
     return subgraph, complement
 
 
+def gradcam_eval(cluster_model, cluster_dataitem, config, device):
+    """Evaluate GradCam explainability algo
+
+    Args:
+        cluster_model (PyG model): PyG model acts on the clusters
+        device (string): Device to run on
+        config (dict): Parameters for algo
+        cluster_dataitem (pyg dataitem): Cluster graph to pass through network"""
+
+    print("GradCAM...")
+    # To implement GradCAM we need to remove all MLP layers
+    # as gradcam works by getting the weight attribute of the layer
+    # but MLP doesn't have this attribute therefore replace all MLP
+    # with the parts of it
+    explainer = GradCAM(
+        cluster_model,
+        explain_graph=True,
+    )
+
+    # generate explanation for the graph
+    edge_masks, hard_edge_masks, related_preds = explainer(
+        cluster_dataitem.x,
+        cluster_dataitem.edge_index,
+        forward_kwargs={
+            "batch": torch.tensor([0], device=device),
+            "pos": cluster_dataitem.pos,
+            "logits": True,  # has to be True
+        },
+        # max_nodes=config["gradcam"]["max_nodes"],
+        num_classes=config["gradcam"]["num_classes"],
+        sparsity=config["gradcam"]["sparsity"],
+    )
+
+    # generate metrics for explanation
+    x_collector = XCollector()
+    x_collector.collect_data(hard_edge_masks, related_preds, label=cluster_dataitem.y)
+
+    node_imp = None
+
+    # print metrics for explanation
+    print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
+    print(f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})")
+    print(f"Sparsity: {x_collector.sparsity:.4f}")
+    print(f"Accuracy: {x_collector.accuracy:.4f}")
+    print(f"Stability: {x_collector.stability:.4f}")
+
+    # evaluate explanation
+    visualise_explanation(
+        cluster_dataitem.pos,
+        cluster_dataitem.edge_index,
+        node_imp=node_imp.to(device),
+        edge_imp=None,
+    )
+
+
+def induced_subgraph(data, imp_list, node_or_edge="node"):
+    """Return the induced subgraph and its complement
+
+    Args:
+        data (pyg graph): Graph we want to induce
+        imp_list (tensor): Tensor of 0s and 1s corresponding to
+            unimportant and important nodes/edges
+        node_or_edge (string): If node we induce node subgraph
+            and if edge we induce edge subgraph
+
+    Returns:
+        subgraph (PyG graph): The induced subgraph from the important structure
+        complement (PyG graph): The complement to the subgraph
+
+    Raises:
+        ValueError: If induced subgraph is whole graph OR no important nodes/edges"""
+
+    if sum(imp_list) == 0:
+        raise ValueError("No important edges/nodes")
+
+    imp_list = imp_list.bool()
+    non_imp_list = torch.where(imp_list == False, True, False)
+
+    if node_or_edge == "node":
+        # automatically relabelled
+        subgraph = data.subgraph(imp_list)
+        if subgraph.num_nodes == data.num_nodes:
+            raise ValueError(
+                "No complement graph as induced subgraph is the whole graph"
+            )
+        else:
+            complement_graph = data.subgraph(non_imp_list)
+
+        return subgraph, complement_graph
+
+    elif node_or_edge == "edge":
+        nx_graph = to_networkx(data, node_attrs=["x", "pos"])
+        include_edges = data.edge_index.T[imp_list].cpu().numpy()
+        include_edges = list(map(tuple, include_edges))
+        non_include_edges = data.edge_index.T[non_imp_list].cpu().numpy()
+        non_include_edges = list(map(tuple, non_include_edges))
+        subgraph = nx_graph.edge_subgraph(include_edges)
+        subgraph_pyg = from_networkx(subgraph, group_node_attrs=["x", "pos"])
+        x = subgraph_pyg.x[:, :-2]
+        pos = subgraph_pyg.x[:, -2:]
+        subgraph_pyg.x = x
+        subgraph_pyg.pos = pos
+        if subgraph.nodes == nx_graph.nodes:
+            raise ValueError(
+                "No complement graph as induced subgraph is the whole graph"
+            )
+        else:
+            warnings.warn(
+                "As the graphs are directed - it may still appear that the important edge is in the "
+                "complement BUT this will be the edge in the other direction i.e. if two edges between"
+                "two nodes and only one is important, visualising the graph and complement will appear"
+                "the same between these nodes"
+            )
+            complement_graph = nx_graph.edge_subgraph(non_include_edges)
+            complement_graph_pyg = from_networkx(
+                complement_graph, group_node_attrs=["x", "pos"]
+            )
+            x = complement_graph_pyg.x[:, :-2]
+            pos = complement_graph_pyg.x[:, -2:]
+            complement_graph_pyg.x = x
+            complement_graph_pyg.pos = pos
+
+            # complement induced by the nodes not in the subgraph below
+            # e = list(subgraph.nodes)
+            # nx_graph.remove_nodes_from(e)
+            # complement_graph_pyg = from_networkx(
+            #    nx_graph, group_node_attrs=["x", "pos"]
+            # )
+            # x = complement_graph_pyg.x[:, :-2]
+            # pos = complement_graph_pyg.x[:, -2:]
+            # complement_graph_pyg.x = x
+            # complement_graph_pyg.pos = pos
+
+        return subgraph_pyg, complement_graph_pyg
+
+    else:
+        raise ValueError("node or edge should be node or edge")
+
+
 def custom_fidelity_measure(
     cluster_model,
     cluster_dataitem,
@@ -1669,61 +1188,6 @@ def custom_fidelity_measure(
     print("Negative fidelity", neg_fid)
 
     return subgraph, complement
-
-
-def gradcam_eval(cluster_model, cluster_dataitem, config, device):
-    """Evaluate GradCam explainability algo
-
-    Args:
-        cluster_model (PyG model): PyG model acts on the clusters
-        device (string): Device to run on
-        config (dict): Parameters for algo
-        cluster_dataitem (pyg dataitem): Cluster graph to pass through network"""
-
-    print("GradCAM...")
-    # To implement GradCAM we need to remove all MLP layers
-    # as gradcam works by getting the weight attribute of the layer
-    # but MLP doesn't have this attribute therefore replace all MLP
-    # with the parts of it
-    explainer = GradCAM(
-        cluster_model,
-        explain_graph=True,
-    )
-
-    # generate explanation for the graph
-    edge_masks, hard_edge_masks, related_preds = explainer(
-        cluster_dataitem.x,
-        cluster_dataitem.edge_index,
-        forward_kwargs={
-            "batch": torch.tensor([0], device=device),
-            "pos": cluster_dataitem.pos,
-            "logits": True,  # has to be True
-        },
-        # max_nodes=config["gradcam"]["max_nodes"],
-        num_classes=config["gradcam"]["num_classes"],
-        sparsity=config["gradcam"]["sparsity"],
-    )
-
-    # generate metrics for explanation
-    x_collector = XCollector()
-    x_collector.collect_data(hard_edge_masks, related_preds, label=cluster_dataitem.y)
-
-    node_imp = None
-
-    # print metrics for explanation
-    print(f"Positive fidelity closer to 1 better: {x_collector.fidelity:.4f})")
-    print(f"Negative fidelity closer to 0 better: {x_collector.fidelity_inv:.4f})")
-    print(f"Sparsity: {x_collector.sparsity:.4f}")
-    print(f"Accuracy: {x_collector.accuracy:.4f}")
-    print(f"Stability: {x_collector.stability:.4f}")
-
-    # evaluate explanation
-    visualise_explanation(
-        cluster_dataitem.pos,
-        cluster_dataitem.edge_index,
-        node_imp=node_imp.to(device),
-        edge_imp=None,
-    )
 
 
 class Present:
@@ -1983,95 +1447,325 @@ def visualise_explanation(
         o3d.visualization.draw_geometries(plots)
 
 
-def induced_subgraph(data, imp_list, node_or_edge="node"):
-    """Return the induced subgraph and its complement
+#### ----- Legacy ------
+
+
+def features_to_csv(
+    train_dataset,
+    test_dataset,
+    cluster_model,
+    gt_label_map,
+    encoder,
+    device,
+    project_directory,
+    final_test,
+):
+    """Convert features to .csv file
 
     Args:
-        data (pyg graph): Graph we want to induce
-        imp_list (tensor): Tensor of 0s and 1s corresponding to
-            unimportant and important nodes/edges
-        node_or_edge (string): If node we induce node subgraph
-            and if edge we induce edge subgraph
+        train_dataset (dataset): Training dataset
+        test_dataset (dataset): Test dataset
+        cluster_model (pyg model): PyG model
+        gt_label_map (dict): GT label map
+        encoder (string): Which encoder to use
+        device (torch deive): What device its on
+        project_directory (string): Where is project directory
+        final_test (bool): Whether is final test or not"""
 
-    Returns:
-        subgraph (PyG graph): The induced subgraph from the important structure
-        complement (PyG graph): The complement to the subgraph
+    train_dfs = get_features(
+        train_dataset, cluster_model, gt_label_map, encoder, device
+    )
+    if final_test:
+        test_dfs = get_features(
+            test_dataset, cluster_model, gt_label_map, encoder, device
+        )
+
+    # aggregate dfs into one big df
+    train_df = pl.concat(train_dfs)
+    train_df = train_df.to_pandas()
+    if final_test:
+        test_df = pl.concat(test_dfs)
+        test_df = test_df.to_pandas()
+
+    # save train and test df
+    train_df.to_csv(
+        os.path.join(project_directory, f"output/train_df_nn_{encoder}.csv"),
+        index=False,
+    )
+    if final_test:
+        test_df.to_csv(
+            os.path.join(project_directory, f"output/test_df_nn_{encoder}.csv"),
+            index=False,
+        )
+
+
+def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
+    """Analyse the features of the clusters from neural network
+
+    Args:
+        project_directory (str): Location of the project directory
+        config (dict): Configuration for this script
+        final_test (bool): Whether final test
+        n_repeats (int): number of times to run data through loc model for averaging
 
     Raises:
-        ValueError: If induced subgraph is whole graph OR no important nodes/edges"""
+        ValueError: If device specified is neither cpu or gpu OR
+            if attention to examine is not correctly specified OR
+            if encoder not loc or cluster or fov
+    """
 
-    if sum(imp_list) == 0:
-        raise ValueError("No important edges/nodes")
+    # ----------------------------
 
-    imp_list = imp_list.bool()
-    non_imp_list = torch.where(imp_list == False, True, False)
-
-    if node_or_edge == "node":
-        # automatically relabelled
-        subgraph = data.subgraph(imp_list)
-        if subgraph.num_nodes == data.num_nodes:
-            raise ValueError(
-                "No complement graph as induced subgraph is the whole graph"
-            )
-        else:
-            complement_graph = data.subgraph(non_imp_list)
-
-        return subgraph, complement_graph
-
-    elif node_or_edge == "edge":
-        nx_graph = to_networkx(data, node_attrs=["x", "pos"])
-        include_edges = data.edge_index.T[imp_list].cpu().numpy()
-        include_edges = list(map(tuple, include_edges))
-        non_include_edges = data.edge_index.T[non_imp_list].cpu().numpy()
-        non_include_edges = list(map(tuple, non_include_edges))
-        subgraph = nx_graph.edge_subgraph(include_edges)
-        subgraph_pyg = from_networkx(subgraph, group_node_attrs=["x", "pos"])
-        x = subgraph_pyg.x[:, :-2]
-        pos = subgraph_pyg.x[:, -2:]
-        subgraph_pyg.x = x
-        subgraph_pyg.pos = pos
-        if subgraph.nodes == nx_graph.nodes:
-            raise ValueError(
-                "No complement graph as induced subgraph is the whole graph"
-            )
-        else:
-            warnings.warn(
-                "As the graphs are directed - it may still appear that the important edge is in the "
-                "complement BUT this will be the edge in the other direction i.e. if two edges between"
-                "two nodes and only one is important, visualising the graph and complement will appear"
-                "the same between these nodes"
-            )
-            complement_graph = nx_graph.edge_subgraph(non_include_edges)
-            complement_graph_pyg = from_networkx(
-                complement_graph, group_node_attrs=["x", "pos"]
-            )
-            x = complement_graph_pyg.x[:, :-2]
-            pos = complement_graph_pyg.x[:, -2:]
-            complement_graph_pyg.x = x
-            complement_graph_pyg.pos = pos
-
-            # complement induced by the nodes not in the subgraph below
-            # e = list(subgraph.nodes)
-            # nx_graph.remove_nodes_from(e)
-            # complement_graph_pyg = from_networkx(
-            #    nx_graph, group_node_attrs=["x", "pos"]
-            # )
-            # x = complement_graph_pyg.x[:, :-2]
-            # pos = complement_graph_pyg.x[:, -2:]
-            # complement_graph_pyg.x = x
-            # complement_graph_pyg.pos = pos
-
-        return subgraph_pyg, complement_graph_pyg
-
+    if config["device"] == "gpu":
+        device = torch.device("cuda")
+    elif config["device"] == "cpu":
+        device = torch.device("cpu")
     else:
-        raise ValueError("node or edge should be node or edge")
+        raise ValueError("Device should be cpu or gpu")
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    model_type = config["model"]
+
+    # only works for locclusternet at the moment
+    # 1. To construct datasets we use cluster_net required in model
+    # 2. For explainability also assumes uses LocClusterNet
+    assert model_type == "locclusternet" or model_type == "clusternet"
+
+    # initialise model
+    model = model_choice(
+        model_type,
+        # this should parameterise the chosen model
+        config[model_type],
+        device=device,
+    )
+
+    model_name = config["model_name"]
+
+    # Final test
+    if final_test:
+        ## Load in best model
+        model_loc = os.path.join(project_directory, "models", model_name)
+        model.load_state_dict(torch.load(model_loc))
+        model.to(device)
+        model.eval()
+
+        ## get input folders
+        input_train_folder = os.path.join(project_directory, "processed", "train")
+        input_val_folder = os.path.join(project_directory, "processed", "val")
+        input_test_folder = os.path.join(project_directory, "processed", "test")
+
+        ## generate train val and test homogeneous clusternet set
+
+    # Not final test
+    if not final_test:
+        ## For each fold
+        for fold in None:
+            raise ValueError("fix")
+
+            ## Load in model
+            model_loc = os.path.join(
+                project_directory, "models", f"fold_{fold}", model_name
+            )
+            model.load_state_dict(torch.load(model_loc))
+            model.to(device)
+            model.eval()
+
+            ## get input folders
+            input_train_folder = os.path.join(
+                project_directory, "processed", f"fold_{fold}", "train"
+            )
+            input_val_folder = os.path.join(
+                project_directory, "processed", f"fold_{fold}", "val"
+            )
+            input_test_folder = os.path.join(
+                project_directory, "processed", f"fold_{fold}", "test"
+            )
+
+        ## generate train val and test homogeneous clusternet set
+
+    # need to create a homogenous dataset consisting only of clusters from the heterogeneous graph
+    data_folder = os.path.join(project_directory, "processed", "featanalysis")
+
+    if not final_test:
+        input_train_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "train"
+        )
+        input_val_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "val"
+        )
+        input_test_folder = os.path.join(
+            project_directory, "processed", f"fold_{fold}", "test"
+        )
+    else:
+        input_train_folder = os.path.join(project_directory, "processed", "train")
+        input_val_folder = os.path.join(project_directory, "processed", "val")
+        input_test_folder = os.path.join(project_directory, "processed", "test")
+    output_train_folder = os.path.join(data_folder, "train")
+    output_val_folder = os.path.join(data_folder, "val")
+    output_test_folder = os.path.join(data_folder, "test")
+
+    output_folders = [output_train_folder, output_val_folder, output_test_folder]
+    for folder in output_folders:
+        if not os.path.exists(folder):
+            os.makedirs(folder)
+
+    # initialise train/validation and test sets
+
+    # note these datastructures have been passed through
+    # PointNet/PointTransformer therefore localisations
+    # have been embedded into cluster
+    if model_type == "locclusternet":
+        loc_model = model.loc_net
+        loc_model.eval()
+    else:
+        loc_model = None
+
+    cluster_train_set = datastruc.ClusterDataset(
+        input_train_folder,
+        output_train_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    cluster_val_set = datastruc.ClusterDataset(
+        input_val_folder,
+        output_val_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    cluster_test_set = datastruc.ClusterDataset(
+        input_test_folder,
+        output_test_folder,
+        label_level=None,
+        pre_filter=None,
+        save_on_gpu=None,
+        transform=None,
+        pre_transform=None,
+        fov_x=None,
+        fov_y=None,
+        from_hetero_loc_cluster=True,
+        loc_net=loc_model,
+        n_repeats=n_repeats,
+        device=device,
+    )
+
+    warnings.warn(
+        "Assumes\
+                      1. Using a ClusterNet \
+                      2. Embedding is in a final cluster encoder layer\
+                      3. Graph level explanation"
+    )
+
+    # need to create a model that acts on the homogeneous data for cluster and locs
+    cluster_model = ClusterNetHomogeneousLegacy(model.cluster_net, config[model_type])
+    torch.save(
+        cluster_model, os.path.join(project_directory, f"output/cluster_model.pt")
+    )
+    cluster_model.to(device)
+    cluster_model.eval()
+
+    # ------- GRAPHXAI --------
+    # train pgexplainer
+    if "pgex" in config.keys():
+        pg_explainer = train_pgex(
+            config, cluster_model, cluster_train_set, cluster_val_set, device
+        )
+        torch.save(
+            pg_explainer, os.path.join(project_directory, f"output/pg_explainer.pt")
+        )
+
+    # ------- BOXPLOT/UMAP/SKLEARN SETUP ---------
+
+    print("Feature analysis...")
+
+    # need to ensure no manual features being analysed
+    with open("../config/process.yaml", "r") as ymlfile:
+        process_config = yaml.safe_load(ymlfile)
+    cluster_features = process_config["cluster_feat"]
+    if cluster_features is not None:
+        inpt = input("Cluster features are present, be aware, type (YES I AM AWARE)")
+        while inpt != "YES I AM AWARE":
+            inpt = input(
+                "Cluster features are present, be aware, type (YES I AM AWARE)"
+            )
+
+    # aggregate cluster features into collated df
+    if not final_test:
+        train_dataset = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set, cluster_test_set]
+        )
+        test_dataset = None
+    else:
+        train_dataset = torch.utils.data.ConcatDataset(
+            [cluster_train_set, cluster_val_set]
+        )
+        test_dataset = cluster_test_set
+
+    features_to_csv(
+        train_dataset,
+        test_dataset,
+        cluster_model,
+        gt_label_map,
+        "loc",
+        device,
+        project_directory,
+        final_test,
+    )
+    features_to_csv(
+        train_dataset,
+        test_dataset,
+        cluster_model,
+        gt_label_map,
+        "cluster",
+        device,
+        project_directory,
+        final_test,
+    )
+    features_to_csv(
+        train_dataset,
+        test_dataset,
+        cluster_model,
+        gt_label_map,
+        "fov",
+        device,
+        project_directory,
+        final_test,
+    )
 
 
 def explain(
     project_directory,
     config,
     neuralnet=False,
-    automatic=False,
     final_test=False,
     n_repeats=1,
 ):
@@ -2081,7 +1775,6 @@ def explain(
         project_directory (str): Location of project directory
         config (str): Configuration file for evaluating
         neuralnet (bool): If TRUE output of neural net is analyse rather than manual features
-        automatic (bool): If TRUE should only be one model in the folder
         final_test (bool): If TRUE running final_test
         n_repeats (int): Number of times to run data through locnet if neuralnet=True
 
@@ -2152,8 +1845,520 @@ def explain(
             project_directory, train_loc_files, test_loc_files, final_test
         )
     elif neuralnet:
-        analyse_nn_feats(
-            project_directory, config, final_test, automatic, n_repeats=n_repeats
-        )
+        analyse_nn_feats(project_directory, config, final_test, n_repeats=n_repeats)
     else:
         raise ValueError("Should be neural net or manual")
+
+
+def test_ensemble_averaging(
+    project_directory,
+    device,
+    fold,
+    n_repeats,
+    final_test,
+    post_sigmoid=True,
+    model_name=None,
+):
+    """Test that averaging the loc features then running through the cluster model
+    gives similar/same output as normally running through the model and taking the average
+
+    Args:
+        project_directory (string): Location of the project directory
+        device (string): Which device running on
+        fold (int): Which fold is model from
+        n_repeats (int): Number of times to repeat for ensemble averaging
+        final_test (bool): Whether it is final test
+        post_sigmoid (bool): Whether to apply averaging after sigmoid
+        model_name (string): Model name, if not given assume only one model
+
+    Returns:
+        diffs (list): List of differences between predictions
+
+    Raises:
+        ValueError: Bug
+    """
+    # -- Load in files configuration and model
+    file_dir = os.path.join(project_directory, "preprocessed/gt_label")
+    files = os.listdir(file_dir)
+    files = [f.removesuffix(".parquet") for f in files]
+
+    with open(
+        os.path.join(project_directory, "config/featanalyse_nn.yaml"), "r"
+    ) as ymlfile:
+        config = yaml.safe_load(ymlfile)
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    model = model_choice(
+        config["model"],
+        # this should parameterise the chosen model
+        config[config["model"]],
+        dim=2,
+        device=device,
+    )
+
+    print("\n")
+    print("Loading in best model")
+    print("\n")
+
+    if not final_test:
+        model_dir = os.path.join(project_directory, "models", f"fold_{fold}")
+    else:
+        model_dir = os.path.join(project_directory, "models")
+
+    if model_name is None:
+        model_list = os.listdir(model_dir)
+        assert len(model_list) == 1
+        model_name = model_list[0]
+
+    model_loc = os.path.join(model_dir, model_name)
+    model.load_state_dict(torch.load(model_loc))
+    model.to(device)
+    model.eval()
+
+    raise ValueError("BUG: no cluster model yet...!")
+
+    cluster_model = torch.load(
+        os.path.join(project_directory, f"output/cluster_model.pt")
+    )
+    cluster_model.to(device)
+    cluster_model.eval()
+
+    # -- Load in train/val/test datasets --
+
+    train_folder = os.path.join(project_directory, f"processed/fold_{fold}/train")
+    val_folder = os.path.join(project_directory, f"processed/fold_{fold}/val")
+    test_folder = os.path.join(project_directory, f"processed/fold_{fold}/test")
+
+    train_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        train_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+        range_xy=False,
+    )
+
+    val_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        val_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+        range_xy=False,
+    )
+
+    test_set = datastruc.ClusterLocDataset(
+        None,  # raw_loc_dir_root
+        None,  # raw_cluster_dir_root
+        test_folder,  # processed_dir_root
+        label_level=None,  # label_level
+        pre_filter=None,  # pre_filter
+        save_on_gpu=False,
+        transform=None,  # transform
+        pre_transform=None,  # pre_transform
+        loc_feat=None,
+        cluster_feat=None,
+        min_feat_locs=None,
+        max_feat_locs=None,
+        min_feat_clusters=None,
+        max_feat_clusters=None,
+        kneighboursclusters=None,
+        fov_x=None,
+        fov_y=None,
+        kneighbourslocs=None,
+        range_xy=False,
+    )
+
+    # Get prediction
+
+    diffs = []
+
+    for file in files:
+        print("file")
+        print(file)
+        file_name = file
+
+        _, _, diff = get_prediction_ensemble(
+            file_name,
+            model,
+            cluster_model,
+            train_set,
+            val_set,
+            test_set,
+            project_directory,
+            device,
+            gt_label_map,
+            n_repeats,
+            post_sigmoid=post_sigmoid,
+        )
+
+        diffs.append(diff)
+
+    diffs = np.array(diffs)
+
+    return diffs
+
+
+def analyse_manual_feats(
+    project_directory,
+    train_loc_files,
+    test_loc_files,
+    final_test,
+):
+    """Analyse the features of the clusters manually extracted
+
+    Args:
+        project_directory (str): Location of the project directory
+        train_loc_files (list): List of the TRAIN files with the protein
+            localisations
+        test_loc_files (list): List of the TEST files with the protein
+            localisations
+        final_test (bool): Whether final test
+    """
+
+    # aggregate cluster features into collated df
+    train_dfs = []
+
+    if not final_test:
+        train_cluster_root = os.path.join(
+            project_directory, f"preprocessed/featextract/clusters"
+        )
+    else:
+        train_cluster_root = os.path.join(
+            project_directory, f"preprocessed/train/featextract/clusters"
+        )
+        # process test data
+        test_cluster_root = os.path.join(
+            project_directory, f"preprocessed/test/featextract/clusters"
+        )
+        test_dfs = []
+        for index, file in enumerate(test_loc_files):
+            test_cluster_path = os.path.join(test_cluster_root, file)
+
+            cluster_df = pq.read_table(test_cluster_path)
+            # extract metadata
+            gt_label_map = json.loads(
+                cluster_df.schema.metadata[b"gt_label_map"].decode("utf-8")
+            )
+            gt_label_map = {int(key): value for key, value in gt_label_map.items()}
+            gt_label = cluster_df.schema.metadata[b"gt_label"]
+            gt_label = int(gt_label)
+            label = gt_label_map[gt_label]
+
+            # convert to polars
+            cluster_df = pl.from_arrow(cluster_df)
+            cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
+            cluster_df = cluster_df.with_columns(pl.lit(f"{file}").alias("file_name"))
+            test_dfs.append(cluster_df)
+
+    # process training data
+    for index, file in enumerate(train_loc_files):
+        train_cluster_path = os.path.join(train_cluster_root, file)
+
+        cluster_df = pq.read_table(train_cluster_path)
+
+        # extract metadata
+        gt_label_map = json.loads(
+            cluster_df.schema.metadata[b"gt_label_map"].decode("utf-8")
+        )
+        gt_label_map = {int(key): value for key, value in gt_label_map.items()}
+        gt_label = cluster_df.schema.metadata[b"gt_label"]
+        gt_label = int(gt_label)
+        label = gt_label_map[gt_label]
+
+        # convert to polars
+        cluster_df = pl.from_arrow(cluster_df)
+        cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
+        cluster_df = cluster_df.with_columns(pl.lit(f"{file}").alias("file_name"))
+        train_dfs.append(cluster_df)
+
+    # aggregate dfs into one big df
+    train_df = pl.concat(train_dfs)
+    train_df = train_df.to_pandas()
+    if final_test:
+        test_df = pl.concat(test_dfs)
+        test_df = test_df.to_pandas()
+
+    # save train and test df
+    train_df.to_csv(
+        os.path.join(project_directory, "output/train_df_manual.csv"), index=False
+    )
+    if final_test:
+        test_df.to_csv(
+            os.path.join(project_directory, "output/test_df_manual.csv"), index=False
+        )
+
+
+def get_prediction_ensemble(
+    file_name,
+    model,
+    cluster_model,
+    train_set,
+    val_set,
+    test_set,
+    project_directory,
+    device,
+    gt_label_map,
+    n_repeats,
+    post_sigmoid=True,
+):
+    """Get the prediction for a file using the cluster model
+
+    Args:
+        file_name (string): Name of the file
+        model (pyg model): LocClusterNet model
+        cluster_model (pyg model): ClusterNet model
+        train_set (pyg dataset): Training set with locs and clusters
+        val_set (pyg dataset): Validation set with locs and clusters
+        test_set (pyg dataset): Test set with locs and clusters
+        project_directory (string): Location of the project directory
+        device (string): Device to run on
+        gt_label_map (dict): Map from labels to real concepts
+        n_repeats (int): Number of times to repeat to get prediction
+        post_sigmoid (bool): If true then average after sigmoid
+
+    Returns:
+        cluster_dataitem (pyg dataitem): Cluster graph embedded into each node
+        prediction (float): Predicted label
+        diff (numpy): Difference between two predictions
+    """
+
+    # load in gt_label_map
+    metadata_path = os.path.join(project_directory, "metadata.json")
+    with open(
+        metadata_path,
+    ) as file:
+        metadata = json.load(file)
+        # add time ran this script to metadata
+        gt_label_map = metadata["gt_label_map"]
+
+    gt_label_map = {int(key): val for key, val in gt_label_map.items()}
+
+    train_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/train/file_map.csv"
+    )
+    val_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/val/file_map.csv"
+    )
+    test_file_map_path = os.path.join(
+        project_directory, f"processed/fold_0/test/file_map.csv"
+    )
+
+    train_file_map = pd.read_csv(train_file_map_path)
+    val_file_map = pd.read_csv(val_file_map_path)
+    test_file_map = pd.read_csv(test_file_map_path)
+
+    train_out = train_file_map[train_file_map["file_name"] == file_name]
+    val_out = val_file_map[val_file_map["file_name"] == file_name]
+    test_out = test_file_map[test_file_map["file_name"] == file_name]
+
+    if len(train_out) > 0:
+        file_name = train_out["idx"].values[0]
+        dataitem = train_set.get(file_name)
+
+    if len(val_out) > 0:
+        file_name = val_out["idx"].values[0]
+        dataitem = val_set.get(file_name)
+
+    if len(test_out) > 0:
+        file_name = test_out["idx"].values[0]
+        dataitem = test_set.get(file_name)
+
+    dataitem.to(device)
+    dataitem["clusters"].batch = torch.zeros(
+        dataitem["clusters"].pos.shape[0], device=device, dtype=torch.int64
+    )
+
+    loc_model = model.loc_net
+    cluster_model.eval()
+    loc_model.eval()
+
+    # generate prediction for the graph
+    x_cluster_list = []
+    output_old_method = []
+
+    for _ in range(n_repeats):
+        x_cluster = loc_model(
+            x_locs=None,
+            edge_index_locs=dataitem.edge_index_dict["locs", "in", "clusters"],
+            pos_locs=dataitem.pos_dict["locs"],
+        )
+        if post_sigmoid:
+            x_cluster_list.append(x_cluster.sigmoid())
+        else:
+            x_cluster_list.append(x_cluster)
+
+        # --- Averaging after the whole model ---
+
+        logits_old_method = cluster_model(
+            x_cluster.sigmoid(),
+            dataitem.edge_index_dict["clusters", "near", "clusters"],
+            torch.tensor([0], device=device),
+            dataitem["clusters"].pos,
+            logits=True,
+        )
+        output_old_method.append(logits_old_method)
+
+    # --- Averaging after the whole model ---
+
+    logits_old_method = torch.mean(torch.stack(output_old_method), axis=0)
+
+    # print out prediction & gt label
+    probs_old_method = logits_old_method.softmax(dim=-1)
+    print(probs_old_method)
+    prediction_old_method = logits_old_method.argmax(-1).item()
+    # print(f"Item {idx}")
+    print("Predicted label: ", gt_label_map[prediction_old_method])
+
+    # --- Averaging after the locnet ---
+
+    x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
+
+    if not post_sigmoid:
+        x_cluster = x_cluster.sigmoid()
+
+    logits = cluster_model(
+        x_cluster,
+        dataitem.edge_index_dict["clusters", "near", "clusters"],
+        torch.tensor([0], device=device),
+        dataitem["clusters"].pos,
+        logits=True,
+    )
+
+    # print out prediction & gt label
+    probs = logits.softmax(dim=-1)
+    print(probs)
+    prediction = logits.argmax(-1).item()
+    # print(f"Item {idx}")
+    print("Predicted label: ", gt_label_map[prediction])
+
+    # --- Check predictions the same ---
+    assert prediction == prediction_old_method
+
+    print("GT label: ", gt_label_map[dataitem.y.cpu().item()])
+    print("\n")
+
+    # Calculate difference
+    diff = (probs_old_method - probs)[0][0].cpu().detach().numpy()
+
+    return dataitem, prediction, diff
+
+
+def get_features(dataset, cluster_model, gt_label_map, encoder, device):
+    """Get features from the neural network
+
+    Args:
+        dataset (dataset): PyG dataset to get features for
+        cluster_model (model): PyG model to get features out of
+        gt_label_map (dict): Dictionary mapping gt labels
+        encoder (string): Either loc, cluster or fov
+        device (torch device): Device running on
+
+    Returns:
+        dfs (list): Dataframes with features from encoding
+
+    Raises:
+        ValueError: If encoder not loc, fov or cluster
+    """
+
+    dfs = []
+
+    # a dict to store the activations
+    activation = {}
+
+    def getActivation(name):
+        # the hook signature
+        def hook(model, input, output):
+            activation[name] = output.detach()
+
+        return hook
+
+    # register forward hook
+    h_0 = cluster_model.cluster_encoder_3.register_forward_hook(
+        getActivation("clusterencoder")
+    )
+    h_1 = cluster_model.pool.register_forward_hook(getActivation("globalpool"))
+
+    print("Encoder: ", encoder)
+    predictions = []
+    labels = []
+
+    for _, data in enumerate(dataset):
+        # gt label
+        gt_label = int(data.y)
+        label = gt_label_map[gt_label]
+        data.to(device)
+
+        # file name
+        file_name = data.name + ".parquet"
+
+        # forward through network
+        logits = cluster_model(
+            data.x,
+            data.edge_index,
+            torch.tensor([0], device=device),
+            data.pos,
+            logits=True,
+        )
+
+        prediction = logits.argmax(-1).item()
+        labels.append(gt_label)
+        predictions.append(prediction)
+
+        # convert to polars
+        if encoder == "loc":
+            data = data.x.detach().cpu().numpy()
+        elif encoder == "cluster":
+            data = activation["clusterencoder"].cpu().numpy()
+        elif encoder == "fov":
+            data = activation["globalpool"].cpu().numpy()
+        else:
+            raise ValueError("encoder should be loc or cluster")
+        cluster_df = pl.DataFrame(data)
+        cluster_df = cluster_df.with_columns(pl.lit(label).alias("type"))
+        cluster_df = cluster_df.with_columns(pl.lit(f"{file_name}").alias("file_name"))
+        dfs.append(cluster_df)
+
+    print("accuracy: ", accuracy_score(labels, predictions))
+
+    # remove foward hook
+    h_0.remove()
+    h_1.remove()
+
+    return dfs

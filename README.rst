@@ -632,6 +632,12 @@ Analysis notebooks
 
 analysis.ipynb and analysis_locs.ipynb allow analysis of manual features, neural network features and explainability of the algorithms.
 
+Note we now include ability to generate the features after multiple runs through the model.
+
+Note we now include ability to generate homogeneous graph (used by SubgraphX) after multiple runs through the model
+(N.B. This is different from running the graph through the whole model multiple times and calculating the 
+average probability (evaluation procedure), therefore there may be a performance difference)
+
 
 Visualise
 ---------

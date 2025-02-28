@@ -445,42 +445,33 @@ class ClusterDataset(SMLMDataset):
         )
 
     def process(self):
-        """Processes data with just clusters
+        """Processes data with just clusters"""
 
-        Raises:
-            ValueError: TEMPORARY"""
-
-        # Processes data into homogeneous graph from LocClusterNet
         if self.from_hetero_loc_cluster and self.loc_net is not None:
             # make sure model is in eval mode
             self.loc_net.eval()
 
-            # work through tensors
-            for raw_path in self.raw_cluster_file_names:
-                # if file not file_map.csv; pre_filter.pt; pre_transform.pt
-                if raw_path in ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]:
-                    src = os.path.join(self._raw_cluster_dir_root, raw_path)
-                    dst = os.path.join(self.processed_dir, raw_path)
-                    shutil.copyfile(src, dst)
-                    continue
+        for raw_path in self.raw_cluster_file_names:
+            # if file not file_map.csv; pre_filter.pt; pre_transform.pt
+            if raw_path in ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]:
+                src = os.path.join(self._raw_cluster_dir_root, raw_path)
+                dst = os.path.join(self.processed_dir, raw_path)
+                shutil.copyfile(src, dst)
+                continue
 
-                # initialise homogeneous data item
-                data = Data()
+            # initialise homogeneous data item
+            data = Data()
 
-                # load in tensor
-                hetero_data = torch.load(
-                    os.path.join(self._raw_cluster_dir_root, raw_path)
-                )
-                hetero_data.to(self.device)
+            # load in tensor
+            hetero_data = torch.load(os.path.join(self._raw_cluster_dir_root, raw_path))
+            hetero_data.to(self.device)
 
-                # pass through loc net
-                x_dict, pos_dict, edge_index_dict, _ = parse_data(
-                    hetero_data, self.device
-                )
+            # pass through loc net
+            x_dict, pos_dict, edge_index_dict, _ = parse_data(hetero_data, self.device)
 
+            # Processes data into homogeneous graph from LocClusterNet
+            if self.from_hetero_loc_cluster and self.loc_net is not None:
                 x_cluster_list = []
-                print("remove this but just check its 25")
-                print(self.n_repeats)
                 for _ in range(self.n_repeats):
                     x_cluster = self.loc_net(
                         x_locs=x_dict["locs"],
@@ -489,16 +480,7 @@ class ClusterDataset(SMLMDataset):
                     )
                     x_cluster = x_cluster.sigmoid()
                     x_cluster_list.append(x_cluster)
-                print(x_cluster_list)
-                print(x_cluster.shape)
                 x_cluster = torch.mean(torch.stack(x_cluster_list), axis=0)
-                print(x_cluster)
-                print(x_cluster.shape)
-                raise ValueError("check")
-                raise ValueError(
-                    "Note: Here we calculate average feature vector and then later push through cluster model WHEREAS for calculating prediction\
-                                 we put through whole network 25 times and calculate average probability - there may/probably will be difference in how this performs"
-                )
 
                 # if have manual cluster features as well
                 try:
@@ -507,56 +489,23 @@ class ClusterDataset(SMLMDataset):
                 except KeyError:
                     pass
 
-                # assign to homogeneous data item
-                data.x = x_cluster
-                data.pos = pos_dict["clusters"]
-                data.edge_index = edge_index_dict["clusters", "near", "clusters"]
-                data.name = hetero_data.name
-                data.y = hetero_data.y
-
-                # save
-                torch.save(data, os.path.join(self.processed_dir, raw_path))
-
-            self._processed_file_names = list(sorted(os.listdir(self.processed_dir)))
-
-        # Processes data into homogeneous graph from ClusterNet
-        elif self.from_hetero_loc_cluster and self.loc_net is None:
-            # work through tensors
-            for raw_path in self.raw_cluster_file_names:
-                # if file not file_map.csv; pre_filter.pt; pre_transform.pt
-                if raw_path in ["file_map.csv", "pre_filter.pt", "pre_transform.pt"]:
-                    src = os.path.join(self._raw_cluster_dir_root, raw_path)
-                    dst = os.path.join(self.processed_dir, raw_path)
-                    shutil.copyfile(src, dst)
-                    continue
-
-                # initialise homogeneous data item
-                data = Data()
-
-                # load in tensor
-                hetero_data = torch.load(
-                    os.path.join(self._raw_cluster_dir_root, raw_path)
-                )
-                hetero_data.to(self.device)
-
-                # pass through loc net
-                x_dict, pos_dict, edge_index_dict, _ = parse_data(
-                    hetero_data, self.device
-                )
-
+            # Processes data into homogeneous graph from ClusterNet
+            elif self.from_hetero_loc_cluster and self.loc_net is None:
                 # must have manual cluster features
                 manual_feats = hetero_data.x_dict["clusters"]
                 x_cluster = manual_feats
 
-                # assign to homogeneous data item
-                data.x = x_cluster
-                data.pos = pos_dict["clusters"]
-                data.edge_index = edge_index_dict["clusters", "near", "clusters"]
-                data.name = hetero_data.name
-                data.y = hetero_data.y
+            # assign to homogeneous data item
+            data.x = x_cluster
+            data.pos = pos_dict["clusters"]
+            data.edge_index = edge_index_dict["clusters", "near", "clusters"]
+            data.name = hetero_data.name
+            data.y = hetero_data.y
 
-                # save
-                torch.save(data, os.path.join(self.processed_dir, raw_path))
+            # save
+            torch.save(data, os.path.join(self.processed_dir, raw_path))
+
+        self._processed_file_names = list(sorted(os.listdir(self.processed_dir)))
 
 
 class ClusterLocDataset(SMLMDataset):
