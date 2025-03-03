@@ -185,7 +185,7 @@ def visualise_umap_embedding(
         save_name (string): Name of file to save
         project_directory (string): Project directory to save plot in
         format (string): What format to save UMAP as
-        colour_by (string): How to colour the UMAP [response, patient, wt, wt_resposne, prediction, correct]
+        colour_by (string): How to colour the UMAP [response, patient, wt, wt_resposne, prediction, correct, best_r]
 
     Returns:
         p (umap plot): Returns the umap plot
@@ -206,6 +206,8 @@ def visualise_umap_embedding(
     elif colour_by == "correct":
         df["correct"] = df["type"] == df["prediction"]
         labels = df["correct"]
+    elif colour_by == "best_r":
+        labels = df["best_r"]
     else:
         raise ValueError(f"{colour_by} not supported")
 
@@ -291,6 +293,7 @@ def visualise_umap_embedding(
                 "all-WT response": df.wt_response,
                 "file_name": df.file_name,
                 "patient": df.patient,
+                "best_r": df.best_r,
                 "fold": df.fold,
                 "GT label (integer)": df.type.map(label_map),
                 "index": np.arange(len(df)),
