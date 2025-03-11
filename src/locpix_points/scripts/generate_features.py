@@ -199,6 +199,15 @@ def main(argv=None):
         help="if given then is final test",
     )
 
+    parser.add_argument(
+        "-fo",
+        "--folds",
+        type=int,
+        required=False,
+        help="number of folds",
+        default=5,
+    )
+
     args = parser.parse_args(argv)
 
     if args.final_test:
@@ -243,7 +252,7 @@ def main(argv=None):
     OVERALL_test_file_list = []
 
     # For each fold
-    for fold in range(5):
+    for fold in range(args.folds):
         # Load in model
         processed_directory = os.path.join(project_directory, f"processed/fold_{fold}")
         model_loc = os.path.join(project_directory, f"models/fold_{fold}", model_name)

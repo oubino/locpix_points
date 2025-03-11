@@ -244,6 +244,15 @@ def main(argv=None):
         help="location of the config file",
     )
 
+    parser.add_argument(
+        "-fo",
+        "--folds",
+        type=int,
+        required=False,
+        help="number of folds",
+        default=5,
+    )
+
     args = parser.parse_args(argv)
     file_map = pl.read_csv(args.map_file)
 
@@ -283,7 +292,7 @@ def main(argv=None):
     final_test_gt = []
 
     # For each fold
-    for fold in range(5):
+    for fold in range(args.folds):
         # Load in model
         processed_directory = os.path.join(project_directory, f"processed/fold_{fold}")
         model_loc = os.path.join(project_directory, f"models/fold_{fold}")
