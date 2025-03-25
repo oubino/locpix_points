@@ -130,8 +130,8 @@ This includes 50 items from each class from the digits and letters dataset in th
 
     .. code-block:: shell
 
-    micromamba activate locpix-points
-    initialise
+        micromamba activate locpix-points
+        initialise
     
     * User name = oliver-umney
     * Project name = output
@@ -150,8 +150,8 @@ This includes 50 items from each class from the digits and letters dataset in th
 
     .. code-block:: shell
 
-    cd demo/output
-    bash scripts/preprocess.sh
+        cd demo/output
+        bash scripts/preprocess.sh
     
     This preprocesses the data into a folder preprocessed/
 
@@ -159,7 +159,7 @@ This includes 50 items from each class from the digits and letters dataset in th
 
     .. code-block:: shell
 
-    bash scripts/featextract.sh
+        bash scripts/featextract.sh
     
     
     This extracts features from the data into a folder preprocessed/featextract
@@ -168,7 +168,7 @@ This includes 50 items from each class from the digits and letters dataset in th
 
     .. code-block:: shell
 
-    bash scripts/generate_k_fold_splits.sh
+        bash scripts/generate_k_fold_splits.sh
     
 
     This generates a file k_fold.yaml in config/ containing the splits
@@ -177,7 +177,7 @@ This includes 50 items from each class from the digits and letters dataset in th
 
     .. code-block:: shell
 
-    bash scripts/k_fold.sh
+        bash scripts/k_fold.sh
     
 
     This performs k-fold training, generating models in models/ folder
@@ -187,8 +187,8 @@ This includes 50 items from each class from the digits and letters dataset in th
     * Modify model_name in featanalyse_nn.yaml.
 
     .. code-block:: shell
-        
-    jupyter-notebook
+
+        jupyter-notebook
 
     * Run analysis notebook: scripts/analysis.ipynb
     * Do not run any "patient" cells
