@@ -22,9 +22,11 @@ locclusternet:
   # +++ LocNet parameters +++
   loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 1.0
+  ratio: [0.5, 0.5]
   # For each point we sample nearest neighbours up to nearest neighbours (k)
   k: 3
+  dropout: 0.0
+  dropout_posattn: 0.0
 
   # +++++ PointNet parameters +++++
   local_channels: [[2, 4, 6],[12, 14, 16], [22,24,26]]
@@ -50,7 +52,7 @@ locclusternet:
 
   # +++++ ClusterNet parameters +++++
   # Dropout for each layer
-  dropout: 0.0
+  cluster_dropout: 0.0
   cluster_conv_type: pointnet # Options: [gin, transformer, pointnet, pointtransformer]
   # number of final output channels
   OutputChannels: 2
@@ -85,6 +87,10 @@ locclusternet:
   # dimensions of data: options = [2,3]
   pt_tr_dim: 2
   # -------------------------------------------------
+
+   # --- attention_readout ------------
+  attention_readout: null
+  attention_readout_node_level: True
 
 # ---- Explainable AI arguments -----
 

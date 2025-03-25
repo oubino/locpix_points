@@ -1,0 +1,64 @@
+# train/test/val ratio splits only specify it not using k-fold
+# train_ratio: 0.7
+# val_ratio: 0.15
+# test_ratio: 0.15
+
+# this argument is redundant but has to be specified for the moment
+save_on_gpu: False
+
+# what dimensions to load into position data
+pos: xy # Options: [xy, xyz]
+
+# per localisation features
+# null -> no localisation features considered
+# e.g. ["photons", "error"] -> features present in original dataset for each localisation to consider
+loc_feat: null # Options: null OR list of features
+# per cluster features
+# null -> no cluster features considered
+# e.g. to consider all features
+#  cluster_feat:
+#   - count
+#   - RGyration
+#   - linearity
+#   - planarity
+#   - length_pca
+#   - area_pca
+#   - perimeter
+#   - density_pca
+cluster_feat: null
+
+# whether making node or whole graph predictions
+label_level: graph # Options: [node, graph]
+
+# type of model
+model: ClusterLoc # Options: [ClusterLoc] Future: Build support for [Loc, Cluster]
+
+# number of nearest neighbours to connect clusters to in graph
+kneighboursclusters: 5
+
+# number of nearest neighbours to connect locs to in graph
+# note localisations are only connected to other localisations in the same cluster
+# if "all" then connects all locs within each cluster
+# if null then no connections
+# note if using PointNet or PointTransformer - these connections are not used!
+kneighbourslocs: 5
+
+# how to normalise the data
+# 1. per_item - i.e. each item normalised to between -1 and +1 ignoring other items
+# 2. per_dataset - i.e. each item normalised to between -1 and +1 using range of data from other items
+normalise: per_item # per_dataset
+
+# size of fov in x/y in original units e.g. nm
+# Note:
+# - Each item will be checked to see if it's x and y range are less than 95% of the FOV width
+# - However, these values are NOT used to normalise each item
+# - Each item is normalised independently to between -1 and +1 i.e. if Item A has x_range 1000nm
+#   and item B has x_range 5000nm both are scaled to between -1 and +1 independently of each other
+#   not using the fox_x or fov_y range.
+fov_x: 1.681
+fov_y: 1.607
+
+# ---- Archived arguments ------
+
+# whether to save to gpu
+# save_on_gpu: False

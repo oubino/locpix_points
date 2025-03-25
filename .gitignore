@@ -144,3 +144,6 @@ sandpit/*
 
 # ignore eclipse
 eclipse/*
+
+# demo
+demo/output/*

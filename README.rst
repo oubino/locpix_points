@@ -119,6 +119,84 @@ To navigate this we can
     pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
 
+Demo (ON REDUCED DATASET) (~1-2 hours with a GPU)
+=================================================
+
+This includes 50 items from each class from the digits and letters dataset in the folder data/ which will be used to demo the pipeline.
+
+#. Install pre-requisities and environments as above
+
+#. Navigate to demo folder
+
+#. Initialise
+
+    ```shell
+    micromamba activate locpix-points
+    initialise
+    ```
+    - User name = oliver-umney
+    - Project name = output
+    - Project saved = .
+    - Dataset location = demo/data
+    - Dataset name = demo
+    - Copy preprocessed = no
+    - .csv files = no
+    - Already labelled = yes
+
+    This will generate a folder called output/ where we will be analysing the data.
+
+#. Replace output/config files with files in demo/config
+
+#. Preprocess
+
+    ```shell
+    cd demo/output
+    bash scripts/preprocess.sh
+    ```
+    This preprocesses the data into a folder preprocessed/
+
+#. Feature extraction
+
+    ```shell
+    bash scripts/featextract.sh
+    ```
+    
+    This extracts features from the data into a folder preprocessed/featextract
+
+#. Generate k-fold splits
+
+    ```shell
+    bash scripts/generate_k_fold_splits.sh
+    ```
+
+    This generates a file k_fold.yaml in config/ containing the splits
+
+#. K-fold [note add in -w flag to scripts/k_fold.py in main_k if don't want to run with wandb]
+
+    ```shell
+    bash scripts/k_fold.sh
+    ```
+
+    This performs k-fold training, generating models in models/ folder
+
+#. Then can analyse features using
+    
+    * Modify model_name in featanalyse_nn.yaml.
+
+    ```shell
+    jupyter-notebook
+
+    * Run analysis notebook: scripts/analysis.ipynb
+    * Do not run any "patient" cells
+
+#.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+    
+    .. code-block:: shell
+    
+         visualise [ARGS]
+
+    * Generates a window visualising the file
+
 Publication results
 ===================
 
