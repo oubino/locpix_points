@@ -118,12 +118,6 @@ To navigate this we can
     pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
     pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
-Demo (from scratch)
-===================
-
-#. Install any pre-requisites and environments 1 and 2 from above
-#. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
-
 Publication results
 ===================
 
@@ -139,29 +133,33 @@ Visualise results of ClusterNet-HCF [~5 mins]
         #. Figures 2A-C and Supplementary Figure 6 interactively
         #. The remaining figures statically
 
-Reproducing results
--------------------
+Reproducing results [~1-2 hours]
+--------------------------------
 
 * For reproduction of publication results, the provided data is already partially processed so only the final commands need to be run
 
 * To reproduce results for ClusterNet-HCF and ClusterNet-LCF from the publication, do the following.
-    #. Install environment 1 following instructions below
-    #. Download .tar folder from https://doi.org/10.5281/zenodo.14246303 [upload.tar.gz = ClusterNet-HCF, locclusternet.tar.gz = ClusterNet-LCF]
-    #. Extract the .tar folder
-    #.  In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
+    #. Install and actiate environment 1 following instructions above
+    #. Download x2 .tar folder from https://doi.org/10.5281/zenodo.14246303 
+    #. Extract the .tar folder [upload.tar.gz -> task_6_final_test = ClusterNet-HCF, locclusternet.tar.gz -> task_2_final_test = ClusterNet-LCF]
+    #. In both folders, scripts/analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
         #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
         #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
         #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
         #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
 
-* [Alternatively] If you would like to re-run training or evaluation (this requires being signed into wandb), you can run the below and then use analysis.ipynb notebook to re-run the results of feature and structure analysis
+* [Alternatively] If you would like to re-run training or evaluation (this requires being signed into wandb, create account and follow instructions at https://docs.wandb.ai/quickstart/), you can run the below (modify scripts/evaluate.py to include the correct model after training). You can then use analysis.ipynb notebook (modify to load in the correct model) to re-run the results of feature and structure analysis
+    .. code-block:: shell
+        
+        bash scripts/train.sh
     .. code-block:: shell
     
         bash scripts/evaluate.sh
-    
-    .. code-block:: shell
-    
-        bash scripts/train.sh
+
+Reproducing reuslts [~1-2 days]
+-------------------------------
+#. Install any pre-requisites and environments 1 and 2 from above
+#. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
 
 Quickstart (Linux)
 ==================
