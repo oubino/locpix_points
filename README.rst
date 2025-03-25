@@ -1,58 +1,18 @@
 Overview
 ========
 
-This repository allows for classification of SMLM data using graph neural networks and analysis of the features and structures that led to the classification.
-
-Data can be .csv or .parquet files
+This repository allows for classification of SMLM data (.csv or .parquet files) using graph neural networks and analysis of the features and structures that led to the classification.
 
 This repository then does the following:
     - Initialise a project directory
-    - Preprocess
+    - Preprocess the data
     - Annotate each fov or localisation (optional)
-    - Feature extraction for each cluster
+    - Extract features for each cluster
     - Process for Pytorch geometric
-    - Train
-    - Evaluate
-    - Allow visualisation
-    - Analysis of manual features, neural network output, explainability etc. via jupyter notebook
-
-
-Publication results
-===================
-
-To reproduce results for clusternet (with handcrafted features) AND locclusternet from the publication, do the following.
-
-1. Install environment 1 following instructions below
-2. Download .tar folder from https://doi.org/10.5281/zenodo.14246303 [upload.tar.gz = clusternet (with handcrafted features), locclusternet.tar.gz = locclusternet]
-3. Extract the .tar folder
-
-In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
-
-1. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
-2. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
-3. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
-4. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
-
-Or, if you would like to re-run training or evaluation (this requires being signed into wandb), you can run
-
-.. code-block:: shell
-
-    bash scripts/evaluate.sh
-
-.. code-block:: shell
-
-    bash scripts/train.sh
-
-And then use analysis.ipynb notebook to re-run the results of feature and structure analysis
-
-Alternatively for ClusterNet (with handcrafted features) we can visualise the results of this notebook after it has been run already
-
-1. Download paper/analysis.html
-2. Open this file in a suitable browser
-
-This visualises
-1. Figures 2A-C and Supplementary Figure 6 interactively
-2. The remaining figures statically
+    - Train a classification model
+    - Evaluate the classification model
+    - Visualise the raw data and graphs
+    - Analysis of manual features, neural network output, explainability etc. via jupyter notebooks
 
 Installation
 ============
@@ -60,15 +20,13 @@ Installation
 Requirements
 ------------
 
-Requires Cuda 12.1 or above!
-
-For wsl for windows - follow
-
-Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
-
-Requires anaconda, miniconda, mamba or `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended]. For all commands below repalce micromamba with conda etc. depending on which you have installed
-
-To do: release this repository as a package on PyPI
+* Tested on Windows computer using windows subsytem for linux (WSL) 2 with a NVIDIA GPU
+* Requires a CUDA-capable GPU
+* Require Cuda 12.1+
+    * For WSL for windows, follow: https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
+* Require `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended] or anaconda/miniconda/mamba
+    * For all commands below replace micromamba with conda etc. depending on which you have installed
+* Requires environments 1 and 2 below
 
 Environment 1 (locpix-points)
 -----------------------------
@@ -115,7 +73,6 @@ Install DIG
     pip install -e .
     cd ..
 
-
 Environment 2 (feat_extract)
 ----------------------------
 
@@ -143,9 +100,7 @@ Then install this repository, its additional requirements and pytorch geometric 
 
 .. code-block:: python
 
-    cd locpix_points
-    pip install -r requirements.txt
-    cd ..
+    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
 Problems
 --------
@@ -154,97 +109,107 @@ You may have difficulty installing the following: open3d, torch-scatter, torch-s
 
 To navigate this we can 
 
-1. Remove open3d, torch-scatter, torch-sparse and torch-cluster from requirements.txt
-2. For the moment no fix for open3d
-3. For torch-scatter, torch-sparse and torch-cluster - where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page
+1. Do not install open3d
+2. For torch-scatter, torch-sparse and torch-cluster run the following (where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page)
+
+.. code-block:: python
+
     pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
     pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
     pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
+
+Publication results
+===================
+
+* NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
+* To reproduce results for ClusterNet-HCF and ClusterNet-LCF from the publication, do the following.
+    #. Install environment 1 following instructions below
+    #. Download .tar folder from https://doi.org/10.5281/zenodo.14246303 [upload.tar.gz = ClusterNet-HCF, locclusternet.tar.gz = ClusterNet-LCF]
+    #. Extract the .tar folder
+* In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
+    #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
+    #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
+    #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
+    #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
+* [Alternatively] If you would like to re-run training or evaluation (this requires being signed into wandb), you can run the below and then use analysis.ipynb notebook to re-run the results of feature and structure analysis
+    .. code-block:: shell
+    
+        bash scripts/evaluate.sh
+    
+    .. code-block:: shell
+    
+        bash scripts/train.sh
+* [Alternatively] For ClusterNet-HCF we can visualise the results of this notebook after it has been run already
+    #. Download paper/analysis.html
+    #. Open this file in a suitable browser
+    #. This visualises
+        #. Figures 2A-C and Supplementary Figure 6 interactively
+        #. The remaining figures statically
+
 Quickstart (Linux)
 ==================
 
-1. Initialise a project directory 
+#. Initialise a project directory 
+    .. code-block:: python
+    
+        initialise
+#. Navigate to the project directory
+#. Amend all config files
+#. Preprocess the data
+    .. code-block:: shell
+    
+        bash scripts/preprocess.sh
+#. Annotate the data (Optional)
+    .. code-block:: shell
+    
+        bash scripts/annotate.sh
+#. Extract features
+    .. code-block:: shell
+    
+        bash scripts/featextract.sh
+#. Generate k-fold splits
+    .. code-block:: shell
+    
+        bash scripts/generate_k_fold_splits.sh
+#. Run k-fold training (runs process + train + evaluate)
+    .. code-block:: shell
+    
+        bash scripts/k_fold.sh
+#. Analyse manual and neural network features
+    .. code-block:: shell
+    
+        scripts/analysis.ipynb
+#. Analyse locs
+    .. code-block:: shell
+    
+        scripts/analysis_locs.ipynb
 
-.. code-block:: python
+#.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+    
+    .. code-block:: shell
+    
+         visualise [ARGS]
 
-    initialise
+#. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
 
-2. Navigate to the project directory
-
-3. Amend all config files
-
-4. Preprocess the data
-
-.. code-block:: shell
-
-    bash scripts/preprocess.sh
-
-5. Annotate the data (Optional)
-
-.. code-block:: shell
-
-    bash scripts/annotate.sh
-
-6. Extract features
-
-.. code-block:: shell
-
-    bash scripts/featextract.sh
-
-7. Generate k-fold splits
-
-.. code-block:: shell
-
-    bash scripts/generate_k_fold_splits.sh
-
-8. Run k-fold training (runs process + train + evaluate)
-
-.. code-block:: shell
-
-    bash scripts/k_fold.sh
-
-9. Analyse manual and neural network features
-
-.. code-block:: shell
-
-    scripts/analysis.ipynb
-
-10. Analyse locs
-
-.. code-block:: shell
-
-    scripts/analysis_locs.ipynb
-
-11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
-
-.. code-block:: shell
-
-    visualise [ARGS] 
-
-12. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
-
-.. code-block:: shell
-
-     evaluate_ensemble [ARGS]
+    .. code-block:: shell
+    
+         evaluate_ensemble [ARGS]
 
 Longer description
 ==================
 
-If not running on Linux or want to run an alternative workflow we can run any of the scripts detailed below.
-
-Each script has a configuration file, recommended practice is to keep all configuration files for the project
-in a folder inside the project directory (but this is not strictly necessary!) 
-
-::
-    
-    Project directory
-    ├── config
-    │   ├── evaluate.yaml
-    │   └── ...
-    └── ...
-
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
+* If not running on Linux or want to run an alternative workflow we can run the scripts detailed below.
+* Each script has a configuration file, recommended practice is to keep all configuration files for the project in a folder inside the project directory (but this is not strictly necessary!) 
+    ::
+        
+        Project directory
+        ├── config
+        │   ├── evaluate.yaml
+        │   └── ...
+        └── ...
+* Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
 
 Initialise
 ----------
@@ -253,15 +218,11 @@ Initialise
 
     initialise
 
-*Arguments*
-
-    - -d (Optional) Path to the input data folder
-
-If specify data folder then runs in headless mode otherwise will get data using a window
-
-Initialise a project directory, linked to the dataset you want to analyse.
-Project directory contains the configuration files, scripts and metadata required.
-
+* Initialises a project directory, linked to the dataset you want to analyse. 
+* Arguments
+    * -d (Optional) Path to the input data folder
+* If specify data folder then runs in headless mode otherwise will get data using a window
+* Project directory contains the configuration files, scripts and metadata required.
 ::
     
     Project directory
@@ -638,7 +599,6 @@ Note we now include ability to generate homogeneous graph (used by SubgraphX) af
 (N.B. This is different from running the graph through the whole model multiple times and calculating the 
 average probability (evaluation procedure), therefore there may be a performance difference)
 
-
 Visualise
 ---------
 
@@ -792,38 +752,28 @@ Evaluate on the test set
 
     visualise [ARGS] 
 
-
 Mixed precision training
 ========================
 
-https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
-
-See above link for more information.
-The key takeaway is that GPUs with tensor cores can do FP16 matrix multiplications
+* https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
+* See above link for more information. The key takeaway is that GPUs with tensor cores can do FP16 matrix multiplications
 in very optimised fashion.
-
-Pytorch standard precision is FP32, therefore converting to FP16 can speed up
+* Pytorch standard precision is FP32, therefore converting to FP16 can speed up
 the training significantly.
-
-However, as FP16 has a higher rounding error, small gradients can 'underflow'
+* However, as FP16 has a higher rounding error, small gradients can 'underflow'
 to zero, where underflow means that small values become zero, which leads to
 these gradients vanishing.
-
-If we scale the gradients up, then work with them in FP16 before scaling them
+* If we scale the gradients up, then work with them in FP16 before scaling them
 back down during backpropagation we can work in FP16 while avoiding underflow.
-
-It is called mixed precision, as we maintain two copies of a weight matrix
+* It is called mixed precision, as we maintain two copies of a weight matrix
 in FP32 and FP16.
-The gradient updates are calculated using FP16 but they are applied to the
+* The gradient updates are calculated using FP16 but they are applied to the
 FP32 matrix, thereby making the updates safer.
-
-Some operations are safe in FP16 while some are only safe in FP32, therefore
+* Some operations are safe in FP16 while some are only safe in FP32, therefore
 we work with mixed precision where pytorch automatically casts the tensors
 to the safest/fastest precision.
-
-There is memory saved from using FP16 but the speed up comes from the tensor
+* There is memory saved from using FP16 but the speed up comes from the tensor
 cores which provide faster computation for FP16 matrices.
-
 
 Features of ONI data
 ====================
