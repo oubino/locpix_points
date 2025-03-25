@@ -44,7 +44,6 @@ Install this repository
 
     git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
-    git checkout working [REMOVE IF HAVE MERGED BRANCHES]
     pip install -e .
     cd ..
 
@@ -122,6 +121,7 @@ Publication results
 ===================
 
 * NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
+* **Need to switch to the paper branch for locpix-points for the below to work!**
 
 Visualise results of ClusterNet-HCF [~5 mins]
 ---------------------------------------------
@@ -140,6 +140,7 @@ Reproducing results [~1-2 hours]
 
 * To reproduce results for ClusterNet-HCF and ClusterNet-LCF from the publication, do the following.
     #. Install and actiate environment 1 following instructions above
+    #. Switch to paper branch for locpix-points i.e. git checkout paper
     #. Download x2 .tar folder from https://doi.org/10.5281/zenodo.14246303 
     #. Extract the .tar folder [upload.tar.gz -> task_6_final_test = ClusterNet-HCF, locclusternet.tar.gz -> task_2_final_test = ClusterNet-LCF]
     #. In both folders, scripts/analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
@@ -148,7 +149,7 @@ Reproducing results [~1-2 hours]
         #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
         #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
 
-* [Alternatively] If you would like to re-run training or evaluation (this requires being signed into wandb, create account and follow instructions at https://docs.wandb.ai/quickstart/), you can run the below (modify scripts/evaluate.py to include the correct model after training). You can then use analysis.ipynb notebook (modify to load in the correct model) to re-run the results of feature and structure analysis
+* [Additionally] If you would like to re-run training or evaluation (this requires being signed into wandb, create account and follow instructions at https://docs.wandb.ai/quickstart/), you can run the below (modify scripts/evaluate.py to include the correct model after training). You can then use analysis.ipynb notebook (modify to load in the correct model) to re-run the results of feature and structure analysis
     .. code-block:: shell
         
         bash scripts/train.sh
@@ -159,6 +160,7 @@ Reproducing results [~1-2 hours]
 Reproducing results from scratch [needs testing] [~1-2 days]
 ------------------------------------------------------------
 #. Install any pre-requisites and environments 1 and 2 from above
+#. Switch to paper branch for locpix-points i.e. git checkout paper
 #. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
 
 Quickstart (Linux)
