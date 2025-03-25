@@ -1,44 +1,44 @@
 Overview
 ========
 
-This repository allows for analysis of SMLM data using graph neural networks.
-
-Data can be .csv or .parquet files
+This repository allows for classification of SMLM data (.csv or .parquet files) using graph neural networks and analysis of the features and structures that led to the classification.
 
 This repository then does the following:
     - Initialise a project directory
-    - Preprocess
+    - Preprocess the data
     - Annotate each fov or localisation (optional)
-    - Feature extraction for each cluster
+    - Extract features for each cluster
     - Process for Pytorch geometric
-    - Train
-    - Evaluate
-    - Allow visualisation
+    - Train a classification model
+    - Evaluate the classification model
+    - Visualise the raw data and graphs
+    - Analysis of manual features, neural network output, explainability etc. via jupyter notebooks
 
-Installation
-============
+Installation [~30 mins - 1 hour]
+================================
 
 Requirements
 ------------
 
-Requires Cuda 12.1 or above!
-
-For wsl for windows - follow
-
-Install cuda 12.2 on WSL https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
-
-To do: release this repository as a package on PyPI
+* Tested on Windows computer using windows subsytem for linux (WSL) 2 with a NVIDIA GPU
+* Requires a CUDA-capable GPU
+* Require Cuda 12.1+
+    * For WSL for windows, follow: https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
+* Require `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended] or anaconda/miniconda/mamba
+    * For all commands below replace micromamba with conda etc. depending on which you have installed
+* Requires environments 1 and 2 below
 
 Environment 1 (locpix-points)
 -----------------------------
 
-Create new environment
+Create and activate new environment
 
 .. code-block:: python
 
     micromamba create -n locpix-points -c conda-forge python=3.11
+    micromamba activate locpix-points
 
-Then install this repository
+Install this repository
 
 .. code-block:: python
 
@@ -47,43 +47,30 @@ Then install this repository
     pip install -e .
     cd ..
 
-Before installing the remaining requirements, making sure you have activated the environment first
-
-We need to install our version of pytorch geometric which we do by
+Install our version of pytorch geometric
 
 .. code-block:: python
 
     git clone https://github.com/oubino/pytorch_geometric.git
     cd pytorch_geometric
     pip install -e .
+    git checkout hetero_transforms
     cd ..
 
-Install other requirements
+Install other requirements [note may have to change the wheels to install based on which cuda you have i.e. cu121 = cuda 12.1]
 
 .. code-block:: python
 
-    cd locpix_points
-    pip install -r requirements.txt
-    cd ..
+    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
-Also need to install DIG
-
-To do this clone the repository to your desired location
-
-However, we also need a custom version of this repo fixing some bugs therefore we use our fork
+Install DIG
 
 .. code-block:: python 
 
     git clone https://github.com/oubino/DIG
-
-Then navigate to the directory and install using 
-
-.. code-block:: python 
-
     cd DIG
     pip install -e .
     cd ..
-
 
 Environment 2 (feat_extract)
 ----------------------------
@@ -92,7 +79,7 @@ Install external packages
 
 .. code-block:: python 
 
-    micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.0
+    micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.2
     micromamba activate feat_extract
     pip install dask dask-ml polars pytest
 
@@ -112,9 +99,7 @@ Then install this repository, its additional requirements and pytorch geometric 
 
 .. code-block:: python
 
-    cd locpix_points
-    pip install -r requirements.txt
-    cd ..
+    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
 Problems
 --------
@@ -123,93 +108,203 @@ You may have difficulty installing the following: open3d, torch-scatter, torch-s
 
 To navigate this we can 
 
-1. Remove open3d, torch-scatter, torch-sparse and torch-cluster from requirements.txt
-2. For the moment no fix for open3d
-3. For torch-scatter, torch-sparse and torch-cluster - where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page
-    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
-    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
-    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.3.0+cu121.html
+1. Do not install open3d
+2. For torch-scatter, torch-sparse and torch-cluster run the following (where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page)
+
+.. code-block:: python
+
+    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+
+Demo (ON REDUCED DATASET) (~1-2 hours with a GPU)
+=================================================
+
+This includes 50 items from each class from the digits and letters dataset in the folder data/ which will be used to demo the pipeline.
+
+#. Install pre-requisities and environments as above
+
+#. Navigate to demo folder
+
+#. Initialise
+
+    ```shell
+    micromamba activate locpix-points
+    initialise
+    ```
+    - User name = oliver-umney
+    - Project name = output
+    - Project saved = .
+    - Dataset location = demo/data
+    - Dataset name = demo
+    - Copy preprocessed = no
+    - .csv files = no
+    - Already labelled = yes
+
+    This will generate a folder called output/ where we will be analysing the data.
+
+#. Replace output/config files with files in demo/config
+
+#. Preprocess
+
+    ```shell
+    cd demo/output
+    bash scripts/preprocess.sh
+    ```
+    This preprocesses the data into a folder preprocessed/
+
+#. Feature extraction
+
+    ```shell
+    bash scripts/featextract.sh
+    ```
+    
+    This extracts features from the data into a folder preprocessed/featextract
+
+#. Generate k-fold splits
+
+    ```shell
+    bash scripts/generate_k_fold_splits.sh
+    ```
+
+    This generates a file k_fold.yaml in config/ containing the splits
+
+#. K-fold [note add in -w flag to scripts/k_fold.py in main_k if don't want to run with wandb]
+
+    ```shell
+    bash scripts/k_fold.sh
+    ```
+
+    This performs k-fold training, generating models in models/ folder
+
+#. Then can analyse features using
+    
+    * Modify model_name in featanalyse_nn.yaml.
+
+    ```shell
+    jupyter-notebook
+
+    * Run analysis notebook: scripts/analysis.ipynb
+    * Do not run any "patient" cells
+
+#.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+    
+    .. code-block:: shell
+    
+         visualise [ARGS]
+
+    * Generates a window visualising the file
+
+
+Publication results
+===================
+
+* NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
+* **Need to switch to the paper branch for locpix-points for the below to work!**
+
+Visualise results of ClusterNet-HCF [~5 mins]
+---------------------------------------------
+
+* For ClusterNet-HCF we can visualise the results of this notebook after it has been run already
+    #. Download paper/analysis.html
+    #. Open this file in a suitable browser
+    #. This visualises
+        #. Figures 2A-C and Supplementary Figure 6 interactively
+        #. The remaining figures statically
+
+Reproducing results [~1-2 hours]
+--------------------------------
+
+* For reproduction of publication results, the provided data is already partially processed so only the final commands need to be run
+
+* To reproduce results for ClusterNet-HCF and ClusterNet-LCF from the publication, do the following.
+    #. Install and actiate environment 1 following instructions above
+    #. Switch to paper branch for locpix-points i.e. git checkout paper
+    #. Download x2 .tar folder from https://doi.org/10.5281/zenodo.14246303 
+    #. Extract the .tar folder [upload.tar.gz -> task_6_final_test = ClusterNet-HCF, locclusternet.tar.gz -> task_2_final_test = ClusterNet-LCF]
+    #. In both folders, scripts/analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
+        #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
+        #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
+        #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
+        #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
+
+* [Additionally] If you would like to re-run training or evaluation (this requires being signed into wandb, create account and follow instructions at https://docs.wandb.ai/quickstart/), you can run the below (modify scripts/evaluate.py to include the correct model after training). You can then use analysis.ipynb notebook (modify to load in the correct model) to re-run the results of feature and structure analysis
+    .. code-block:: shell
+        
+        bash scripts/train.sh
+    .. code-block:: shell
+    
+        bash scripts/evaluate.sh
+
+Reproducing results from scratch [needs testing] [~1-2 days]
+------------------------------------------------------------
+#. Install any pre-requisites and environments 1 and 2 from above
+#. Switch to paper branch for locpix-points i.e. git checkout paper
+#. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
 
 Quickstart (Linux)
 ==================
 
-1. Initialise a project directory 
+#. Initialise a project directory 
+    .. code-block:: python
+    
+        initialise
+#. Navigate to the project directory
+#. Amend all config files
+#. Preprocess the data
+    .. code-block:: shell
+    
+        bash scripts/preprocess.sh
+#. Annotate the data (Optional)
+    .. code-block:: shell
+    
+        bash scripts/annotate.sh
+#. Extract features
+    .. code-block:: shell
+    
+        bash scripts/featextract.sh
+#. Generate k-fold splits
+    .. code-block:: shell
+    
+        bash scripts/generate_k_fold_splits.sh
+#. Run k-fold training (runs process + train + evaluate)
+    .. code-block:: shell
+    
+        bash scripts/k_fold.sh
+#. Analyse manual and neural network features
+    .. code-block:: shell
+    
+        scripts/analysis.ipynb
+#. Analyse locs
+    .. code-block:: shell
+    
+        scripts/analysis_locs.ipynb
 
-.. code-block:: python
+#.  Visualise a FOV [note see Longer Description for helping set the ARGS]
+    
+    .. code-block:: shell
+    
+         visualise [ARGS]
 
-    initialise
+#. Ensemble evaluate - evaluate the model running multiple times and taking an average, also allows for considering only WT cells (This is custom to our analysis) - see Longer Description for helping to set the ARGS
 
-2. Navigate to the project directory
-
-3. Amend all config files
-
-4. Preprocess the data
-
-.. code-block:: shell
-
-    bash scripts/preprocess.sh
-
-5. Annotate the data (Optional)
-
-.. code-block:: shell
-
-    bash scripts/annotate.sh
-
-6. Extract features
-
-.. code-block:: shell
-
-    bash scripts/featextract.sh
-
-7. Generate k-fold splits
-
-.. code-block:: shell
-
-    bash scripts/generate_k_fold_splits.sh
-
-8. Run k-fold training (runs process + train + evaluate)
-
-.. code-block:: shell
-
-    bash scripts/k_fold.sh
-
-9. Analyse manual features
-
-.. code-block:: shell
-
-    bash scripts/featanalyse_manual.sh
-
-10. Analyse neural network features for one fold
-
-Adjust config file to choose fold
-
-.. code-block:: shell
-
-    bash scripts/featanalyse_nn.sh
-
-11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
-
-.. code-block:: shell
-
-    visualise [ARGS] 
+    .. code-block:: shell
+    
+         evaluate_ensemble [ARGS]
 
 Longer description
 ==================
 
-If not running on Linux or want to run an alternative workflow we can run any of the scripts detailed below.
-
-Each script has a configuration file, recommended practice is to keep all configuration files for the project
-in a folder inside the project directory (but this is not strictly necessary!) 
-
-::
-    
-    Project directory
-    ├── config
-    │   ├── evaluate.yaml
-    │   └── ...
-    └── ...
-
-Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
+* If not running on Linux or want to run an alternative workflow we can run the scripts detailed below.
+* Each script has a configuration file, recommended practice is to keep all configuration files for the project in a folder inside the project directory (but this is not strictly necessary!) 
+    ::
+        
+        Project directory
+        ├── config
+        │   ├── evaluate.yaml
+        │   └── ...
+        └── ...
+* Each script should be run with Environment 1 apart from Featextract which must be run with Environment 2 
 
 Initialise
 ----------
@@ -218,15 +313,11 @@ Initialise
 
     initialise
 
-*Arguments*
-
-    - -d (Optional) Path to the input data folder
-
-If specify data folder then runs in headless mode otherwise will get data using a window
-
-Initialise a project directory, linked to the dataset you want to analyse.
-Project directory contains the configuration files, scripts and metadata required.
-
+* Initialises a project directory, linked to the dataset you want to analyse. 
+* Arguments
+    * -d (Optional) Path to the input data folder
+* If specify data folder then runs in headless mode otherwise will get data using a window
+* Project directory contains the configuration files, scripts and metadata required.
 ::
     
     Project directory
@@ -397,6 +488,22 @@ This has two types of nodes: localisations and clusters.
 
 The features for the localisations and clusters are loaded into these nodes.
 
+The positions of the nodes come from the xy coordinates of the localisations.
+
+The nodes can be normalised either:
+
+    per_item:
+        These are normalised to between -1 and +1 for each dataitem, independently of other dataitems.
+        i.e. if Item A has x_range 1000nm and Item B has x_range 2000nm, both are scaled to -1 and +1 
+        independently of each other, without taking into consideration the FOV width either.
+
+    per_dataset:
+        Calculates the maximum x/y range for the cells i.e. which is the largest cell.
+        This defines the normalisation for all other cells 
+        e.g. Cell C has x_width = 1000nm 
+             1000nm -> -1 to +1 i.e. 1000nm = 2 units
+             All cells defined by this.
+
 Then edges are added between
 
     - Localisations to localisations within the same cluster
@@ -523,6 +630,7 @@ k-fold
 
     - -i Path to the project folder
     - -c Path to folder with configuration .yaml file
+    - -f Fold to start from (Optional)
 
 *Description*
 
@@ -552,32 +660,39 @@ The final models are saved in
 
     - project_folder/models/fold_{index}/
 
-Featanalyse
------------
+
+Ensemble evaluate [custom to our analysis]
+------------------------------------------
 
 .. code-block:: python
 
-    featanalyse
+    evaluate_ensemble
 
 *Arguments*
 
-    - -i Path to the project folder
-    - -c Path to configuration .yaml file
-    - -n (Optional) If given then feat analysis uses the features derived by the neural net & any manual features present as well
-    - -a (Optional) If present we use only model present in model folder, as otherwise we have to specify the model name but we won't know what it is
+- -i Path to the project folder
+- -m Location of the file map for mapping files to their mutation status/outcomes
+- -w (Optional) If given then only run on the WT files
+- -n (Optional) Name of the model in each fold - if not given then assumes only one model present in each fold folder
+- -r (Optional) Number of times to run each dataitem through the model, default = 25
+- -f (Optional) Whether running for final test 
 
 *Description*
 
-Analyse the features for the clusters, both the manual features and the ones calculated by the neural network.
-This includes
-  - Box plots of the features 
-  - Graph explainability for the neural network features
-  - UMAP
-  - Classification of the fields of view using scikit-learn
-    - Logisitic regression
-    - Decision trees 
-    - SVM 
-    - KNN  
+Evaluate the model on the train/val/test sets for each fold OR alternatively for train/test if final test.
+Note runs each graph through the model multiple times (default=25) and takes average 
+Further, there is the option to only evaluate on the WT samples.
+
+Analysis notebooks
+------------------
+
+analysis.ipynb and analysis_locs.ipynb allow analysis of manual features, neural network features and explainability of the algorithms.
+
+Note we now include ability to generate the features after multiple runs through the model.
+
+Note we now include ability to generate homogeneous graph (used by SubgraphX) after multiple runs through the model
+(N.B. This is different from running the graph through the whole model multiple times and calculating the 
+average probability (evaluation procedure), therefore there may be a performance difference)
 
 Visualise
 ---------
@@ -599,6 +714,7 @@ Visualise
 Can load in .pt pytorch geometric file and visualise the nodes and edges [RECOMMENDED]
 
 OR load in .parquet file and visualise just the points.
+
 
 Clean up
 --------
@@ -640,7 +756,8 @@ This is different to initialise as we now ASSUME that your input data is located
 
 *Description*
 
-If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files
+If copy files from another folder will put these in a folder "preprocessed/train" i.e. assumes copying train files.
+Note can't copy files from another final_test folder for example
     
 *Warning*
 
@@ -716,28 +833,13 @@ Trains of all the training data
 *Notes*
 Evaluate on the test set
 
-10. Analyse manual features
+10. Analyse manual, NN features and locs
 
 .. code-block:: shell
 
-    bash scripts/featanalyse_manual.sh
+    scripts/analysis.ipynb
+    scripts/analysis_locs.ipynb
 
-*Notes*
-Analyse the manual features just for the TEST set
-No sklearn prediction models as this requires further changes
-
-10. Analyse neural network features for one fold
-
-Adjust config file to choose fold
-
-.. code-block:: shell
-
-    bash scripts/featanalyse_nn.sh
-
-*Notes*
-For XAI algos that need training will train of train dataset but all evaluation and 
-results are on the test set
-No sklearn prediction models as this requires further changes
 
 11.  Visualise a FOV [note see Longer Description for helping set the ARGS]
 
@@ -745,76 +847,28 @@ No sklearn prediction models as this requires further changes
 
     visualise [ARGS] 
 
-Generate figures using OriginPro
-================================
-
-1. File > New > Project
-2. File > Open > [Change file type to ASCII data] > [Open cluster_features.csv located in output folder in project_directory]
-3. File > Open > [Change file type to ASCII data] > [Open fov_features.csv located in output folder in project_directory]
-4. File > Save > Research Project/results/piccolo_tma/FOLDER/manual_features
-5. Move cluster_features.csv and fov_features.csv into top of directory
-6. Create two sub folders from top directory called clusters and fov i.e. manual_features/clusters AND manual_features/fov
-7. Create two sub folders within clusters called no_outliers and outliers
-
-For cluster_features.csv and fov_features.csv 
-1. Highlight each column (in case of fov_features only mean columns) > Plot Grouped Box Charts - Indexed > Click play button in Group Column(s) - Click type > Click OK
-2. Double click on vertical axis label and set Tick Labels > Display to Scientific:10^3 
-3. Click Scale and change Type to log10 if necessary
-4. Close dialogue box 
-5. Right click vertical axis and click Rescale to Show All
-6. Change y_axis label to the name of the feature if necessary plotted and add /[UNITS] i.e. Length/m
-7. If changed scale to log_10 add this to the y_axis label in brackets (Ticks placed on log10 scale) - in size 12 font
-8. Change name of graph to the name of the features being plotted
-9. Move graph to outliers
-10. Then right click graph file and click duplicate 
-11. Move this to no_outliers and remove [- Copy]
-12. Double click an outlier and click Box tab 
-13. Then unclick outliers
-14. Right click vertical axis and click Rescale to Show All
-15. Double click y-axis label and change scale to Linear if necessary and change y-axis label accordingly
-
-Cluster type count
-1. Open cluster_type_count.csv
-
-FOV cluster count
-1. Open fov_cluster_count.csv
-2. Plot Grouped Box Charts - Indexed by type to get number of clusters per fov (y-axis) against type (x-axis)
-
-Model architectures
-===================
-
-
 Mixed precision training
 ========================
 
-https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
-
-See above link for more information.
-The key takeaway is that GPUs with tensor cores can do FP16 matrix multiplications
+* https://spell.ml/blog/mixed-precision-training-with-pytorch-Xuk7YBEAACAASJam
+* See above link for more information. The key takeaway is that GPUs with tensor cores can do FP16 matrix multiplications
 in very optimised fashion.
-
-Pytorch standard precision is FP32, therefore converting to FP16 can speed up
+* Pytorch standard precision is FP32, therefore converting to FP16 can speed up
 the training significantly.
-
-However, as FP16 has a higher rounding error, small gradients can 'underflow'
+* However, as FP16 has a higher rounding error, small gradients can 'underflow'
 to zero, where underflow means that small values become zero, which leads to
 these gradients vanishing.
-
-If we scale the gradients up, then work with them in FP16 before scaling them
+* If we scale the gradients up, then work with them in FP16 before scaling them
 back down during backpropagation we can work in FP16 while avoiding underflow.
-
-It is called mixed precision, as we maintain two copies of a weight matrix
+* It is called mixed precision, as we maintain two copies of a weight matrix
 in FP32 and FP16.
-The gradient updates are calculated using FP16 but they are applied to the
+* The gradient updates are calculated using FP16 but they are applied to the
 FP32 matrix, thereby making the updates safer.
-
-Some operations are safe in FP16 while some are only safe in FP32, therefore
+* Some operations are safe in FP16 while some are only safe in FP32, therefore
 we work with mixed precision where pytorch automatically casts the tensors
 to the safest/fastest precision.
-
-There is memory saved from using FP16 but the speed up comes from the tensor
+* There is memory saved from using FP16 but the speed up comes from the tensor
 cores which provide faster computation for FP16 matrices.
-
 
 Features of ONI data
 ====================

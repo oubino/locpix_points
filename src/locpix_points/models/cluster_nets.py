@@ -13,14 +13,14 @@ https://colab.research.google.com/drive/1D45E5bUK3gQ40YpZo65ozs7hg5l-eo_U?usp=sh
 import torch
 from torch.nn import Linear
 from torch_geometric.nn import MLP, HeteroConv, conv, knn_graph
-from torch_geometric.nn.aggr import MaxAggregation
+from torch_geometric.nn.aggr import MaxAggregation, AttentionalAggregation
 from torch_geometric.nn.pool import (
     global_mean_pool,
     global_max_pool,
     max_pool_x,
     avg_pool_x,
 )
-from torch_geometric.utils import contains_self_loops
+from torch_geometric.utils import contains_self_loops, to_undirected
 import torch_scatter
 from .point_transformer import PointTransformerEmbedding
 from .point_net import PointNetEmbedding
@@ -121,7 +121,7 @@ class ClusterEncoder(torch.nn.Module):
                         add_self_loops=False,
                     )
                 },
-                aggr="max",
+                aggr="max",  # CHANGE
             )
         else:
             raise ValueError(f"{conv_type} not supported")
@@ -162,6 +162,9 @@ class ClusterNet(torch.nn.Module):
         cluster_encoder_3 (torch.nn.module): Fourth encoder for the clusters
         linear (torch.nn.module): Linear layer that operates on cluster embeddings
             and returns a classification
+        attention_readout (bool): Whether to use attention_readout
+        attention_readout_node_level (bool): If true then node level gating else feature level
+
     """
 
     def __init__(
@@ -171,6 +174,8 @@ class ClusterNet(torch.nn.Module):
         cluster_encoder_2,
         cluster_encoder_3,
         linear,
+        attention_readout=False,
+        attention_readout_node_level=True,
     ):
         super().__init__()
         self.cluster_encoder_0 = cluster_encoder_0
@@ -179,62 +184,156 @@ class ClusterNet(torch.nn.Module):
         self.cluster_encoder_3 = cluster_encoder_3
         self.linear = linear
 
+        self.attention_readout = attention_readout
+
+        if self.attention_readout:
+            chans = self.linear.in_features
+            attention_readout_nn = Linear(chans, chans)
+            if attention_readout_node_level:
+                attention_readout_gate = Linear(chans, 1)
+            else:
+                attention_readout_gate = attention_readout_nn
+
+            self.attention_readout_fn = AttentionalAggregation(
+                attention_readout_gate, attention_readout_nn
+            )
+
+        HIDDEN = 32
+        DIM = 2
+        OUTA = 48
+        INA = 40
+        INB = OUTA
+        OUTB = 56
+        INC = OUTB
+        OUTC = 64
+        IND = OUTC
+        OUTD = 72
+        INE = OUTD
+        OUTE = 80
+        INF = OUTE
+        OUTF = 88
+        HIDDEN_MLP = 128
+        DROPOUT_supercluster = 0.2
+
+        # comment out MLPs for backwards compatability with old models
+        # self.sc_mlp_0 = MLP(
+        #    [INA, HIDDEN_MLP, INA],
+        #    norm=None,
+        #    act="relu",
+        #    dropout=DROPOUT_supercluster,
+        # )
+
         # dim, pos, out
-        pos_nn_0_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_0_0 = MLP(
+            [DIM, HIDDEN, OUTA],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         # out, attn, out
         attn_nn_0_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTA, HIDDEN, OUTA],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
+            INA, OUTA, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_1_0 = MLP(
+            [DIM, HIDDEN, OUTB],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_1_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTB, HIDDEN, OUTB],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_1_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
+            INB, OUTB, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_0 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_2_0 = MLP(
+            [DIM, HIDDEN, OUTC],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_2_0 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTC, HIDDEN, OUTC],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
-            64, 64, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
+            INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
         )
 
+        # self.sc_mlp_1 = MLP(
+        #    [IND, HIDDEN_MLP, IND],
+        #    norm=None,
+        #    act="relu",
+        #    dropout=DROPOUT_supercluster,
+        # )
+
         # dim, pos, out
-        pos_nn_0_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_0_1 = MLP(
+            [DIM, HIDDEN, OUTD],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         # out, attn, out
         attn_nn_0_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTD, HIDDEN, OUTD],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         # in, out
         self.cluster_encoder_0_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
+            IND, OUTD, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_1_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_1_1 = MLP(
+            [DIM, HIDDEN, OUTE],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_1_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTE, HIDDEN, OUTE],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_1_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
+            INE, OUTE, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
         )
 
-        pos_nn_2_1 = MLP([2, 64, 64], plain_last=False, dropout=0.25, act="relu")  # BN
+        pos_nn_2_1 = MLP(
+            [DIM, HIDDEN, OUTF],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
+        )  # BN
         attn_nn_2_1 = MLP(
-            [64, 64, 64], plain_last=False, dropout=0.25, act="relu"
+            [OUTF, HIDDEN, OUTF],
+            plain_last=False,
+            dropout=DROPOUT_supercluster,
+            act="relu",
         )  # BN
         self.cluster_encoder_2_1_new = conv.PointTransformerConv(
-            64, 64, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
+            INF, OUTF, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
         )
 
         warnings.warn("Change back to number of classes")
-        self.linear_new = Linear(64, 2)
+        self.linear_new = Linear(OUTF, 2)
 
     def forward(
         self,
@@ -264,6 +363,9 @@ class ClusterNet(torch.nn.Module):
         Returns:
             self.linear(x_dict['clusters']): Log-probability for the classes
                 for that FOV
+
+        Raises:
+            NotImplementedError: If try and do attention readout with superclusters
         """
         x_dict["clusters"] = self.cluster_encoder_0(
             x_dict, pos_dict, edge_index_dict, add_cluster_pos=add_cluster_pos
@@ -279,10 +381,24 @@ class ClusterNet(torch.nn.Module):
         )
 
         if supercluster_ID_0 is not None and supercluster_ID_1 is not None:
+            if self.attention_readout:
+                raise NotImplementedError(
+                    "Not implemented attention readout for SC yet"
+                )
+
             # --- SC0 ---
             cluster = gen_cluster(supercluster_ID_0, batch)
-            x_superclusters_0, batch = max_pool_x(cluster, x_dict["clusters"], batch)
-            edge_index = knn_graph(pos_dict["superclusters_0"], k=3, batch=batch)
+            x_superclusters_0, batch = avg_pool_x(cluster, x_dict["clusters"], batch)
+
+            x_superclusters_0 = self.sc_mlp_0(x_superclusters_0)
+
+            x_superclusters_0 = x_superclusters_0.sigmoid()
+
+            edge_index = knn_graph(
+                pos_dict["superclusters_0"], k=5 + 1, batch=batch, loop=True
+            )
+
+            edge_index = to_undirected(edge_index)
 
             # clusterencoders
             x = self.cluster_encoder_0_0_new(
@@ -293,8 +409,17 @@ class ClusterNet(torch.nn.Module):
 
             # ---- SC1 -----
             cluster = gen_cluster(supercluster_ID_1, batch)
-            x_superclusters_1, batch = max_pool_x(cluster, x, batch)
-            edge_index = knn_graph(pos_dict["superclusters_1"], k=3, batch=batch)
+            x_superclusters_1, batch = avg_pool_x(cluster, x, batch)
+
+            x_superclusters_1 = self.sc_mlp_1(x_superclusters_1)
+
+            x_superclusters_1 = x_superclusters_1.sigmoid()
+
+            edge_index = knn_graph(
+                pos_dict["superclusters_1"], k=5 + 1, batch=batch, loop=True
+            )
+
+            edge_index = to_undirected(edge_index)
 
             # clusterencoders
             x = self.cluster_encoder_0_1_new(
@@ -310,10 +435,217 @@ class ClusterNet(torch.nn.Module):
 
         else:
             # pooling step so end up with one feature vector per fov
-            x_dict["clusters"] = global_max_pool(x_dict["clusters"], batch)
+            if self.attention_readout:
+                x_dict["clusters"] = self.attention_readout_fn(
+                    x_dict["clusters"], index=batch
+                )
+
+            else:
+                x_dict["clusters"] = global_max_pool(
+                    x_dict["clusters"], batch
+                )  # CHANGE
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
+
+
+class ClusterNetHomogeneous(torch.nn.Module):
+    """ClusterNetwork for a homogeneous graph instantiated from a heterogeneous graph
+    This is used for SubgraphX which expects unnormalized class score therefore last layer
+    is unnormalised class score
+
+    Attributes:
+        cluster_net_hetero (torch.nn.Module): The heterogeneous ClusterNetwork from which
+            we will instantiate a homogeneous one
+        config (dict): Configuration for the Network"""
+
+    def __init__(self, cluster_net_hetero, config):
+        super().__init__()
+        warnings.warn("This assumes a very particular model set up!")
+        self.name = "ClusterNetHomogeneous"
+
+        # first
+        self.cluster_encoder_0 = conv.PointTransformerConv(
+            config["pt_tr_in_channels"][0],
+            config["pt_tr_out_channels"][0],
+            MLP(  # BN
+                [
+                    config["pt_tr_dim"],
+                    config["pt_tr_pos_nn_layers"],
+                    config["pt_tr_out_channels"][0],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            MLP(  # BN
+                [
+                    config["pt_tr_out_channels"][0],
+                    config["pt_tr_attn_nn_layers"],
+                    config["pt_tr_out_channels"][0],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            add_self_loops=False,
+        )
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_0.state_dict().items()
+        }
+        self.cluster_encoder_0.load_state_dict(state_dict_saved)
+        self.cluster_encoder_0.aggr = "max"
+
+        # second
+        self.cluster_encoder_1 = conv.PointTransformerConv(
+            config["pt_tr_in_channels"][1],
+            config["pt_tr_out_channels"][1],
+            MLP(  # BN
+                [
+                    config["pt_tr_dim"],
+                    config["pt_tr_pos_nn_layers"],
+                    config["pt_tr_out_channels"][1],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            MLP(  # BN
+                [
+                    config["pt_tr_out_channels"][1],
+                    config["pt_tr_attn_nn_layers"],
+                    config["pt_tr_out_channels"][1],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            add_self_loops=False,
+        )
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_1.state_dict().items()
+        }
+        self.cluster_encoder_1.load_state_dict(state_dict_saved)
+        self.cluster_encoder_1.aggr = "max"
+
+        # third
+        self.cluster_encoder_2 = conv.PointTransformerConv(
+            config["pt_tr_in_channels"][2],
+            config["pt_tr_out_channels"][2],
+            MLP(  # BN
+                [
+                    config["pt_tr_dim"],
+                    config["pt_tr_pos_nn_layers"],
+                    config["pt_tr_out_channels"][2],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            MLP(  # BN
+                [
+                    config["pt_tr_out_channels"][2],
+                    config["pt_tr_attn_nn_layers"],
+                    config["pt_tr_out_channels"][2],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            add_self_loops=False,
+        )
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_2.state_dict().items()
+        }
+        self.cluster_encoder_2.load_state_dict(state_dict_saved)
+        self.cluster_encoder_2.aggr = "max"
+
+        # fourth
+        self.cluster_encoder_3 = conv.PointTransformerConv(
+            config["pt_tr_in_channels"][3],
+            config["pt_tr_out_channels"][3],
+            MLP(  # BN
+                [
+                    config["pt_tr_dim"],
+                    config["pt_tr_pos_nn_layers"],
+                    config["pt_tr_out_channels"][3],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            MLP(  # BN
+                [
+                    config["pt_tr_out_channels"][3],
+                    config["pt_tr_attn_nn_layers"],
+                    config["pt_tr_out_channels"][3],
+                ],
+                plain_last=False,
+                dropout=config["dropout"],
+                act="relu",
+            ),
+            add_self_loops=False,
+        )
+        state_dict_saved = {
+            key[40:]: value
+            for key, value in cluster_net_hetero.cluster_encoder_3.state_dict().items()
+        }
+        self.cluster_encoder_3.load_state_dict(state_dict_saved)
+        self.cluster_encoder_3.aggr = "max"
+
+        # linear
+        self.linear = Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"])
+        state_dict_saved = cluster_net_hetero.linear.state_dict()
+        self.linear.load_state_dict(state_dict_saved)
+
+        # attentional aggregation
+        chans = self.linear.in_features
+        attention_readout_nn = Linear(chans, chans)
+        attention_readout_node_level = config["attention_readout_node_level"]
+        if attention_readout_node_level:
+            attention_readout_gate = Linear(chans, 1)
+        else:
+            attention_readout_gate = attention_readout_nn
+
+        self.attention_readout_fn = AttentionalAggregation(
+            attention_readout_gate, attention_readout_nn
+        )
+        state_dict_saved = cluster_net_hetero.attention_readout_fn.state_dict()
+        self.attention_readout_fn.load_state_dict(state_dict_saved)
+
+    def forward(self, x, edge_index, batch, pos, logits=True):
+        """The method called when ClusterNetHomogeneous is used on a dataitem
+
+        Args:
+            x (torch.tensor): cluster features
+            edge_index (torch.tensor): contains the edge connections
+                between the clusters
+            batch (torch.tensor): batch for the clusters
+            pos (torch.tensor): Pposition for the clusters
+            logits (bool): If true output logits, if false output log probs
+
+        Returns:
+            self.linear(x): Log probabilities for the classes for the
+                FOV
+        """
+
+        x = self.cluster_encoder_0(x, pos, edge_index)
+        x = self.cluster_encoder_1(x, pos, edge_index)
+        x = self.cluster_encoder_2(x, pos, edge_index)
+        x = self.cluster_encoder_3(x, pos, edge_index)
+
+        # pooling step so end up with one feature vector per fov
+        x = self.attention_readout_fn(x, index=batch)
+
+        # linear layer on each fov feature vector
+        if logits:
+            return self.linear(x)
+        else:
+            logits = self.linear(x)
+            return logits.log_softmax(dim=-1)
 
 
 def gen_cluster(clusterID, batch):
@@ -372,7 +704,523 @@ def parse_data(data, device):
     return x_dict, pos_dict, edge_index_dict, cluster_feats_present
 
 
-class ClusterNetHomogeneous(torch.nn.Module):
+class ClusterNetHetero(torch.nn.Module):
+    def __init__(self, config):
+        super().__init__()
+        self.name = "cluster_net"
+        self.add_cluster_pos = config["add_cluster_pos"]
+        if config["cluster_conv_type"] == "gin":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][3],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
+                ),
+            )
+        elif config["cluster_conv_type"] == "transformer":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][0],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][1],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][2],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][3],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
+            )
+        elif config["cluster_conv_type"] == "pointnet":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][3],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
+                ),
+            )
+        elif config["cluster_conv_type"] == "pointtransformer":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][0],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][0],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][1],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][1],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][2],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][2],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][3],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][3],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
+            )
+        else:
+            conv_type = config["cluster_conv_type"]
+            raise NotImplementedError(f"{conv_type} is not implemented")
+
+    def forward(self, data):
+        x_dict = data.x_dict
+        edge_index_dict = data.edge_index_dict
+        pos_dict = data.pos_dict
+
+        output = self.cluster_net(
+            x_dict,
+            pos_dict,
+            edge_index_dict,
+            data["clusters"].batch,
+            self.add_cluster_pos,
+        )
+
+        return output.log_softmax(dim=-1)
+
+
+class ClusterMLP(torch.nn.Module):
+    """Simple neural network with series of MLPs
+
+    Attributes:
+        name (str): Name of the model
+        MLP (nn.Module): MLP for the module
+    """
+
+    def __init__(self, config):
+        super().__init__()
+        self.name = "clustermlp"
+        channels = config["channels"]
+        self.MLP_in = MLP(
+            config["channels"][:-1], plain_last=False, dropout=config["dropout"]
+        )
+        self.linear = Linear(config["channels"][-2], config["channels"][-1])
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Raises:
+            KeyError: If clusters don't have features
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        # embed each localisation
+        try:
+            x = data.x_dict["clusters"]
+        except KeyError:
+            raise KeyError("Clusters need to have features present")
+        x = self.MLP_in(x)
+        x = global_max_pool(x, batch=data["clusters"].batch)
+        x = self.linear(x)
+
+        return x.log_softmax(dim=-1)
+
+
+class LocNet(torch.nn.Module):
+    """Neural network that acts on localisations and aggregates into each cluster
+
+    Attributes:
+    """
+
+    def __init__(self, config, transformer=False):
+        super().__init__()
+
+        self.transformer = transformer
+        if not transformer:
+            self.name = "locpointnet"
+            self.pointnet = PointNetEmbedding(config)
+        else:
+            self.name = "locpointtransformer"
+            self.pointtransformer = PointTransformerEmbedding(config)
+
+    def forward(self, x_locs, edge_index_locs, pos_locs):
+        """Method called when data runs through network
+        Note the order of the arguments MUST not be changed as is required in this order
+        for explainability
+
+        Args:
+            x_locs (array): Features of the locs
+            edge_index_locs (array): Edge connections between
+                locs
+            pos_locs (array): Positions of the locs
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        # get clusterID for each localisation
+        clusterID = edge_index_locs[1, :]
+
+        # embed each localisation and aggregate into each cluster
+        if not self.transformer:
+            x_cluster = self.pointnet(
+                x_locs,
+                pos_locs,
+                batch=clusterID,
+            )
+        else:
+            x_cluster = self.pointtransformer(
+                x_locs,
+                pos_locs,
+                batch=clusterID,
+            )
+        return x_cluster
+
+
+class LocNetClassifyFOV(torch.nn.Module):
+    """Network that embeds the localisations and makes a prediction for each cluster
+    then aggregates the predictions over the FOV to classify the FOV
+
+    Args:
+        config (dict): Dictionary containing the configuration for the network
+        device (torch.device): Whether to run on cpu or gpu
+        transformer (bool): If true use PointTransformer to encode localisations"""
+
+    def __init__(self, config, device="cpu", transformer=False):
+        super().__init__()
+        self.name = "locnetclassifyfov"
+        self.loc_net = LocNet(config, transformer=transformer)
+        self.device = device
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the FOV"""
+
+        # parse data
+        x_dict, pos_dict, edge_index_dict, _ = parse_data(data, self.device)
+
+        # get batch ID for each cluster
+        cluster_batch = data["clusters"].batch
+
+        # embed each localisation
+        x_cluster = self.loc_net(
+            x_locs=x_dict["locs"],
+            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+            pos_locs=pos_dict["locs"],
+        )
+
+        # aggregate over the FOV
+        x_fov = global_max_pool(x_cluster, cluster_batch)
+
+        # return log probability
+        return x_fov.log_softmax(dim=-1)
+
+
+class LocClusterNet(torch.nn.Module):
+    """Network that embeds the localisations aggregates this with cluster
+    features if present, then embeds the clusters using a graph network before
+    using a linear layer to make a prediction for the FOV
+
+    Args:
+        config (dict): Dictionary containing the configuration for the network
+        device (torch.device): Whether to run on cpu or gpu
+
+    Raises:
+        NotImplementedError: If incorrect loc convolution specified"""
+
+    def __init__(self, config, device="cpu"):
+        super().__init__()
+        self.name = "locclusternet"
+        self.device = device
+        self.add_cluster_pos = config["add_cluster_pos"]
+        if config["loc_conv_type"] == "pointtransformer":
+            transformer = True
+        elif config["loc_conv_type"] == "pointnet":
+            transformer = False
+        else:
+            raise NotImplementedError(
+                "Loc conv type should be pointnet or pointtransformer"
+            )
+        if "superclusters" in config.keys():
+            self.superclusters = True
+        else:
+            self.superclusters = False
+
+        # wrong input channel size 2 might change if locs have features
+        self.loc_net = LocNet(config, transformer=transformer)
+
+        if config["cluster_conv_type"] == "gin":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="gin",
+                    channel_list=config["ClusterEncoderChannels"][3],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
+                ),
+            )
+        elif config["cluster_conv_type"] == "transformer":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][0],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][1],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][2],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="transformer",
+                    tr_out_channels=config["tr_out_channels"][3],
+                    tr_heads=config["tr_heads"],
+                    tr_concat=config["tr_concat"],
+                    tr_beta=config["tr_beta"],
+                ),
+                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
+            )
+        elif config["cluster_conv_type"] == "pointnet":
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][0],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][1],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][2],
+                ),
+                ClusterEncoder(
+                    dropout=config["dropout"],
+                    conv_type="pointnet",
+                    channel_list=config["ClusterEncoderChannels"][3],
+                ),
+                Linear(
+                    config["ClusterEncoderChannels"][-1][-1][-1],
+                    config["OutputChannels"],
+                ),
+            )
+        elif config["cluster_conv_type"] == "pointtransformer":
+            if "attention_readout" in config.keys():
+                attention_readout = True
+                attention_readout_node_level = config["attention_readout_node_level"]
+            else:
+                attention_readout = False
+                attention_readout_node_level = None
+            self.cluster_net = ClusterNet(
+                ClusterEncoder(
+                    dropout=config["cluster_dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][0],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][0],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["cluster_dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][1],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][1],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["cluster_dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][2],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][2],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                ClusterEncoder(
+                    dropout=config["cluster_dropout"],
+                    conv_type="pointtransformer",
+                    pt_tr_in_channels=config["pt_tr_in_channels"][3],
+                    pt_tr_out_channels=config["pt_tr_out_channels"][3],
+                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
+                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
+                    pt_tr_dim=config["pt_tr_dim"],
+                ),
+                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
+                attention_readout=attention_readout,
+                attention_readout_node_level=attention_readout_node_level,
+            )
+        else:
+            raise ValueError("conv_type should be gin or transformer")
+
+    def forward(self, data):
+        """Method called when data runs through network
+
+        Args:
+            data (torch_geometric.data): Data item that runs through the network
+
+        Returns:
+            output.log_softmax(dim=-1): Log probabilities for the classes"""
+
+        # parse data
+        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
+            data, self.device
+        )
+
+        # embed each localisation
+        x_cluster = self.loc_net(
+            x_locs=x_dict["locs"],
+            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
+            pos_locs=pos_dict["locs"],
+        )
+
+        # apply activation function to cluster embedding to constrain between 0 and 1
+        x_cluster = x_cluster.sigmoid()
+
+        # add on cluster features if present
+        if cluster_feats_present:
+            x_dict["clusters"] = torch.cat((x_dict["clusters"], x_cluster), dim=-1)
+        else:
+            x_dict["clusters"] = x_cluster
+
+        # operate graph net on clusters
+        if not self.superclusters:
+            supercluster_ID_0 = None
+            supercluster_ID_1 = None
+        elif self.superclusters:
+            supercluster_ID_0 = data["superclusters_0"].index
+            supercluster_ID_1 = data["superclusters_1"].index
+        output = self.cluster_net(
+            x_dict,
+            pos_dict,
+            edge_index_dict,
+            data["clusters"].batch,
+            self.add_cluster_pos,
+            supercluster_ID_0=supercluster_ID_0,
+            supercluster_ID_1=supercluster_ID_1,
+        )
+
+        return output.log_softmax(dim=-1)
+
+
+# ------------- Legacy --------------#
+
+
+class ClusterNetHomogeneousLegacy(torch.nn.Module):
     """ClusterNetwork for a homogeneous graph instantiated from a heterogeneous graph
     This is used for PGExplainer which expects unnormalized class score therefore last layer
     is unnormalised class score
@@ -792,512 +1640,6 @@ class ClusterNetHomogeneous(torch.nn.Module):
         else:
             logits = self.linear(x)
             return logits.log_softmax(dim=-1)
-
-
-class ClusterNetHetero(torch.nn.Module):
-    def __init__(self, config):
-        super().__init__()
-        self.name = "cluster_net"
-        self.add_cluster_pos = config["add_cluster_pos"]
-        if config["cluster_conv_type"] == "gin":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][0],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][1],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][2],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][3],
-                ),
-                Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
-                ),
-            )
-        elif config["cluster_conv_type"] == "transformer":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][0],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][1],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][2],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][3],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
-            )
-        elif config["cluster_conv_type"] == "pointnet":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][0],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][1],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][2],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][3],
-                ),
-                Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
-                ),
-            )
-        elif config["cluster_conv_type"] == "pointtransformer":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][0],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][0],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][1],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][1],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][2],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][2],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][3],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][3],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
-            )
-        else:
-            conv_type = config["cluster_conv_type"]
-            raise NotImplementedError(f"{conv_type} is not implemented")
-
-    def forward(self, data):
-        x_dict = data.x_dict
-        edge_index_dict = data.edge_index_dict
-        pos_dict = data.pos_dict
-
-        output = self.cluster_net(
-            x_dict,
-            pos_dict,
-            edge_index_dict,
-            data["clusters"].batch,
-            self.add_cluster_pos,
-        )
-
-        return output.log_softmax(dim=-1)
-
-
-class ClusterMLP(torch.nn.Module):
-    """Simple neural network with series of MLPs
-
-    Attributes:
-        name (str): Name of the model
-        MLP (nn.Module): MLP for the module
-    """
-
-    def __init__(self, config):
-        super().__init__()
-        self.name = "clustermlp"
-        channels = config["channels"]
-        self.MLP_in = MLP(
-            config["channels"][:-1], plain_last=False, dropout=config["dropout"]
-        )
-        self.linear = Linear(config["channels"][-2], config["channels"][-1])
-
-    def forward(self, data):
-        """Method called when data runs through network
-
-        Args:
-            data (torch_geometric.data): Data item that runs through the network
-
-        Raises:
-            KeyError: If clusters don't have features
-
-        Returns:
-            output.log_softmax(dim=-1): Log probabilities for the classes"""
-
-        # embed each localisation
-        try:
-            x = data.x_dict["clusters"]
-        except KeyError:
-            raise KeyError("Clusters need to have features present")
-        x = self.MLP_in(x)
-        x = global_max_pool(x, batch=data["clusters"].batch)
-        x = self.linear(x)
-
-        return x.log_softmax(dim=-1)
-
-
-class LocNet(torch.nn.Module):
-    """Neural network that acts on localisations and aggregates into each cluster
-
-    Attributes:
-    """
-
-    def __init__(self, config, transformer=False):
-        super().__init__()
-
-        self.transformer = transformer
-        if not transformer:
-            self.name = "locpointnet"
-            self.pointnet = PointNetEmbedding(config)
-        else:
-            self.name = "locpointtransformer"
-            self.pointtransformer = PointTransformerEmbedding(config)
-
-    def forward(self, x_locs, edge_index_locs, pos_locs):
-        """Method called when data runs through network
-        Note the order of the arguments MUST not be changed as is required in this order
-        for explainability
-
-        Args:
-            x_locs (array): Features of the locs
-            edge_index_locs (array): Edge connections between
-                locs
-            pos_locs (array): Positions of the locs
-
-        Returns:
-            output.log_softmax(dim=-1): Log probabilities for the classes"""
-
-        # get clusterID for each localisation
-        clusterID = edge_index_locs[1, :]
-
-        # embed each localisation and aggregate into each cluster
-        if not self.transformer:
-            x_cluster = self.pointnet(
-                x_locs,
-                pos_locs,
-                batch=clusterID,
-            )
-        else:
-            x_cluster = self.pointtransformer(
-                x_locs,
-                pos_locs,
-                batch=clusterID,
-            )
-        return x_cluster
-
-
-class LocNetClassifyFOV(torch.nn.Module):
-    """Network that embeds the localisations and makes a prediction for each cluster
-    then aggregates the predictions over the FOV to classify the FOV
-
-    Args:
-        config (dict): Dictionary containing the configuration for the network
-        device (torch.device): Whether to run on cpu or gpu
-        transformer (bool): If true use PointTransformer to encode localisations"""
-
-    def __init__(self, config, device="cpu", transformer=False):
-        super().__init__()
-        self.name = "locnetclassifyfov"
-        self.loc_net = LocNet(config, transformer=transformer)
-        self.device = device
-
-    def forward(self, data):
-        """Method called when data runs through network
-
-        Args:
-            data (torch_geometric.data): Data item that runs through the network
-
-        Returns:
-            output.log_softmax(dim=-1): Log probabilities for the FOV"""
-
-        # parse data
-        x_dict, pos_dict, edge_index_dict, _ = parse_data(data, self.device)
-
-        # get batch ID for each cluster
-        cluster_batch = data["clusters"].batch
-
-        # embed each localisation
-        x_cluster = self.loc_net(
-            x_locs=x_dict["locs"],
-            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
-            pos_locs=pos_dict["locs"],
-        )
-
-        # aggregate over the FOV
-        x_fov = global_max_pool(x_cluster, cluster_batch)
-
-        # return log probability
-        return x_fov.log_softmax(dim=-1)
-
-
-class LocClusterNet(torch.nn.Module):
-    """Network that embeds the localisations aggregates this with cluster
-    features if present, then embeds the clusters using a graph network before
-    using a linear layer to make a prediction for the FOV
-
-    Args:
-        config (dict): Dictionary containing the configuration for the network
-        device (torch.device): Whether to run on cpu or gpu
-
-    Raises:
-        NotImplementedError: If incorrect loc convolution specified"""
-
-    def __init__(self, config, device="cpu"):
-        super().__init__()
-        self.name = "locclusternet"
-        self.device = device
-        self.add_cluster_pos = config["add_cluster_pos"]
-        if config["loc_conv_type"] == "pointtransformer":
-            transformer = True
-        elif config["loc_conv_type"] == "pointnet":
-            transformer = False
-        else:
-            raise NotImplementedError(
-                "Loc conv type should be pointnet or pointtransformer"
-            )
-        if "superclusters" in config.keys():
-            if config["superclusters"] is True:
-                self.superclusters = True
-            else:
-                self.superclusters = False
-        else:
-            self.superclusters = False
-
-        # wrong input channel size 2 might change if locs have features
-        self.loc_net = LocNet(config, transformer=transformer)
-
-        if config["cluster_conv_type"] == "gin":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][0],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][1],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][2],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="gin",
-                    channel_list=config["ClusterEncoderChannels"][3],
-                ),
-                Linear(
-                    config["ClusterEncoderChannels"][-1][-1], config["OutputChannels"]
-                ),
-            )
-        elif config["cluster_conv_type"] == "transformer":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][0],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][1],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][2],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="transformer",
-                    tr_out_channels=config["tr_out_channels"][3],
-                    tr_heads=config["tr_heads"],
-                    tr_concat=config["tr_concat"],
-                    tr_beta=config["tr_beta"],
-                ),
-                Linear(config["tr_out_channels"][-1], config["OutputChannels"]),
-            )
-        elif config["cluster_conv_type"] == "pointnet":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][0],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][1],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][2],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointnet",
-                    channel_list=config["ClusterEncoderChannels"][3],
-                ),
-                Linear(
-                    config["ClusterEncoderChannels"][-1][-1][-1],
-                    config["OutputChannels"],
-                ),
-            )
-        elif config["cluster_conv_type"] == "pointtransformer":
-            self.cluster_net = ClusterNet(
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][0],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][0],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][1],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][1],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][2],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][2],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                ClusterEncoder(
-                    dropout=config["dropout"],
-                    conv_type="pointtransformer",
-                    pt_tr_in_channels=config["pt_tr_in_channels"][3],
-                    pt_tr_out_channels=config["pt_tr_out_channels"][3],
-                    pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
-                    pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
-                ),
-                Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
-            )
-        else:
-            raise ValueError("conv_type should be gin or transformer")
-
-    def forward(self, data):
-        """Method called when data runs through network
-
-        Args:
-            data (torch_geometric.data): Data item that runs through the network
-
-        Returns:
-            output.log_softmax(dim=-1): Log probabilities for the classes"""
-
-        # parse data
-        x_dict, pos_dict, edge_index_dict, cluster_feats_present = parse_data(
-            data, self.device
-        )
-
-        # embed each localisation
-        x_cluster = self.loc_net(
-            x_locs=x_dict["locs"],
-            edge_index_locs=edge_index_dict["locs", "in", "clusters"],
-            pos_locs=pos_dict["locs"],
-        )
-
-        # apply activation function to cluster embedding to constrain between 0 and 1
-        x_cluster = x_cluster.sigmoid()
-
-        # add on cluster features if present
-        if cluster_feats_present:
-            x_dict["clusters"] = torch.cat((x_dict["clusters"], x_cluster), dim=-1)
-        else:
-            x_dict["clusters"] = x_cluster
-
-        # operate graph net on clusters
-        if not self.superclusters:
-            supercluster_ID_0 = None
-            supercluster_ID_1 = None
-        elif self.superclusters:
-            supercluster_ID_0 = data["superclusters_0"].index
-            supercluster_ID_1 = data["superclusters_1"].index
-        output = self.cluster_net(
-            x_dict,
-            pos_dict,
-            edge_index_dict,
-            data["clusters"].batch,
-            self.add_cluster_pos,
-            supercluster_ID_0=supercluster_ID_0,
-            supercluster_ID_1=supercluster_ID_1,
-        )
-
-        return output.log_softmax(dim=-1)
 
 
 # -----------------------------------------------------------------------

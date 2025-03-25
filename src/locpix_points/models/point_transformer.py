@@ -28,7 +28,15 @@ from torch_geometric.utils import scatter, contains_self_loops
 
 
 class TransformerBlock(torch.nn.Module):
-    def __init__(self, in_channels, out_channels, dim, pos_nn_layers, attn_nn_layers):
+    def __init__(
+        self,
+        in_channels,
+        out_channels,
+        dim,
+        pos_nn_layers,
+        attn_nn_layers,
+        dropout_posattn,
+    ):
         super().__init__()
         self.lin_in = Lin(in_channels, in_channels)
         self.lin_out = Lin(out_channels, out_channels)
@@ -37,7 +45,10 @@ class TransformerBlock(torch.nn.Module):
         # one ReLU non-linearity but the MLP has one after each linear layer...
         # HARDCODE
         self.pos_nn = MLP(
-            [dim, pos_nn_layers, out_channels], plain_last=False, act="relu"
+            [dim, pos_nn_layers, out_channels],
+            plain_last=False,
+            act="relu",
+            dropout=dropout_posattn,
         )  # BN
 
         # HARDCODE
@@ -45,6 +56,7 @@ class TransformerBlock(torch.nn.Module):
             [out_channels, attn_nn_layers, out_channels],
             plain_last=False,
             act="relu",
+            dropout=dropout_posattn,
         )
 
         self.transformer = PointTransformerConv(
@@ -158,6 +170,8 @@ class PointTransformerEmbedding(torch.nn.Module):
         ratio = config["ratio"]
         pos_nn_layers = config["pos_nn_layers"]
         attn_nn_layers = config["attn_nn_layers"]
+        dropout = config["dropout"]
+        dropout_posattn = config["dropout_posattn"]
 
         # dummy feature is created if there is none given
         in_channels = max(in_channels, 1)
@@ -175,6 +189,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             dim=dim,
             pos_nn_layers=pos_nn_layers,
             attn_nn_layers=attn_nn_layers,
+            dropout_posattn=dropout_posattn,
         )
         # backbone layers
         self.transformers_down = torch.nn.ModuleList()
@@ -186,7 +201,7 @@ class PointTransformerEmbedding(torch.nn.Module):
                 TransitionDown(
                     in_channels=dim_model[i],
                     out_channels=dim_model[i + 1],
-                    ratio=ratio,
+                    ratio=ratio[i],
                     k=self.k,
                 )
             )
@@ -198,6 +213,7 @@ class PointTransformerEmbedding(torch.nn.Module):
                     dim=dim,
                     pos_nn_layers=pos_nn_layers,
                     attn_nn_layers=attn_nn_layers,
+                    dropout_posattn=dropout_posattn,
                 )
             )
 
@@ -207,16 +223,18 @@ class PointTransformerEmbedding(torch.nn.Module):
             [dim_model[-1], output_mlp_layers, out_channels],
             norm=None,
             act="relu",
+            dropout=dropout,
         )
 
-    def forward(self, x, pos, batch=None):
+    def forward(self, x, pos, batch=None, edge_index=None):
         # add dummy features in case there is none
         if x is None:
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
         # first block
         x = self.mlp_input(x)
-        edge_index = knn_graph(pos, k=self.k, batch=batch)
+        if edge_index is None:
+            edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
 
         # backbone
@@ -227,7 +245,7 @@ class PointTransformerEmbedding(torch.nn.Module):
             x = self.transformers_down[i](x, pos, edge_index)
 
         # GlobalAveragePooling
-        x = global_max_pool(x, batch)
+        x = global_mean_pool(x, batch)
 
         # Class score
         out = self.mlp_output(x)

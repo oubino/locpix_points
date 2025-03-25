@@ -47,6 +47,18 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-f",
+        "--fold",
+        type=int,
+        help="if provided then start from this fold",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-w", "--wandb_disable", action="store_true", help="disable all wandb"
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -96,6 +108,9 @@ def main(argv=None):
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):
+        if args.fold is not None:
+            if index < args.fold:
+                continue
         print(f"Fold {index}")
 
         val_fold = val_folds[index]
@@ -106,6 +121,11 @@ def main(argv=None):
         test_fold = [x.removesuffix(".parquet") for x in test_fold]
 
         # initialise wandb
+        if args.wandb_disable:
+            wand_mode = "disabled"
+        else:
+            wand_mode = "online"
+
         wandb.init(
             # set the wandb project where this run will be logged
             project=dataset_name,
@@ -115,6 +135,7 @@ def main(argv=None):
             group=project_name,
             # name for this run
             name=f"fold_{index}",
+            mode=wand_mode,
         )
 
         # process

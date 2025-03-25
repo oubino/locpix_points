@@ -167,6 +167,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbourslocs=None,
+            range_xy=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -185,6 +186,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbours=None,
+            range_xy=False,
         )
 
     else:
@@ -308,9 +310,9 @@ def main(argv=None):
     time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
 
     # save config file to folder and wandb
-    yaml_save_loc = os.path.join(project_directory, f"evaluate_{time_o}.yaml")
-    with open(yaml_save_loc, "w") as outfile:
-        yaml.dump(config, outfile)
+    # yaml_save_loc = os.path.join(project_directory, f"evaluate_{time_o}.yaml")
+    # with open(yaml_save_loc, "w") as outfile:
+    #    yaml.dump(config, outfile)
     yaml_save_loc = os.path.join(wandb.run.dir, f"evaluate_{time_o}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)

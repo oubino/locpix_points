@@ -20,13 +20,13 @@ classifiers = [
     "Operating System :: OS Independent",
 ]
 dependencies = [
-    "polars",
-    "numpy",
+    "polars==0.19.8",
+    "numpy==1.26.1",
     "napari",
     "matplotlib",
     "imageio-ffmpeg", # napari needs this
     "PyQt5", # napari needs this
-    "torch",
+    "torch==2.1.0",
     "pyarrow",
     "wandb",
     "python-dotenv",
@@ -40,12 +40,16 @@ dependencies = [
     "pre-commit",
     "importlib_resources",
     "scikit-learn",
-    "umap",
+    "umap-learn",
     "ipympl",
     "mplcursors",
     "datashader",
     "bokeh",
     "holoviews",
+    "notebook",
+    "numba==0.60.0",
+    "cloudpickle==3.0.0",
+    "pynndescent==0.5.11",
 ]
 
 [project.scripts]
@@ -62,6 +66,8 @@ k_fold = "locpix_points.scripts.k_fold:main"
 visualise = "locpix_points.scripts.visualise:main"
 final_test = "locpix_points.scripts.final_test:main"
 generate_k_fold_splits = "locpix_points.scripts.generate_k_fold_splits:main"
+evaluate_ensemble = "locpix_points.scripts.evaluate_ensemble:main"
+generate_features = "locpix_points.scripts.generate_features:main"
 
 [project.urls]
 "Homepage" = "https://github.com/oubino/locpix_points"

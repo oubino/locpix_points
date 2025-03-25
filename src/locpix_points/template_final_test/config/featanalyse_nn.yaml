@@ -3,6 +3,9 @@ label_map:
   fib: 0
   iso: 1
 
+# whether making node or whole graph predictions
+label_level: graph # Options: [node, graph]
+
 # whether to run on gpu or cpu
 device: gpu # Options: [cpu, gpu]
 

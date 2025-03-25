@@ -50,7 +50,7 @@ locclusternet:
   # +++ LocNet parameters +++
   loc_conv_type: pointnet # Options: [pointnet, pointtransformer]
   # Ratio of points to sample from the point cloud
-  ratio: 0.5
+  ratio: [0.5, 0.5, 0.5]
   # For each point we sample nearest neighbours up to nearest neighbours (k)
   k: 5
 
@@ -60,7 +60,7 @@ locclusternet:
   global_sa_channels: [32, 30, 28, 26]
   final_channels: [26, 24, 22, 8]
   # For each point we sample nearest neighbours up to radius
-  radius: 1.0
+  radius: [1.0, 1.0, 1.0]
 
   # +++++ PointTransformer parameters +++++
   # Number of channels input to first MLP

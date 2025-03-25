@@ -289,8 +289,8 @@ class item:
             ]
         )
         # floor the pixel locations
-        self.df = self.df.with_column(pl.col("x_pixel").cast(int, strict=True))
-        self.df = self.df.with_column(pl.col("y_pixel").cast(int, strict=True))
+        self.df = self.df.with_columns(pl.col("x_pixel").cast(int, strict=True))
+        self.df = self.df.with_columns(pl.col("y_pixel").cast(int, strict=True))
 
         # localisations at the end get assigned to outside the histogram,
         # therefore need to be assigned to previous pixel
@@ -449,7 +449,9 @@ class item:
         elif self.dim == 3:
             print("segment the 3d coords")
 
-    def mask_pixel_2_coord(self, img_mask: np.ndarray) -> pl.DataFrame:
+    def mask_pixel_2_coord(
+        self, img_mask: np.ndarray, col_name="pred_label"
+    ) -> pl.DataFrame:
         """For a given mask over the image (value at each pixel
         normally representing a label), return the dataframe with a column
         giving the value for each localisation. Note that it is
@@ -464,6 +466,7 @@ class item:
             img_mask (np.ndarray): Mask over the image -
                 to reiterate, to convert this to histogram space need
                 to transpose it
+            col_name (str): Name of the column the label will be in
 
         Returns:
             df (polars dataframe): Original dataframe with
@@ -485,13 +488,13 @@ class item:
             x_pixel = np.ravel(mesh_grid[0])
             y_pixel = np.ravel(mesh_grid[1])
             label = flatten_mask
-            data = {"x_pixel": x_pixel, "y_pixel": y_pixel, "pred_label": label}
+            data = {"x_pixel": x_pixel, "y_pixel": y_pixel, col_name: label}
             mask_df = pl.DataFrame(
                 data,
-                columns=[
+                schema=[
                     ("x_pixel", pl.Int64),
                     ("y_pixel", pl.Int64),
-                    ("pred_label", pl.Float64),
+                    (col_name, pl.Float64),
                 ],
             ).sort(["x_pixel", "y_pixel"])
 

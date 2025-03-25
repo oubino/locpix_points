@@ -18,9 +18,12 @@ from torch_geometric.nn import (
     fps,
     global_max_pool,
     knn_interpolate,
-    radius,
 )
 from torch_geometric.utils import sort_edge_index, coalesce, contains_self_loops
+from torch import Tensor
+import torch_geometric.typing
+from typing import Optional
+from torch_geometric.typing import OptTensor, torch_cluster
 import warnings
 
 # TODO: layer sizes
@@ -28,6 +31,80 @@ import warnings
 
 # note the following is taken directly from example on pytorch geometric
 # github
+
+
+# modified from pyg
+def radius(
+    x,
+    y,
+    r,
+    batch_x=None,
+    batch_y=None,
+    max_num_neighbors=32,
+    num_workers=1,
+    batch_size=None,
+    ignore_same_index=False,
+):
+    r"""Finds for each element in :obj:`y` all points in :obj:`x` within
+    distance :obj:`r`.
+
+    .. code-block:: python
+
+        import torch
+        from torch_geometric.nn import radius
+
+        x = torch.tensor([[-1.0, -1.0], [-1.0, 1.0], [1.0, -1.0], [1.0, 1.0]])
+        batch_x = torch.tensor([0, 0, 0, 0])
+        y = torch.tensor([[-1.0, 0.0], [1.0, 0.0]])
+        batch_y = torch.tensor([0, 0])
+        assign_index = radius(x, y, 1.5, batch_x, batch_y)
+
+    Args:
+        x (torch.Tensor): Node feature matrix
+            :math:`\mathbf{X} \in \mathbb{R}^{N \times F}`.
+        y (torch.Tensor): Node feature matrix
+            :math:`\mathbf{Y} \in \mathbb{R}^{M \times F}`.
+        r (float): The radius.
+        batch_x (torch.Tensor, optional): Batch vector
+            :math:`\mathbf{b} \in {\{ 0, \ldots, B-1\}}^N`, which assigns each
+            node to a specific example. (default: :obj:`None`)
+        batch_y (torch.Tensor, optional): Batch vector
+            :math:`\mathbf{b} \in {\{ 0, \ldots, B-1\}}^M`, which assigns each
+            node to a specific example. (default: :obj:`None`)
+        max_num_neighbors (int, optional): The maximum number of neighbors to
+            return for each element in :obj:`y`. (default: :obj:`32`)
+        num_workers (int, optional): Number of workers to use for computation.
+            Has no effect in case :obj:`batch_x` or :obj:`batch_y` is not
+            :obj:`None`, or the input lies on the GPU. (default: :obj:`1`)
+        batch_size (int, optional): The number of examples :math:`B`.
+            Automatically calculated if not given. (default: :obj:`None`)
+        ignore_same_index: Foo
+
+    Returns:
+        torch_cluster.radius: Radius ..
+
+    .. warning::
+
+        The CPU implementation of :meth:`radius` with :obj:`max_num_neighbors`
+        is biased towards certain quadrants.
+        Consider setting :obj:`max_num_neighbors` to :obj:`None` or moving
+        inputs to GPU before proceeding.
+    """
+    if not torch_geometric.typing.WITH_TORCH_CLUSTER_BATCH_SIZE:
+        return torch_cluster.radius(
+            x, y, r, batch_x, batch_y, max_num_neighbors, num_workers, ignore_same_index
+        )
+    return torch_cluster.radius(
+        x,
+        y,
+        r,
+        batch_x,
+        batch_y,
+        max_num_neighbors,
+        num_workers,
+        batch_size,
+        ignore_same_index,
+    )
 
 
 class SAModule(torch.nn.Module):
@@ -44,10 +121,11 @@ class SAModule(torch.nn.Module):
         self.ratio = ratio
         self.r = r
         self.k = k
-        self.conv = PointNetConv(local_nn, global_nn, add_self_loops=False)
+        self.conv = PointNetConv(local_nn, global_nn, add_self_loops=True)
 
     def forward(self, x, pos, batch):
         idx = fps(pos, batch, ratio=self.ratio)
+
         row, col = radius(
             # add one to nearest neighs as nearest neighs includes itself
             pos,
@@ -57,11 +135,38 @@ class SAModule(torch.nn.Module):
             batch[idx],
             max_num_neighbors=self.k + 1,
         )
+        row_old = row
+        col_old = col
+
+        row, col = radius(
+            # ignore itself
+            pos,
+            pos,
+            self.r,
+            batch,
+            batch,
+            max_num_neighbors=self.k,
+            ignore_same_index=True,
+        )
+        indices = torch.isin(row, idx)
+        row = row[indices]
+        col = col[indices]
+        unique_vals = torch.unique(row)
+        mapping = {int(val): id for id, val in enumerate(unique_vals)}
+        row = torch.tensor([mapping[int(x)] for x in row], device=row.device)
+        print(torch.equal(row, row_old))
+        print(torch.equal(col, col_old))
+        raise ValueError(
+            "bug here as ignore same index is not implemented\
+                         yet in the version of pytorch cluster i can install"
+        )
         edge_index = torch.stack([col, row], dim=0)
         # remove duplicate edges
-        edge_index = coalesce(edge_index)
+        # edge_index = coalesce(edge_index)
         x_dst = None if x is None else x[idx]
-        assert contains_self_loops(edge_index)
+        assert not contains_self_loops(
+            torch.stack([edge_index[0, :], idx[edge_index[1, :]]])
+        )
         x = self.conv((x, x_dst), (pos, pos[idx]), edge_index)
         pos, batch = pos[idx], batch[idx]
         return x, pos, batch
@@ -119,22 +224,22 @@ class PointNetEmbedding(torch.nn.Module):
         # Input channels account for both `pos` and node features.
         # Note that plain last layers causes issues!!
         self.sa1_module = SAModule(
-            ratio,
-            radius,
+            ratio[0],
+            radius[0],
             k,
             MLP(local_channels[0], plain_last=True),  # BN
             MLP(global_channels[0], plain_last=True),  # BN
         )
         self.sa2_module = SAModule(
-            ratio,
-            radius,
+            ratio[1],
+            radius[1],
             k,
             MLP(local_channels[1], plain_last=True),  # BN
             MLP(global_channels[1], plain_last=True),  # BN
         )
         self.sa3_module = SAModule(
-            ratio,
-            radius,
+            ratio[2],
+            radius[2],
             k,
             MLP(local_channels[2], plain_last=True),  # BN
             MLP(global_channels[2], plain_last=True),  # BN
@@ -149,7 +254,11 @@ class PointNetEmbedding(torch.nn.Module):
         warnings.warn("PointNet embedding requires the clusterID to be ordered")
 
     def forward(self, x, pos, batch):
-        x = self.sa1_module(x, pos, batch)
+        x = self.sa1_module(
+            x,
+            pos,
+            batch,
+        )
         x = self.sa2_module(*x)
         x = self.sa3_module(*x)
         sa4_out = self.sa4_module(*x)

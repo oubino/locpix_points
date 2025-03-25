@@ -45,6 +45,7 @@ def load_loc_cluster(
     fov_y,
     kneighbourslocs=None,
     superclusters=False,
+    range_xy=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -66,12 +67,23 @@ def load_loc_cluster(
         fov_x (float) : Size of fov (x) in units of data
         fov_y (float) : Size of fov (y) in units of data
         kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
-            loc loc dataset. If None then connects all locs within each cluster. Default (None)
+            loc loc dataset. If "all" then connects all locs within each cluster. Default (None)
         superclusters (bool) : If true extracts superclusters
+        range_xy (float) : Range of the data over whole dataset. If not given calculate range
+            on per item basis, otherwise use range_xy to define normalisation for each item. If
+            False then shouldn't be processing the data
 
     Returns:
         data (torch_geometric data) : Data with
-            position and feature for eacch node"""
+            position and feature for eacch node
+
+    Raises:
+        ValueError: If try and process data when range_xy has not been calculated"""
+
+    if range_xy is False:
+        raise ValueError(
+            "should not be processing the data haven't considered range_xy"
+        )
 
     loc_table = pl.from_arrow(loc_table)
     cluster_table = pl.from_arrow(cluster_table)
@@ -139,10 +151,12 @@ def load_loc_cluster(
         loc_cluster_edges[0].numpy(), np.arange(0, len(loc_cluster_edges[0]))
     )
     if kneighbourslocs is None:
+        loc_loc_edges = None
+    elif kneighbourslocs == "all":
         # locs with same clusterID
         edges = []
         # iterate through clusters
-        for i in range(torch.max(loc_cluster_edges[1])):
+        for i in range(torch.max(loc_cluster_edges[1]) + 1):
             # get the loc indices for the clusters
             loc_indices = loc_cluster_edges[0][np.where(loc_cluster_edges[1] == i)]
             combos = list(itertools.permutations(loc_indices, 2))
@@ -166,27 +180,39 @@ def load_loc_cluster(
     # scale positions
     min_x = x_locs.min()
     min_y = y_locs.min()
-    x_range = x_locs.max() - min_x
-    y_range = y_locs.max() - min_y
-    if x_range < 0.95 * fov_x:
-        logging.info(
-            f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
-        )
-    if y_range < 0.95 * fov_y:
-        logging.info(
-            f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
-        )
-    range_xy = max(x_range, y_range)
+    if range_xy is None:
+        per_item = True
+        x_range = x_locs.max() - min_x
+        y_range = y_locs.max() - min_y
+        if x_range < 0.95 * fov_x:
+            logging.info(
+                f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
+            )
+        if y_range < 0.95 * fov_y:
+            logging.info(
+                f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
+            )
+        range_xy = max(x_range, y_range)
+    else:
+        per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
     x_locs = (x_locs - min_x) / range_xy
     y_locs = (y_locs - min_y) / range_xy
+    x_locs = torch.clamp(x_locs, min=0, max=1)
+    y_locs = torch.clamp(y_locs, min=0, max=1)
     # scale to between -1 and 1
-    x_locs = 2.0 * x_locs - 1.0
-    y_locs = 2.0 * y_locs - 1.0
-    assert x_locs.min() == -1.0 or y_locs.min() == 1.0
-    assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    if per_item:
+        x_locs = 2.0 * x_locs - 1.0
+        y_locs = 2.0 * y_locs - 1.0
+        assert x_locs.min() == -1.0 or y_locs.min() == 1.0
+        assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    else:
+        max_x = x_locs.max()
+        max_y = y_locs.max()
+        x_locs = 2.0 * x_locs - max_x
+        y_locs = 2.0 * y_locs - max_y
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
     data["locs"].pos = loc_coords.float()
 
@@ -197,9 +223,15 @@ def load_loc_cluster(
     # scale from -1 to 1
     x_clusters = (x_clusters - min_x) / range_xy
     y_clusters = (y_clusters - min_y) / range_xy
+    x_clusters = torch.clamp(x_clusters, min=0, max=1)
+    y_clusters = torch.clamp(y_clusters, min=0, max=1)
     # scale from -1 to 1
-    x_clusters = 2.0 * x_clusters - 1.0
-    y_clusters = 2.0 * y_clusters - 1.0
+    if per_item:
+        x_clusters = 2.0 * x_clusters - 1.0
+        y_clusters = 2.0 * y_clusters - 1.0
+    else:
+        x_clusters = 2.0 * x_clusters - max_x
+        y_clusters = 2.0 * y_clusters - max_y
     cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
     data["clusters"].pos = cluster_coords.float()
 
@@ -326,6 +358,7 @@ def load_loc(
     fov_x,
     fov_y,
     kneighbours=None,
+    range_xy=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -341,10 +374,21 @@ def load_loc(
         fov_y (float) : Size of fov (y) in units of data
         kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If None then no edges between locs Default (None)
+        range_xy (float) : Range of the data over whole dataset. If not given calculate range
+            on per item basis, otherwise use range_xy to define normalisation for each item. If
+            False should not be processing the data.
 
     Returns:
         data (torch_geometric data) : Data with
-            position and feature for eacch node"""
+            position and feature for eacch node
+
+    Raises:
+        ValueError: If try to process data and haven't define range_xy"""
+
+    if range_xy is False:
+        raise ValueError(
+            "should not be processing the data haven't considered range_xy"
+        )
 
     loc_table = pl.from_arrow(loc_table)
 
@@ -374,33 +418,48 @@ def load_loc(
         # add 1 as with loop = True considers itself as one of the k neighbours
         loc_loc_edges = knn_graph(loc_coords, k=kneighbours + 1, batch=batch, loop=True)
         data.edge_index = loc_loc_edges
+    else:
+        data.edge_index = False
 
     # Load in positions afterwards as scale data to between -1 and 1 - this might affect
     # above code
     # scale positions
     min_x = x_locs.min()
     min_y = y_locs.min()
-    x_range = x_locs.max() - min_x
-    y_range = y_locs.max() - min_y
-    if x_range < 0.95 * fov_x:
-        logging.info(
-            f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
-        )
-    if y_range < 0.95 * fov_y:
-        logging.info(
-            f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
-        )
-    range_xy = max(x_range, y_range)
+    if range_xy is None:
+        per_item = True
+        x_range = x_locs.max() - min_x
+        y_range = y_locs.max() - min_y
+        if x_range < 0.95 * fov_x:
+            logging.info(
+                f"Range of x data: {x_range} is smaller than 95% of the width of the fov: {fov_x}"
+            )
+        if y_range < 0.95 * fov_y:
+            logging.info(
+                f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
+            )
+        range_xy = max(x_range, y_range)
+    else:
+        per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
     x_locs = (x_locs - min_x) / range_xy
     y_locs = (y_locs - min_y) / range_xy
-    # scale to between -1 and 1
-    x_locs = 2.0 * x_locs - 1.0
-    y_locs = 2.0 * y_locs - 1.0
-    assert x_locs.min() == -1.0 or y_locs.min() == 1.0
-    assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    x_locs = torch.clamp(x_locs, min=0, max=1)
+    y_locs = torch.clamp(y_locs, min=0, max=1)
+
+    if per_item:
+        # scale to between -1 and 1
+        x_locs = 2.0 * x_locs - 1.0
+        y_locs = 2.0 * y_locs - 1.0
+        assert x_locs.min() == -1.0 or y_locs.min() == 1.0
+        assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+    else:
+        max_x = x_locs.max()
+        max_y = y_locs.max()
+        x_locs = 2.0 * x_locs - max_x
+        y_locs = 2.0 * y_locs - max_y
     loc_coords = torch.stack((x_locs, y_locs), dim=1)
     data.pos = loc_coords.float()
 

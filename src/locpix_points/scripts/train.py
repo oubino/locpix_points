@@ -174,6 +174,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbourslocs=None,
+            range_xy=False,
         )
 
         # load in val dataset
@@ -196,6 +197,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbourslocs=None,
+            range_xy=False,
         )
 
         # load in test dataset
@@ -218,6 +220,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbourslocs=None,
+            range_xy=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -236,6 +239,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbours=None,
+            range_xy=False,
         )
 
         # load in val dataset
@@ -253,6 +257,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbours=None,
+            range_xy=False,
         )
 
         # load in test dataset
@@ -270,6 +275,7 @@ def main(argv=None):
             fov_x=None,
             fov_y=None,
             kneighbours=None,
+            range_xy=False,
         )
     else:
         raise ValueError("Model not defined for train script")
@@ -287,6 +293,8 @@ def main(argv=None):
     else:
         raise ValueError("load_data_from_gpu should be True or False")
 
+    drop_last = False
+
     # initialise dataloaders
     if imbalanced_sampler:
         train_sampler = L.ImbalancedSampler(train_set)
@@ -296,7 +304,7 @@ def main(argv=None):
             pin_memory=pin_memory,
             num_workers=num_workers,
             sampler=train_sampler,
-            drop_last=True,
+            drop_last=drop_last,
         )
         val_sampler = L.ImbalancedSampler(val_set)
         val_loader_train = L.DataLoader(
@@ -305,7 +313,7 @@ def main(argv=None):
             pin_memory=pin_memory,
             num_workers=num_workers,
             sampler=val_sampler,
-            drop_last=True,
+            drop_last=drop_last,
         )
     else:
         train_loader_train = L.DataLoader(
@@ -314,7 +322,7 @@ def main(argv=None):
             shuffle=True,
             pin_memory=pin_memory,
             num_workers=num_workers,
-            drop_last=True,
+            drop_last=drop_last,
         )
         val_loader_train = L.DataLoader(
             val_set,
@@ -322,7 +330,7 @@ def main(argv=None):
             shuffle=False,
             pin_memory=pin_memory,
             num_workers=num_workers,
-            drop_last=True,
+            drop_last=drop_last,
         )
     train_loader_predict = L.DataLoader(
         train_set,
@@ -330,7 +338,7 @@ def main(argv=None):
         shuffle=True,
         pin_memory=pin_memory,
         num_workers=num_workers,
-        drop_last=True,
+        drop_last=drop_last,
     )
     val_loader_predict = L.DataLoader(
         val_set,
@@ -338,7 +346,7 @@ def main(argv=None):
         shuffle=False,
         pin_memory=pin_memory,
         num_workers=num_workers,
-        drop_last=True,
+        drop_last=drop_last,
     )
 
     # print parameters
@@ -534,9 +542,9 @@ def main(argv=None):
     #    processed_directory = os.path.join(project_directory, "processed")
 
     # save config file to folder and wandb
-    yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
-    with open(yaml_save_loc, "w") as outfile:
-        yaml.dump(config, outfile)
+    # yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
+    # with open(yaml_save_loc, "w") as outfile:
+    #    yaml.dump(config, outfile)
     yaml_save_loc = os.path.join(wandb.run.dir, f"train_{time_o}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)

@@ -209,13 +209,15 @@ def visualise_torch_geometric(
     locs_to_clusters.colors = o3d.utility.Vector3dVector(colors)
 
     # loc to loc edges
-    lines = np.swapaxes(x["locs", "clusteredwith", "locs"].edge_index, 0, 1)
-    colors = [[0, 1, 0] for i in range(len(lines))]
-    locs_to_locs = o3d.geometry.LineSet()
-    locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
-    locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
-    locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
-    # locs_to_locs = None
+    try:
+        lines = np.swapaxes(x["locs", "clusteredwith", "locs"].edge_index, 0, 1)
+        colors = [[0, 1, 0] for i in range(len(lines))]
+        locs_to_locs = o3d.geometry.LineSet()
+        locs_to_locs.points = o3d.utility.Vector3dVector(pcds[0])
+        locs_to_locs.lines = o3d.utility.Vector2iVector(lines)
+        locs_to_locs.colors = o3d.utility.Vector3dVector(colors)
+    except:
+        locs_to_locs = None
 
     # cluster to cluster edges
     lines = np.swapaxes(x["clusters", "near", "clusters"].edge_index, 0, 1)

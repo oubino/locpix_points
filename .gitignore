@@ -138,3 +138,12 @@ digits_letters/task_4/*
 # ignore renal
 renal/*
 renal_*/*
+
+# ignore sandpit
+sandpit/*
+
+# ignore eclipse
+eclipse/*
+
+# demo
+demo/output/*
