@@ -128,18 +128,19 @@ This includes 50 items from each class from the digits and letters dataset in th
 
 #. Initialise
 
-    ```shell
+    .. code-block:: shell
+
     micromamba activate locpix-points
     initialise
-    ```
-    - User name = oliver-umney
-    - Project name = output
-    - Project saved = .
-    - Dataset location = demo/data
-    - Dataset name = demo
-    - Copy preprocessed = no
-    - .csv files = no
-    - Already labelled = yes
+    
+    * User name = oliver-umney
+    * Project name = output
+    * Project saved = .
+    * Dataset location = demo/data
+    * Dataset name = demo
+    * Copy preprocessed = no
+    * .csv files = no
+    * Already labelled = yes
 
     This will generate a folder called output/ where we will be analysing the data.
 
@@ -147,33 +148,37 @@ This includes 50 items from each class from the digits and letters dataset in th
 
 #. Preprocess
 
-    ```shell
+    .. code-block:: shell
+
     cd demo/output
     bash scripts/preprocess.sh
-    ```
+    
     This preprocesses the data into a folder preprocessed/
 
 #. Feature extraction
 
-    ```shell
+    .. code-block:: shell
+
     bash scripts/featextract.sh
-    ```
+    
     
     This extracts features from the data into a folder preprocessed/featextract
 
 #. Generate k-fold splits
 
-    ```shell
+    .. code-block:: shell
+
     bash scripts/generate_k_fold_splits.sh
-    ```
+    
 
     This generates a file k_fold.yaml in config/ containing the splits
 
 #. K-fold [note add in -w flag to scripts/k_fold.py in main_k if don't want to run with wandb]
 
-    ```shell
+    .. code-block:: shell
+
     bash scripts/k_fold.sh
-    ```
+    
 
     This performs k-fold training, generating models in models/ folder
 
@@ -181,7 +186,8 @@ This includes 50 items from each class from the digits and letters dataset in th
     
     * Modify model_name in featanalyse_nn.yaml.
 
-    ```shell
+    .. code-block:: shell
+        
     jupyter-notebook
 
     * Run analysis notebook: scripts/analysis.ipynb
