@@ -129,8 +129,8 @@ Publication results
 
 * NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
 
-Visualise results of ClusterNet-HCF 
------------------------------------
+Visualise results of ClusterNet-HCF [~5 mins]
+---------------------------------------------
 
 * For ClusterNet-HCF we can visualise the results of this notebook after it has been run already
     #. Download paper/analysis.html
