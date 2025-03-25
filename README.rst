@@ -156,8 +156,8 @@ Reproducing results [~1-2 hours]
     
         bash scripts/evaluate.sh
 
-Reproducing reuslts [~1-2 days]
--------------------------------
+Reproducing results from scratch [needs testing] [~1-2 days]
+------------------------------------------------------------
 #. Install any pre-requisites and environments 1 and 2 from above
 #. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
 
