@@ -14,8 +14,8 @@ This repository then does the following:
     - Visualise the raw data and graphs
     - Analysis of manual features, neural network output, explainability etc. via jupyter notebooks
 
-Installation
-============
+Installation [~30 mins - 1 hour]
+================================
 
 Requirements
 ------------
