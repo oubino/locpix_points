@@ -118,20 +118,42 @@ To navigate this we can
     pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
     pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
 
+Demo (from scratch)
+===================
+
+#. Install any pre-requisites and environments 1 and 2 from above
+#. Follow digits_letters/README.md, using the configuration files from task_2 (ClusterNet-LCF) or task_6 (ClusterNet-HCF)
 
 Publication results
 ===================
 
 * NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
+
+Visualise results of ClusterNet-HCF 
+-----------------------------------
+
+* For ClusterNet-HCF we can visualise the results of this notebook after it has been run already
+    #. Download paper/analysis.html
+    #. Open this file in a suitable browser
+    #. This visualises
+        #. Figures 2A-C and Supplementary Figure 6 interactively
+        #. The remaining figures statically
+
+Reproducing results
+-------------------
+
+* For reproduction of publication results, the provided data is already partially processed so only the final commands need to be run
+
 * To reproduce results for ClusterNet-HCF and ClusterNet-LCF from the publication, do the following.
     #. Install environment 1 following instructions below
     #. Download .tar folder from https://doi.org/10.5281/zenodo.14246303 [upload.tar.gz = ClusterNet-HCF, locclusternet.tar.gz = ClusterNet-LCF]
     #. Extract the .tar folder
-* In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
-    #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
-    #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
-    #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
-    #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
+    #.  In this folder analysis_small.ipynb notebook can be run with jupyter-notebook this allows for reproduction and visualisation of the results, including:
+        #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
+        #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
+        #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
+        #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
+
 * [Alternatively] If you would like to re-run training or evaluation (this requires being signed into wandb), you can run the below and then use analysis.ipynb notebook to re-run the results of feature and structure analysis
     .. code-block:: shell
     
@@ -140,12 +162,6 @@ Publication results
     .. code-block:: shell
     
         bash scripts/train.sh
-* [Alternatively] For ClusterNet-HCF we can visualise the results of this notebook after it has been run already
-    #. Download paper/analysis.html
-    #. Open this file in a suitable browser
-    #. This visualises
-        #. Figures 2A-C and Supplementary Figure 6 interactively
-        #. The remaining figures statically
 
 Quickstart (Linux)
 ==================
