@@ -122,6 +122,7 @@ Publication results
 ===================
 
 * NOTE: In the paper ClusterNet-LCF is named LocClusterNet in the code and ClusterNet-HCF is named ClusterNet in the code (with handcrafted features an option to include).
+* When installing locpix-points package either 1. Checkout paper branch or 2. Download the Paper release rather than cloning 
 
 Visualise results of ClusterNet-HCF [~5 mins]
 ---------------------------------------------
