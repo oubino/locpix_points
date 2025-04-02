@@ -268,16 +268,20 @@ Other commands (Linux)
 ======================
 
 #. After preprocessing and before feature extraction can annotate the data (Optional)
+
     .. code-block:: shell
     
         bash scripts/annotate.sh
 
+
 #. Can analyse the localisations
+
     .. code-block:: shell
     
         scripts/analysis_locs.ipynb
 
-#. Evaluate the model multiple times and take an average - ARGS see longer description in :ref:`errata`.
+
+#. Evaluate the model multiple times and take an average - ARGS see longer description in errata.rst file.
 
     .. code-block:: shell
     
@@ -286,4 +290,4 @@ Other commands (Linux)
 Errata
 ======
 
-For more information, including a longer description of each command see :ref:`errata Errata`.
+For more information, including a longer description of each command see errata.rst file.

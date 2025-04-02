@@ -1,5 +1,3 @@
-.. _errata Errata:
-
 Errata
 ******
 
