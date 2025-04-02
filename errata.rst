@@ -1,4 +1,7 @@
-.. _errata:
+.. _errata Errata:
+
+Errata
+******
 
 Longer description
 ==================

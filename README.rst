@@ -286,4 +286,4 @@ Other commands (Linux)
 Errata
 ======
 
-For more information, including a longer description of each command see :ref:`errata`.
+For more information, including a longer description of each command see :ref:`errata Errata`.
