@@ -3,6 +3,7 @@
 # Imports
 import argparse
 import os
+import numpy as np
 import polars as pl
 
 import torch
@@ -291,6 +292,18 @@ def main(argv=None):
     final_test_predictions = []
     final_test_gt = []
 
+    train_aurocs = []
+    val_aurocs = []
+    test_aurocs = []
+
+    train_balanced_accs = []
+    val_balanced_accs = []
+    test_balanced_accs = []
+
+    train_plrs = []
+    val_plrs = []
+    test_plrs = []
+
     # For each fold
     for fold in range(args.folds):
         # Load in model
@@ -537,6 +550,16 @@ def main(argv=None):
         print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
         print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
         print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
+        print(
+            "Balanced accuracy: ",
+            0.5 * (metrics["BinaryRecall"] + metrics["BinarySpecificity"]),
+        )
+
+        train_aurocs.append(roc_metrics["BinaryAUROC"].cpu())
+        train_balanced_accs.append(
+            0.5 * (metrics["BinaryRecall"].cpu() + metrics["BinarySpecificity"].cpu())
+        )
+        train_plrs.append(metrics["pos_lr"])
 
         print("\n")
         print("---- Predict on val set... ----")
@@ -555,6 +578,16 @@ def main(argv=None):
         print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
         print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
         print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
+        print(
+            "Balanced accuracy: ",
+            0.5 * (metrics["BinaryRecall"] + metrics["BinarySpecificity"]),
+        )
+
+        val_aurocs.append(roc_metrics["BinaryAUROC"].cpu())
+        val_balanced_accs.append(
+            0.5 * (metrics["BinaryRecall"].cpu() + metrics["BinarySpecificity"].cpu())
+        )
+        val_plrs.append(metrics["pos_lr"])
 
         print("\n")
         print("---- Predict on test set... ----")
@@ -592,11 +625,63 @@ def main(argv=None):
         print("AUROC: ", roc_metrics["BinaryAUROC"])  # MULTICLASS
         print("Accuracy: ", metrics["BinaryAccuracy"])  # MULTICLASS
         print("+ LR: ", metrics["pos_lr"])  # MULTICLASS
+        print(
+            "Balanced accuracy: ",
+            0.5 * (metrics["BinaryRecall"] + metrics["BinarySpecificity"]),
+        )
+
+        test_aurocs.append(roc_metrics["BinaryAUROC"].cpu())
+        test_balanced_accs.append(
+            0.5 * (metrics["BinaryRecall"].cpu() + metrics["BinarySpecificity"].cpu())
+        )
+        test_plrs.append(metrics["pos_lr"])
 
     print(final_test_file_list)
     print(final_test_probs)
     print(final_test_predictions)
     print(final_test_gt)
+
+    print(
+        "train AUROC: ",
+        np.mean(np.array(train_aurocs)),
+        " +- ",
+        np.std(np.array(train_aurocs), ddof=1),
+    )
+    # print("train plr: ", np.mean(np.array(train_plrs)), " +- ", np.std(np.array(train_plrs), ddof=1))
+    print(
+        "train balanced acc: ",
+        np.mean(np.array(train_balanced_accs)),
+        " +- ",
+        np.std(np.array(train_balanced_accs), ddof=1),
+    )
+
+    print(
+        "val AUROC: ",
+        np.mean(np.array(val_aurocs)),
+        " +- ",
+        np.std(np.array(val_aurocs), ddof=1),
+    )
+    # print("val plr: ", np.mean(np.array(val_plrs)), " +- ", np.std(np.array(val_plrs), ddof=1))
+    print(
+        "val balanced acc: ",
+        np.mean(np.array(val_balanced_accs)),
+        " +- ",
+        np.std(np.array(val_balanced_accs), ddof=1),
+    )
+
+    print(
+        "test AUROC: ",
+        np.mean(np.array(test_aurocs)),
+        " +- ",
+        np.std(np.array(test_aurocs), ddof=1),
+    )
+    # print("test plr: ", np.mean(np.array(test_plrs)), " +- ", np.std(np.array(test_plrs), ddof=1))
+    print(
+        "test balanced acc: ",
+        np.mean(np.array(test_balanced_accs)),
+        " +- ",
+        np.std(np.array(test_balanced_accs), ddof=1),
+    )
 
     return final_test_file_list, final_test_probs, final_test_predictions, final_test_gt
 
