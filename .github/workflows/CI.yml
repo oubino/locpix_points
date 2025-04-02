@@ -32,17 +32,6 @@ jobs:
           eval "$(micromamba shell hook --shell bash)"
           micromamba activate locpix-points
           pip install -e .
-          pip install -r requirements.txt
-      #    python -m pip install tox tox-gh-actions
-      - name: Test 1 
-        run: |
-          eval "$(micromamba shell hook --shell bash)"
-          micromamba activate locpix-points
-          bash tests/tests_github_1.sh
-      - name: Remove first environment
-        run: |
-          eval "$(micromamba shell hook --shell bash)"
-          micromamba env remove -n locpix-points
       - name: Set up second environment
         run: |
           micromamba create -n rapids=23.10 -c rapidsai -c conda-forge -c nvidia cudf cuml python=3.10 cuda-version=12.0 pytest

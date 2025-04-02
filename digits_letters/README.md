@@ -49,11 +49,11 @@ i.e. x fov size: 1.681
 Obviously may be 2.0 and 2.0 but will keep these as the values for FOV size
 
 Note the transforms have left in and removed i.e. removed x flip and y flip as otherwise is not a 3 etc. anymore
+
 ## Commands run
 
 This assumes everything is properly installed and the user is located in the locpix-points directory.
 In all commands below replace ID with the task number 1,2,3...
-
 
 ### Initialise
 
