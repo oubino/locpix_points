@@ -263,8 +263,7 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
         
         bash scripts/train.sh
 
-#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud). 
-Note there must be only one file in the models/ folder, which will be analysed.
+#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud). Note there must be only one file in the models/ folder, which will be analysed.
 
     .. code-block:: shell
     
