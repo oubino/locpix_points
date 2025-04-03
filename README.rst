@@ -27,7 +27,8 @@ Requirements
 * Require `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended] or anaconda/miniconda/mamba
     * For all commands below replace micromamba with conda etc. depending on which you have installed
 * wandb for training/evaluating models
-    * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`
+    * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`_
+    * Make a note of your user-name for future use
 * Requires environments 1 and 2 below
 
 Environment 1 (locpix-points)
@@ -130,6 +131,10 @@ The following commands can then be run on the command line.
 
 #. Change directory to locpix-points/demo folder
 
+    .. code-block:: shell
+
+        cd locpix_points/demo
+
 #. Initialise
 
     .. code-block:: shell
@@ -137,7 +142,7 @@ The following commands can then be run on the command line.
         micromamba activate locpix-points
         initialise
     
-    * User name = user-name
+    * User name = [user-name from wandb]
     * Project name = output
     * Project saved = .
     * Dataset location = demo/data
@@ -194,7 +199,8 @@ The following commands can then be run on the command line.
 
 #. Then can analyse features using
     
-    * Modify model_name in config/featanalyse_nn.yaml to be the name of the model want to analyse in models/ folder
+    * In config/featanalyse_nn.yaml, modify model_name to be the name of the model to analyse in the models/ folder 
+    e.g. If the model in the models folder is called test.pt, replace INSERTMODELNAME with test
 
     .. code-block:: shell
 
@@ -220,15 +226,12 @@ The following commands can then be run on the command line.
         - -c If .parquet name of the channel column
 
 
-Manuscript results
-==================
+Reproducing manuscript results [~1 day]
+=======================================
 
 To reproduce results on the reserved test sets as seen in the manuscript please see below.
 
-Reproducing results [~1-2 days]
--------------------------------
-
-#. Install all pre-requisites and environments as above, must have micromamba installed (alternatively can ammend the shell scripts to use conda)
+#. Install all pre-requisites and environments as above, must have micromamba installed (alternatively can amend the .sh scripts to use conda instead)
 
 #. Switch to manuscript_version of locpix-points, by navigating to locpix-points install and switching branch
 
@@ -254,13 +257,13 @@ Reproducing results [~1-2 days]
 
 #. [Optional] If you would like to re-run training or evaluation of the model, please modify the "user" in metadata.json to be your user-name from wandb.
 
-#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder (there must only be one model in the models folder), next run
+#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder as the models folder needs to be empty. Then run
 
     .. code-block:: shell
         
         bash scripts/train.sh
 
-#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud), note as above there must be only one file in the models/ folder
+#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud). Note there must be only one file in the models/ folder, which will be analysed.
 
     .. code-block:: shell
     
@@ -272,9 +275,10 @@ Reproducing results [~1-2 days]
         micromamba activate locpix-points
         jupyter-notebook
 
-    #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models has only one file
+    #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models/ folder has only one file, which will be analysed.
+        #. To re-generate UMAP embeddings, please delete all test_umap_..._.pkl files in output/ folder.
 
-    #. To reproduce results, using the model from the manuscript, run the scripts/analysis_small.ipynb notebook, this allows for reproduction and visualisation of the results, including:
+    #. To reproduce results using the model from the manuscript. Ensure the models folder only contains the original model file that came in the download. Run the scripts/analysis_small.ipynb notebook, this allows for reproduction and visualisation of the results, including:
         #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
         #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
         #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
@@ -282,8 +286,8 @@ Reproducing results [~1-2 days]
 
 #. [Optional] To interactively visualise Figures 2A-C and Supplementary Figure 6 interactively, download clusternet_manuscript/analysis.html and open this file in a suitable browser
 
-Other commands (Linux)
-======================
+Other commands
+==============
 
 #. After preprocessing and before feature extraction can annotate the data (Optional)
 
