@@ -27,7 +27,8 @@ Requirements
 * Require `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended] or anaconda/miniconda/mamba
     * For all commands below replace micromamba with conda etc. depending on which you have installed
 * wandb for training/evaluating models
-    * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`
+    * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`_
+    * Make a note of your user-name for future use
 * Requires environments 1 and 2 below
 
 Environment 1 (locpix-points)
@@ -130,6 +131,10 @@ The following commands can then be run on the command line.
 
 #. Change directory to locpix-points/demo folder
 
+    .. code-block:: shell
+
+        cd locpix_points/demo
+
 #. Initialise
 
     .. code-block:: shell
@@ -137,7 +142,7 @@ The following commands can then be run on the command line.
         micromamba activate locpix-points
         initialise
     
-    * User name = user-name
+    * User name = [user-name from wandb]
     * Project name = output
     * Project saved = .
     * Dataset location = demo/data
