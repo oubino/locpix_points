@@ -257,8 +257,7 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
 
 #. [Optional] If you would like to re-run training or evaluation of the model, please modify the "user" in metadata.json to be your user-name from wandb.
 
-#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder as the models folder needs to be empty
-Then run
+#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder as the models folder needs to be empty. Then run
 
     .. code-block:: shell
         
