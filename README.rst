@@ -285,8 +285,8 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
 
 #. [Optional] To interactively visualise Figures 2A-C and Supplementary Figure 6 interactively, download clusternet_manuscript/analysis.html and open this file in a suitable browser
 
-Other commands (Linux)
-======================
+Other commands
+==============
 
 #. After preprocessing and before feature extraction can annotate the data (Optional)
 
