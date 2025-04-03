@@ -276,6 +276,7 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
         jupyter-notebook
 
     #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models/ folder has only one file, which will be analysed.
+        #. To re-generate UMAP embeddings, please delete all test_umap_..._.pkl files in output/ folder.
 
     #. To reproduce results using the model from the manuscript. Ensure the models folder only contains the original model file that came in the download. Run the scripts/analysis_small.ipynb notebook, this allows for reproduction and visualisation of the results, including:
         #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
