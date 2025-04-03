@@ -257,13 +257,15 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
 
 #. [Optional] If you would like to re-run training or evaluation of the model, please modify the "user" in metadata.json to be your user-name from wandb.
 
-#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder (there must only be one model in the models folder), next run
+#. [Optional] If you would like to re-run training of the model (this may slightly change results due to variability in model training), first delete or move the file in models/ folder as the models folder needs to be empty
+Then run
 
     .. code-block:: shell
         
         bash scripts/train.sh
 
-#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud), note as above there must be only one file in the models/ folder
+#. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud). 
+Note there must be only one file in the models/ folder, which will be analysed.
 
     .. code-block:: shell
     
@@ -275,10 +277,13 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
         micromamba activate locpix-points
         jupyter-notebook
 
-    #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models has only one file
+    #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models/ folder has only one file, which will be analysed.
 
-    #. To reproduce results, using the model from the manuscript, run the scripts/analysis_small.ipynb notebook, this allows for reproduction and visualisation of the results, including:
-        #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating this.
+    #. To reproduce results using the model from the manuscript.
+    Ensure the models folder only contains the original model file that came in the download. 
+    Run the scripts/analysis_small.ipynb notebook, this allows for reproduction and visualisation of the results, including:
+        #. Load in handcrafted, per-cluster and per-FOV features and visualise the UMAP representations of these. 
+        Note as UMAP is not stable (i.e. each run could produce slightly different results), the notebook loads in a previously generated UMAP plot, rather than regenerating         this.
         #. Generate prediction for each item in the reserved test set and visualise the incorrect predictions in UMAP space
         #. Identify graphs closest and furthest from the centre of each class in UMAP space, and visualise the raw and clustered graphs 
         #. For these graphs visualise the results of SubgraphX on them. Note as SubgraphX is not stable (i.e. each run could produce slightly different results), the notebook loads in previously generated SubgraphX plot, rather than regenerating this.
