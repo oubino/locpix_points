@@ -199,7 +199,8 @@ The following commands can then be run on the command line.
 
 #. Then can analyse features using
     
-    * Modify model_name in config/featanalyse_nn.yaml to be the name of the model want to analyse in models/ folder
+    * In config/featanalyse_nn.yaml, modify model_name to be the name of the model to analyse in the models/ folder 
+    e.g. If the model in the models folder is called test.pt, replace INSERTMODELNAME with test
 
     .. code-block:: shell
 
@@ -225,15 +226,12 @@ The following commands can then be run on the command line.
         - -c If .parquet name of the channel column
 
 
-Manuscript results
-==================
+Reproducing manuscript results [~1 day]
+=======================================
 
 To reproduce results on the reserved test sets as seen in the manuscript please see below.
 
-Reproducing results [~1-2 days]
--------------------------------
-
-#. Install all pre-requisites and environments as above, must have micromamba installed (alternatively can ammend the shell scripts to use conda)
+#. Install all pre-requisites and environments as above, must have micromamba installed (alternatively can amend the .sh scripts to use conda instead)
 
 #. Switch to manuscript_version of locpix-points, by navigating to locpix-points install and switching branch
 

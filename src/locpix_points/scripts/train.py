@@ -477,8 +477,10 @@ def main(argv=None):
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
     time_o = time.gmtime(time.time())
-    time_o = f"{time_o[3]}:{time_o[4]}_{time_o[2]}:{time_o[1]}:{time_o[0]}"
-    model_path = f"{project_name}_{dataset_name}_{time_o}_.pt"
+    time_o = (
+        f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
+    )
+    model_path = f"{project_name}_{dataset_name}_{time_o}.pt"
     model_path = os.path.join(model_folder, model_path)
 
     # train loop
