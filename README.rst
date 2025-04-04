@@ -47,7 +47,7 @@ Install this repository
 
     git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
-    pip install -e .
+    pip install .
     cd ..
 
 Install our version of pytorch geometric
@@ -56,7 +56,7 @@ Install our version of pytorch geometric
 
     git clone https://github.com/oubino/pytorch_geometric.git
     cd pytorch_geometric
-    pip install -e .
+    pip install .
     git checkout hetero_transforms
     cd ..
 
@@ -72,7 +72,7 @@ Install DIG
 
     git clone https://github.com/oubino/DIG
     cd DIG
-    pip install -e .
+    pip install .
     cd ..
 
 Environment 2 (feat_extract)
@@ -91,13 +91,13 @@ Then install this repository, its additional requirements and pytorch geometric 
 .. code-block:: python
 
     cd locpix_points
-    pip install -e .
+    pip install .
     cd ..
 
 .. code-block:: python
 
     cd pytorch_geometric
-    pip install -e .
+    pip install .
     cd ..
 
 .. code-block:: python
