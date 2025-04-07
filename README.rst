@@ -214,7 +214,7 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
     .. code-block:: shell
 
         cd locpix_points
-        git checkout clusternet_manuscript
+        git switch clusternet_manuscript
 
 #. Activate the environment [replace micromamba with conda or mamba or whichever you have installed]
 
