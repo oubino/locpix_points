@@ -17,20 +17,17 @@ jobs:
         python-version: ["3.11"]
 
     steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v4
+
+    steps:
+      - uses: actions/checkout@v4
+      - uses: conda-incubator/setup-miniconda@v3
         with:
+          activate-environment: locpix-points
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          "${SHELL}" <(curl -L micro.mamba.pm/install.sh)
+          channels: conda-forge
       - name: Set up first environment
         run: |
-          micromamba create -n locpix-points -c conda-forge python=3.11
-          eval "$(micromamba shell hook --shell bash)"
-          micromamba activate locpix-points
+          conda activate locpix-points
           pip install .
           git clone https://github.com/oubino/DIG
           cd DIG
@@ -44,8 +41,7 @@ jobs:
           pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
       - name: Test
         run: |
-          eval "$(micromamba shell hook --shell bash)"
-          micromamba activate locpix-points
+          conda activate locpix-points
           cd locpix_points/demo
           initialise
       # continue from here
