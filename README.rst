@@ -29,25 +29,25 @@ Requirements
 * wandb for training/evaluating models
     * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`_
     * Make a note of your user-name for future use
-* Requires environments 1 and 2 below
+* Requires environment below
 
-Environment 1 (locpix-points)
+Environment (locpix-points)
 -----------------------------
 
-Create and activate new environment
+Create and activate new environment [replace micromamba with conda or mamba or whichever you have installed]
 
 .. code-block:: python
 
     micromamba create -n locpix-points -c conda-forge python=3.11
     micromamba activate locpix-points
 
-Install this repository
+Install this repository (the -e flag is needed if want to reproduce manuscript results or develop the code, if neither of these apply remove the flag)
 
 .. code-block:: python
 
     git clone https://github.com/oubino/locpix_points.git
     cd locpix_points
-    pip install .
+    pip install -e .
     cd ..
 
 Install our version of pytorch geometric
@@ -56,7 +56,7 @@ Install our version of pytorch geometric
 
     git clone https://github.com/oubino/pytorch_geometric.git
     cd pytorch_geometric
-    pip install .
+    pip install -e .
     git checkout hetero_transforms
     cd ..
 
@@ -74,35 +74,6 @@ Install DIG
     cd DIG
     pip install .
     cd ..
-
-Environment 2 (feat_extract)
-----------------------------
-
-Install external packages
-
-.. code-block:: python 
-
-    micromamba create -n feat_extract -c rapidsai -c conda-forge -c nvidia cuml=23.10 python=3.10 cuda-version=12.2
-    micromamba activate feat_extract
-    pip install dask dask-ml polars pytest
-
-Then install this repository, its additional requirements and pytorch geometric as above 
-
-.. code-block:: python
-
-    cd locpix_points
-    pip install .
-    cd ..
-
-.. code-block:: python
-
-    cd pytorch_geometric
-    pip install .
-    cd ..
-
-.. code-block:: python
-
-    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
 
 Problems
 --------
@@ -125,9 +96,15 @@ Demo (On small dataset) (~1-2 hours with a GPU)
 
 This includes 50 items from each class from the digits and letters dataset in the folder data/ which will be used to demo the pipeline.
 
-All pre-requisites and environments need to be installed as above.
+All pre-requisites and environment need to be installed as above.
 
 The following commands can then be run on the command line.
+
+#. Activate the environment [replace micromamba with conda or mamba or whichever you have installed]
+
+    .. code-block:: shell
+
+        micromamba activate locpix-points
 
 #. Change directory to locpix-points/demo folder
 
@@ -139,7 +116,6 @@ The following commands can then be run on the command line.
 
     .. code-block:: shell
 
-        micromamba activate locpix-points
         initialise
     
     * User name = [user-name from wandb]
@@ -165,7 +141,7 @@ The following commands can then be run on the command line.
     .. code-block:: shell
 
         cd output
-        bash scripts/preprocess.sh
+        python scripts/preprocess.py
     
 
     This preprocesses the data into a folder preprocessed/
@@ -174,7 +150,7 @@ The following commands can then be run on the command line.
 
     .. code-block:: shell
 
-        bash scripts/featextract.sh
+        python scripts/featextract.py
 
 
     This extracts features from the data into a folder preprocessed/featextract
@@ -183,7 +159,7 @@ The following commands can then be run on the command line.
 
     .. code-block:: shell
 
-        bash scripts/generate_k_fold_splits.sh
+        python scripts/generate_k_fold_splits.py
     
 
     This generates a file k_fold.yaml in config/ containing the splits
@@ -192,7 +168,7 @@ The following commands can then be run on the command line.
 
     .. code-block:: shell
 
-        bash scripts/k_fold.sh
+        python scripts/k_fold.py
     
 
     This performs k-fold training, generating models in models/ folder
@@ -231,7 +207,7 @@ Reproducing manuscript results [~1 day]
 
 To reproduce results on the reserved test sets as seen in the manuscript please see below.
 
-#. Install all pre-requisites and environments as above, must have micromamba installed (alternatively can amend the .sh scripts to use conda instead)
+#. Install all pre-requisites and environment as above
 
 #. Switch to manuscript_version of locpix-points, by navigating to locpix-points install and switching branch
 
@@ -239,6 +215,12 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
 
         cd locpix_points
         git checkout clusternet_manuscript
+
+#. Activate the environment [replace micromamba with conda or mamba or whichever you have installed]
+
+    .. code-block:: shell
+    
+        micromamba activate locpix-points
 
 #. Download x2 .tar folder from https://doi.org/10.5281/zenodo.14246303, this includes the raw data (converted to Apache .parquet files). 
 
@@ -261,18 +243,18 @@ To reproduce results on the reserved test sets as seen in the manuscript please 
 
     .. code-block:: shell
         
-        bash scripts/train.sh
+        python scripts/train.py
 
 #. [Optional] If you would like to re-run evaluation of the model (this may slightly change results due to variability in sampling from the point cloud). Note there must be only one file in the models/ folder, which will be analysed.
 
     .. code-block:: shell
     
-        bash scripts/evaluate.sh
+        python scripts/evaluate.py
 
-#. Feature and structure analysis: activate the correct environment and launch jupyter notebook
+#. Feature and structure analysis: launch jupyter notebook
+
     .. code-block:: shell
     
-        micromamba activate locpix-points
         jupyter-notebook
 
     #. [Optional] To perform feature and structure analysis, having done the optional training/evaluation of a new model, run the scripts/analysis.ipynb notebook, ensuring models/ folder has only one file, which will be analysed.

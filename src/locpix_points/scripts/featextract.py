@@ -11,7 +11,6 @@ import warnings
 
 import polars as pl
 import yaml
-from dask.distributed import Client
 
 from locpix_points.preprocessing import datastruc, featextract
 
@@ -99,9 +98,6 @@ def main(argv=None):
             print("Making folder")
             os.makedirs(folder)
 
-    # start client for dask
-    _ = Client()
-
     # remove from files the ones that have already had feat extracted
     loc_files = os.listdir(output_loc_directory)
     cluster_files = os.listdir(output_cluster_directory)
@@ -150,7 +146,7 @@ def main(argv=None):
         # remap the clusterIDs
         unique_clusters = list(df["clusterID"].unique(maintain_order=True))
         map = {value: i for i, value in enumerate(unique_clusters)}
-        df = df.with_columns(pl.col("clusterID").replace(map).alias("clusterID"))
+        df = df.with_columns(pl.col("clusterID").map_dict(map).alias("clusterID"))
 
         # warnings.warn("If no clusters then rest will fail")
 

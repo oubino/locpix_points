@@ -4,19 +4,8 @@ import pyarrow.parquet as pq
 import polars as pl
 import numpy as np
 from locpix_points.preprocessing import datastruc
-from numba import cuda
-from dask_ml.decomposition import PCA
 
-if cuda.is_available():
-    from cuml.cluster import DBSCAN, KMeans
-    import cudf
-
-    gpu = True
-
-else:
-    from sklearn.cluster import DBSCAN, KMeans
-
-    gpu = False
+from sklearn.cluster import DBSCAN, KMeans
 
 folder = "preprocessed/featextract/clusters"
 folder_locs = "preprocessed/featextract/locs"
@@ -54,10 +43,7 @@ for file in os.listdir(folder):
 
     # ---- generate superclusters 0 ----
 
-    if gpu:
-        dataframe = cudf.DataFrame()
-    else:
-        dataframe = pd.DataFrame()
+    dataframe = pd.DataFrame()
     dataframe["x"] = df["x_mean"].to_numpy()
     dataframe["y"] = df["y_mean"].to_numpy()
 
@@ -74,16 +60,10 @@ for file in os.listdir(folder):
         cluster_algo = DBSCAN(eps=750, min_samples=3)
 
     cluster_algo.fit(dataframe)
-    if gpu:
-        df = df.with_columns(
-            pl.lit(cluster_algo.labels_.to_numpy().astype("int32")).alias(
-                "superclusters_0"
-            )
-        )
-    else:
-        df = df.with_columns(
-            pl.lit(cluster_algo.labels_.astype("int32")).alias("superclusters_0")
-        )
+
+    df = df.with_columns(
+        pl.lit(cluster_algo.labels_.astype("int32")).alias("superclusters_0")
+    )
     df = df.filter(pl.col("superclusters_0") != -1)
 
     sc_0_df = df.group_by("superclusters_0").agg(
@@ -96,10 +76,7 @@ for file in os.listdir(folder):
 
     # ---- generate superclusters 1 ----
 
-    if gpu:
-        dataframe = cudf.DataFrame()
-    else:
-        dataframe = pd.DataFrame()
+    dataframe = pd.DataFrame()
     df_mod = df[["superclusters_0", "x_sc_0", "y_sc_0"]].unique()
     dataframe["x"] = df_mod["x_sc_0"].to_numpy()
     dataframe["y"] = df_mod["y_sc_0"].to_numpy()
@@ -112,16 +89,9 @@ for file in os.listdir(folder):
         cluster_algo = DBSCAN(eps=5000, min_samples=2)
 
     cluster_algo.fit(dataframe)
-    if gpu:
-        df_mod = df_mod.with_columns(
-            pl.lit(cluster_algo.labels_.to_numpy().astype("int32")).alias(
-                "superclusters_1"
-            )
-        )
-    else:
-        df_mod = df_mod.with_columns(
-            pl.lit(cluster_algo.labels_.astype("int32")).alias("superclusters_1")
-        )
+    df_mod = df_mod.with_columns(
+        pl.lit(cluster_algo.labels_.astype("int32")).alias("superclusters_1")
+    )
 
     df_mod = df_mod.drop(["x_sc_0", "y_sc_0"])
 

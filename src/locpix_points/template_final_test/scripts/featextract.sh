@@ -4,7 +4,7 @@
 source /root/micromamba/etc/profile.d/micromamba.sh
 
 # Activate correct environment
-micromamba activate feat_extract
+micromamba activate locpix-points
 
 # Test feat extract
 python scripts/featextract_train.py
