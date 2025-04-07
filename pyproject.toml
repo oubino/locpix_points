@@ -47,7 +47,6 @@ dependencies = [
     "bokeh",
     "holoviews",
     "notebook",
-    "numba==0.60.0",
     "cloudpickle==3.0.0",
     "pynndescent==0.5.11",
 ]

@@ -3,28 +3,16 @@
 This module contains functions to extract features from the data
 """
 
-import dask
-import dask.array as da
 import math
 import numpy as np
 import polars as pl
 from scipy.spatial import ConvexHull
 from sklearn.neighbors import NearestNeighbors
 
-from numba import cuda
-from dask_ml.decomposition import PCA
+from sklearn.decomposition import PCA
 import pandas as pd
 
-if cuda.is_available():
-    from cuml.cluster import DBSCAN, KMeans
-    import cudf
-
-    gpu = True
-
-else:
-    from sklearn.cluster import DBSCAN, KMeans
-
-    gpu = False
+from sklearn.cluster import DBSCAN, KMeans
 
 
 def cluster_data(
@@ -44,10 +32,7 @@ def cluster_data(
     Returns:
         df (polars df) : Dataframe with additional column for cluster"""
 
-    if gpu:
-        dataframe = cudf.DataFrame()
-    else:
-        dataframe = pd.DataFrame()
+    dataframe = pd.DataFrame()
     dataframe["x"] = df[x_col].to_numpy()
     dataframe["y"] = df[y_col].to_numpy()
 
@@ -55,25 +40,12 @@ def cluster_data(
         dbscan = DBSCAN(eps=eps, min_samples=minpts)
         dbscan.fit(dataframe)
 
-        if gpu:
-            df = df.with_columns(
-                pl.lit(dbscan.labels_.to_numpy().astype("int32")).alias("clusterID")
-            )
-        else:
-            df = df.with_columns(
-                pl.lit(dbscan.labels_.astype("int32")).alias("clusterID")
-            )
+        df = df.with_columns(pl.lit(dbscan.labels_.astype("int32")).alias("clusterID"))
     elif method == "kmeans":
         kmeans = KMeans(n_clusters=n_clusters)
         kmeans.fit(dataframe)
-        if gpu:
-            df = df.with_columns(
-                pl.lit(kmeans.labels_.to_numpy().astype("int32")).alias("clusterID")
-            )
-        else:
-            df = df.with_columns(
-                pl.lit(kmeans.labels_.astype("int32")).alias("clusterID")
-            )
+
+        df = df.with_columns(pl.lit(kmeans.labels_.astype("int32")).alias("clusterID"))
 
     # return the original df with cluster id for each loc
     return df
@@ -130,8 +102,8 @@ def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
     cluster_df = df.group_by(col_name).agg(
         [
             pl.count(),
-            pl.col(x_name).mean().name.suffix("_mean"),
-            pl.col(y_name).mean().name.suffix("_mean"),
+            pl.col(x_name).mean().alias(f"{x_name}_mean"),
+            pl.col(y_name).mean().alias(f"{y_name}_mean"),
             (
                 (
                     ((pl.col(x_name) - pl.col(x_name).mean()) ** 2).sum()
@@ -157,9 +129,8 @@ def pca_fn(X):
         length_pca (float): Length of the cluster according to PCA
         area_pca (float): Area of the cluster according to PCA
     """
-    dX = da.from_array(X, chunks=X.shape)
     pca = PCA(n_components=2)
-    pca.fit(dX)
+    pca.fit(X)
     # eigenvalues in order of size: variance[0], variance[1]
     variance = pca.explained_variance_
     # from 10.5194/isprsarchives-XXXVIII-5-W12-97-2011
@@ -195,13 +166,11 @@ def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
         df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
     ]  # slow
 
-    lazy_results = []
+    results = []
 
     for arr in array_list:
-        lazy_result = dask.delayed(pca_fn)(arr)
-        lazy_results.append(lazy_result)
-
-    results = dask.compute(*lazy_results)
+        result = pca_fn(arr)
+        results.append(result)
 
     array = np.array(results)
     linearities = array[:, 0]
@@ -264,13 +233,12 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
         df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
     ]  # slow
 
-    lazy_results = []
+    results = []
 
     for arr in array_list:
-        lazy_result = dask.delayed(convex_hull)(arr)
-        lazy_results.append(lazy_result)
+        result = convex_hull(arr)
+        results.append(result)
 
-    results = dask.compute(*lazy_results)
     array = np.array(results)
     perimeters = array[:, 0]
     areas = array[:, 1]
