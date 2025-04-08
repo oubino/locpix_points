@@ -42,6 +42,12 @@ Create and activate new environment [replace micromamba with conda or mamba or w
     micromamba create -n locpix-points -c conda-forge python=3.11
     micromamba activate locpix-points
 
+Install pytorch
+
+.. code-block:: python
+
+    pip install torch --index-url https://download.pytorch.org/whl/cu126
+
 Install this repository (the -e flag is needed if want to reproduce manuscript results or develop the code, if neither of these apply remove the flag)
 
 .. code-block:: python
@@ -50,12 +56,6 @@ Install this repository (the -e flag is needed if want to reproduce manuscript r
     cd locpix_points
     pip install -e .
     cd ..
-
-Install pytorch
-
-.. code-block:: python
-
-    pip install torch --index-url https://download.pytorch.org/whl/cu126
 
 Install our version of pytorch geometric
 
