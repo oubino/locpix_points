@@ -8,8 +8,6 @@ import polars as pl
 import shutil
 import time
 import os
-import tkinter as tk
-from tkinter import filedialog
 
 
 def get_valid_response(prompt, allowed):
@@ -170,6 +168,9 @@ def main(argv=None):
 
     # Get dataset location
     if data_path is None:
+        import tkinter as tk
+        from tkinter import filedialog
+
         root = tk.Tk()
         root.withdraw()
         data_path = filedialog.askdirectory(title="Dataset folder")
