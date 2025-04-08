@@ -24,7 +24,6 @@ jobs:
           channels: conda-forge
       - name: Set up first environment
         run: |
-          conda activate locpix-points
           pip install .
           git clone https://github.com/oubino/DIG
           cd DIG
