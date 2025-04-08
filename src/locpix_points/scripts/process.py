@@ -59,7 +59,7 @@ def load_pre_filter(path):
     Raises:
         ValueError : If pre-filter is not correct type"""
 
-    pre_filter = torch.load(path)
+    pre_filter = torch.load(path, weights_only=False)
     if (
         pre_filter.startswith("functools.partial(<function>, inclusion_list=")
         and pre_filter[-1] == ")"

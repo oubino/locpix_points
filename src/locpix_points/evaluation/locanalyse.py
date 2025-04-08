@@ -121,7 +121,7 @@ def analyse_locs(project_directory, config, final_test, automatic):
         assert len(model_list) == 1
         model_name = model_list[0]
         model_loc = os.path.join(model_dir, model_name)
-    model.load_state_dict(torch.load(model_loc))
+    model.load_state_dict(torch.load(model_loc, weights_only=False))
     model.to(device)
     model.eval()
 

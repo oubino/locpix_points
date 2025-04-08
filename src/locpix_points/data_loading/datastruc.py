@@ -465,7 +465,9 @@ class ClusterDataset(SMLMDataset):
             data = Data()
 
             # load in tensor
-            hetero_data = torch.load(os.path.join(self._raw_cluster_dir_root, raw_path))
+            hetero_data = torch.load(
+                os.path.join(self._raw_cluster_dir_root, raw_path), weights_only=False
+            )
             hetero_data.to(self.device)
 
             # pass through loc net
