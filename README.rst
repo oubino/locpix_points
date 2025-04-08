@@ -3,7 +3,7 @@ Reproducing manuscript results [~1 day]
 
 To reproduce results on the reserved test sets as seen in the manuscript please see below.
 
-#. Install all pre-requisites and environment as above
+#. Install all pre-requisites and environment as noted on main branch
 
 #. Switch to manuscript_version of locpix-points, by navigating to locpix-points install and switching branch
 
