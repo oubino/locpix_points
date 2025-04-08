@@ -164,7 +164,7 @@ def visualise_torch_geometric(
     Args:
         file_loc (str) : Location of the pytorch geometric file"""
 
-    x = torch.load(file_loc)
+    x = torch.load(file_loc, weights_only=False)
 
     cmap = ["r", "darkorange", "b", "k"]
 
