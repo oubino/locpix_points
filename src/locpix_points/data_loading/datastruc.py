@@ -200,7 +200,9 @@ class SMLMDataset(Dataset):
         Returns:
             data (torch tensor): Tensor data item from the dataset"""
 
-        data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"))
+        data = torch.load(
+            os.path.join(self.processed_dir, f"{idx}.pt"), weights_only=False
+        )
         return data
 
     # This is copied from the pytorch geometric docs
