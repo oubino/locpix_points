@@ -207,6 +207,7 @@ def main(argv=None):
             file.name == "preprocess_null.yaml"
             or file.name == "preprocess_present.yaml"
             or file.name == "annotate.yaml"
+            or file.name == "__pycache__"
         ):
             continue
         shutil.copy(file, dest)
@@ -221,6 +222,7 @@ def main(argv=None):
             or file.name == "annotate_loc.py"
             or file.name == "annotate_napari.py"
             or file.name == "annotate.sh"
+            or file.name == "__pycache__"
         ):
             continue
         shutil.copy(file, dest)
