@@ -64,7 +64,8 @@ Install other requirements [note may have to change the wheels to install based 
 
 .. code-block:: python
 
-    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
+    pip install open3d torch-summary torchmetrics pytest
+    pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.6.0+cu126.html
 
 Install DIG
 
