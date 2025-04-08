@@ -200,7 +200,9 @@ class SMLMDataset(Dataset):
         Returns:
             data (torch tensor): Tensor data item from the dataset"""
 
-        data = torch.load(os.path.join(self.processed_dir, f"{idx}.pt"), weights_only=False)
+        data = torch.load(
+            os.path.join(self.processed_dir, f"{idx}.pt"), weights_only=False
+        )
         return data
 
     # This is copied from the pytorch geometric docs
@@ -466,7 +468,8 @@ class ClusterDataset(SMLMDataset):
 
                 # load in tensor
                 hetero_data = torch.load(
-                    os.path.join(self._raw_cluster_dir_root, raw_path), weights_only=False
+                    os.path.join(self._raw_cluster_dir_root, raw_path),
+                    weights_only=False,
                 )
                 hetero_data.to(self.device)
 
@@ -481,7 +484,7 @@ class ClusterDataset(SMLMDataset):
                     pos_locs=pos_dict["locs"],
                 )
                 x_cluster = x_cluster.sigmoid()
-                    
+
                 # if have manual cluster features as well
                 try:
                     manual_feats = hetero_data.x_dict["clusters"]
@@ -517,7 +520,8 @@ class ClusterDataset(SMLMDataset):
 
                 # load in tensor
                 hetero_data = torch.load(
-                    os.path.join(self._raw_cluster_dir_root, raw_path), weights_only=False
+                    os.path.join(self._raw_cluster_dir_root, raw_path),
+                    weights_only=False,
                 )
                 hetero_data.to(self.device)
 
