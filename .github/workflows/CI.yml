@@ -39,7 +39,7 @@ jobs:
           pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.6.0+cu126.html
       - name: Test
         run: |
-          cd locpix_points/demo
+          cd demo
           initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
       # continue from here
 
