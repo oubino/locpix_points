@@ -49,6 +49,7 @@ dependencies = [
     "notebook",
     "cloudpickle",
     "pynndescent",
+    "tkinter",
 ]
 
 [project.scripts]
