@@ -167,7 +167,7 @@ The following commands can then be run on the command line.
 
     This generates a file k_fold.yaml in config/ containing the splits
 
-#. K-fold [remove -w flag to scripts/k_fold.py in main_k if want to run with wandb]
+#. K-fold [to disable wandb, add -w flag to main_k function inside scripts/k_fold.py]
 
     .. code-block:: shell
 
