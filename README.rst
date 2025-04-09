@@ -110,18 +110,18 @@ These can be mapped to their "real" class
    * - Integer
      - Class
    * - 0
-     - 1
-     - 2
-     - 3
-     - 4
-     - 5
-     - 6
-   * - Digit one
+     - Digit one
+   * - 1
      - Digit two
+   * - 2
      - Digit three
+   * - 3
      - Letter T
+   * - 4
      - Letter O
+   * - 5
      - Letter L
+   * - 6
      - Grid
 
 All pre-requisites and environment need to be installed as above.
