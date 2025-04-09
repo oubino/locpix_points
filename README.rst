@@ -174,7 +174,8 @@ The following commands can then be run on the command line.
         python scripts/k_fold.py
     
 
-    This performs k-fold training, generating models in models/ folder
+    This performs k-fold training, generating models in models/ folder.
+    N.B. If you have an error here that looks something like "wandb.errors.errors.CommError: failed to upsert bucket: returned error 403", see https://github.com/wandb/wandb/issues/8609. Potential fix: The user name you gave when running initialise should have include the organisation name after from wandb e.g. maryjane-university-of-life. To fix without going back, open the metadata.json file and amend the user here.
 
 #. Then can analyse features using
     
