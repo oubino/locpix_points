@@ -115,22 +115,20 @@ The following commands can then be run on the command line.
 
         cd locpix_points/demo
 
-#. Initialise
+#. Initialise (this will generate a folder called output/ where we will be analysing the data)
 
     .. code-block:: shell
 
         initialise
-    
-    * User name = [user-name from wandb]
-    * Project name = output
-    * Project saved = .
-    * Dataset location = demo/data
-    * Dataset name = demo
-    * Copy preprocessed = no
-    * .csv files = no
-    * Already labelled = yes
 
-    This will generate a folder called output/ where we will be analysing the data.
+   * User name = [user-name from wandb]
+   * Project name = output
+   * Project saved = .
+   * Dataset location = demo/data
+   * Dataset name = demo
+   * Copy preprocessed = no
+   * .csv files = no
+   * Already labelled = yes
 
 #. Replace output/config files with files in demo/config
 
@@ -138,73 +136,65 @@ The following commands can then be run on the command line.
 
         cp -rf config output/
 
-
-#. Preprocess
+#. Preprocess (This preprocesses the data into a folder preprocessed/)
 
     .. code-block:: shell
 
         cd output
         python scripts/preprocess.py
-    
 
-    This preprocesses the data into a folder preprocessed/
-
-#. Feature extraction
+#. Feature extraction (This extracts features from the data into a folder preprocessed/featextract)
 
     .. code-block:: shell
 
         python scripts/featextract.py
 
-
-    This extracts features from the data into a folder preprocessed/featextract
-
-#. Generate k-fold splits
+#. Generate k-fold splits (This generates a file k_fold.yaml in config/ containing the splits)
 
     .. code-block:: shell
 
         python scripts/generate_k_fold_splits.py
-    
 
-    This generates a file k_fold.yaml in config/ containing the splits
-
-#. K-fold [to disable wandb, add -w flag to main_k function inside scripts/k_fold.py]
+#. K-fold (This performs k-fold training, generating models in models/ folder)[]
 
     .. code-block:: shell
 
         python scripts/k_fold.py
-    
 
-    This performs k-fold training, generating models in models/ folder.
 
-    N.B. If you have an error here that looks something like "wandb.errors.errors.CommError: failed to upsert bucket: returned error 403", see https://github.com/wandb/wandb/issues/8609. Potential fix: The user name you gave when running initialise should have include the organisation name after from wandb e.g. maryjane-university-of-life. To fix without going back 1. Open the metadata.json file 2. Amend the user here 3. Re-run k-fold
+   * N.B. If you have an error here that looks something like "wandb.errors.errors.CommError: failed to upsert bucket: returned error 403", see https://github.com/wandb/wandb/issues/8609. Potential fix: The user name you gave when running initialise should have include the organisation name after from wandb e.g. maryjane-university-of-life. To fix without going back 1. Open the metadata.json file 2. Amend the user here 3. Re-run k-fold
+   * To disable wandb, add -w flag to main_k function inside scripts/k_fold.py
 
-#. Then can analyse features using
-    
-    * In config/featanalyse_nn.yaml, modify model_name to be the name of the model to analyse in the models/ folder 
-    e.g. If the model in the models folder is called test.pt, replace INSERTMODELNAME with test
+#. Then can analyse features
 
-    .. code-block:: shell
+   * Change name of models so can run analysis
 
-        jupyter-notebook
+   .. code-block:: shell
 
-    * Run analysis notebook: scripts/analysis.ipynb
-    * Do not run any "patient" cells
+       mv models/fold_0/*.pt models/fold_0/demo.pt
+       mv models/fold_1/*.pt models/fold_1/demo.pt
+       mv models/fold_2/*.pt models/fold_2/demo.pt
+       mv models/fold_3/*.pt models/fold_3/demo.pt
+       mv models/fold_4/*.pt models/fold_4/demo.pt
 
-#.  [Visualise a FOV]
+   * Then run analysis notebook: scripts/analysis.ipynb [DO NOT RUN ANY "patient" cells] using command:
+
+   .. code-block:: shell
+
+       jupyter-notebook
+
+#.  [Optional] Visualise a FOV (Generates a window visualising the file)
     
     .. code-block:: shell
     
          visualise [ARGS]
 
-    * Generates a window visualising the file
-    
-    *Arguments*
-
-        - -i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
-        - -x If .parquet file then name of the x column
-        - -y If .parquet file then name of the y column
-        - -z If .parquet and 3D then name of the z column
-        - -c If .parquet name of the channel column
+  *Arguments*
+    - -i Path to the file to visualise (either .parquet or .pt pytorch geometric object)
+    - -x If .parquet file then name of the x column
+    - -y If .parquet file then name of the y column
+    - -z If .parquet and 3D then name of the z column
+    - -c If .parquet name of the channel column
 
 
 Reproducing manuscript results [~1 day]
