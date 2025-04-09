@@ -99,6 +99,31 @@ Demo (On small dataset) (~1-2 hours with a GPU)
 
 This includes 50 items from each class from the digits and letters dataset in the folder data/ which will be used to demo the pipeline.
 
+Note results are given in terms of classes 0,...,6 
+
+These can be mapped to their "real" class
+
+.. list-table:: Title
+   :widths: 25 25 50
+   :header-rows: 1
+
+   * - Integer
+     - Class
+   * - 0
+     - 1
+     - 2
+     - 3
+     - 4
+     - 5
+     - 6
+   * - Digit one
+     - Digit two
+     - Digit three
+     - Letter T
+     - Letter O
+     - Letter L
+     - Grid
+
 All pre-requisites and environment need to be installed as above.
 
 The following commands can then be run on the command line.
@@ -177,7 +202,13 @@ The following commands can then be run on the command line.
        mv models/fold_3/*.pt models/fold_3/demo.pt
        mv models/fold_4/*.pt models/fold_4/demo.pt
 
-   * Then run analysis notebook: scripts/analysis.ipynb [DO NOT RUN ANY "patient" cells] using command:
+   * We will then run a jupyter-notebook, note the following important points
+     * DO NOT RUN ANY "patient" cells
+     * In the structure analysis section, the file_name is currently equal to None, change this to a file you want to visualise, using the filename without extension in output/preprocessed/featextract/clusters, it should also be given as a string (e.g. "three_10")
+     * In the structure analysis section, the subgraph config file needs to be amended so that num_classes is 7 AND max_nodes is an integer, defining the maximum number of nodes in the identified important subgraph (e.g. 4)
+     * You will not be able to run new cells after generating a visualisation, until you have closed the visualisation
+   
+   * Then run notebook: scripts/analysis.ipynb using command
 
    .. code-block:: shell
 

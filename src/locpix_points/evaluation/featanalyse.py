@@ -1419,13 +1419,13 @@ def visualise_explanation(
         o3d.visualization.draw_geometries_with_key_callbacks(plots, key_to_callback)
     else:
         # draw raw localisations as grey spheres set back slightly from the graph
-        warnings.warn("Localisations will be slightly set back from graph")
+        # warnings.warn("Localisations will be slightly set back from graph")
         x = torch.load(file_loc, weights_only=False)
         locs = x["locs"].pos.numpy()
         if locs.shape[1] == 2:
             z = np.ones(locs.shape[0])
             plus = input(
-                "Plot localisations set back (YES) or set forward (anything else)"
+                "Plot localisations set forward (YES) or set back (anything else)"
             )
             if plus == "YES":
                 z += 0.1
