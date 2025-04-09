@@ -175,7 +175,8 @@ The following commands can then be run on the command line.
     
 
     This performs k-fold training, generating models in models/ folder.
-    N.B. If you have an error here that looks something like "wandb.errors.errors.CommError: failed to upsert bucket: returned error 403", see https://github.com/wandb/wandb/issues/8609. Potential fix: The user name you gave when running initialise should have include the organisation name after from wandb e.g. maryjane-university-of-life. To fix without going back, open the metadata.json file and amend the user here.
+
+    N.B. If you have an error here that looks something like "wandb.errors.errors.CommError: failed to upsert bucket: returned error 403", see https://github.com/wandb/wandb/issues/8609. Potential fix: The user name you gave when running initialise should have include the organisation name after from wandb e.g. maryjane-university-of-life. To fix without going back 1. Open the metadata.json file 2. Amend the user here 3. Re-run k-fold
 
 #. Then can analyse features using
     
