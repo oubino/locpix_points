@@ -445,7 +445,7 @@ def struc_analysis_prep(
         model_loc = os.path.join(
             project_directory, "models", f"fold_{fold}", model_name
         )
-    model.load_state_dict(torch.load(model_loc))
+    model.load_state_dict(torch.load(model_loc, weights_only=False))
     model.to(device)
     model.eval()
 
@@ -1420,7 +1420,7 @@ def visualise_explanation(
     else:
         # draw raw localisations as grey spheres set back slightly from the graph
         warnings.warn("Localisations will be slightly set back from graph")
-        x = torch.load(file_loc)
+        x = torch.load(file_loc, weights_only=False)
         locs = x["locs"].pos.numpy()
         if locs.shape[1] == 2:
             z = np.ones(locs.shape[0])
@@ -1558,7 +1558,7 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
     if final_test:
         ## Load in best model
         model_loc = os.path.join(project_directory, "models", model_name)
-        model.load_state_dict(torch.load(model_loc))
+        model.load_state_dict(torch.load(model_loc, weights_only=False))
         model.to(device)
         model.eval()
 
@@ -1579,7 +1579,7 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
             model_loc = os.path.join(
                 project_directory, "models", f"fold_{fold}", model_name
             )
-            model.load_state_dict(torch.load(model_loc))
+            model.load_state_dict(torch.load(model_loc, weights_only=False))
             model.to(device)
             model.eval()
 
@@ -1924,14 +1924,14 @@ def test_ensemble_averaging(
         model_name = model_list[0]
 
     model_loc = os.path.join(model_dir, model_name)
-    model.load_state_dict(torch.load(model_loc))
+    model.load_state_dict(torch.load(model_loc, weights_only=False))
     model.to(device)
     model.eval()
 
     raise ValueError("BUG: no cluster model yet...!")
 
     cluster_model = torch.load(
-        os.path.join(project_directory, f"output/cluster_model.pt")
+        os.path.join(project_directory, f"output/cluster_model.pt"), weights_only=False
     )
     cluster_model.to(device)
     cluster_model.eval()

@@ -22,8 +22,9 @@ Requirements
 
 * Tested on Windows computer using windows subsytem for linux (WSL) 2 with a NVIDIA GPU
 * Requires a CUDA-capable GPU
-* Require Cuda 12.1+
-    * For WSL for windows, follow: https://docs.nvidia.com/cuda/wsl-user-guide/index.html https://developer.nvidia.com/cuda-downloads?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local
+* Requires Cuda 12.6
+    * NVIDIA CUDA driver
+    * NVIDIA CUDA toolkit: for WSL for windows, follow: https://developer.nvidia.com/cuda-12-6-0-download-archive?target_os=Linux&target_arch=x86_64&Distribution=WSL-Ubuntu&target_version=2.0&target_type=deb_local 
 * Require `micromamba <https://mamba.readthedocs.io/en/latest/>`_ [recommended] or anaconda/miniconda/mamba
     * For all commands below replace micromamba with conda etc. depending on which you have installed
 * wandb for training/evaluating models
@@ -40,6 +41,12 @@ Create and activate new environment [replace micromamba with conda or mamba or w
 
     micromamba create -n locpix-points -c conda-forge python=3.11
     micromamba activate locpix-points
+
+Install pytorch
+
+.. code-block:: python
+
+    pip install torch --index-url https://download.pytorch.org/whl/cu126
 
 Install this repository (the -e flag is needed if want to reproduce manuscript results or develop the code, if neither of these apply remove the flag)
 
@@ -60,11 +67,13 @@ Install our version of pytorch geometric
     git checkout hetero_transforms
     cd ..
 
-Install other requirements [note may have to change the wheels to install based on which cuda you have i.e. cu121 = cuda 12.1]
+Install other requirements
 
 .. code-block:: python
 
-    pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
+    pip install open3d 
+    pip install torch-summary torchmetrics pytest
+    pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.6.0+cu126.html --no-cache-dir
 
 Install DIG
 
@@ -83,13 +92,7 @@ You may have difficulty installing the following: open3d, torch-scatter, torch-s
 To navigate this we can 
 
 1. Do not install open3d
-2. For torch-scatter, torch-sparse and torch-cluster run the following (where file should be modified to the relevant file - see the torch-scatter/torch-cluster/torch-sparse github page)
-
-.. code-block:: python
-
-    pip install torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-    pip install torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
-    pip install torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html
+2. For torch-scatter, torch-sparse and torch-cluster, ensure correct CUDA and pytorch versions are installed, if want to develop with another version of pytorch and CUDA you will also need to install different versions of these at https://data.pyg.org/whl/
 
 Demo (On small dataset) (~1-2 hours with a GPU)
 ===============================================

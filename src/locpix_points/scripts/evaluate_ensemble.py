@@ -517,7 +517,7 @@ def main(argv=None):
         print("\n")
         print("Loading in best model")
         print("\n")
-        model.load_state_dict(torch.load(model_loc))
+        model.load_state_dict(torch.load(model_loc, weights_only=False))
         model.to(device)
 
         # model summary
