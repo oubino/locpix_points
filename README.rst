@@ -103,7 +103,7 @@ Note results are given in terms of classes 0,...,6
 
 These can be mapped to their "real" class
 
-.. list-table:: Title
+.. list-table::
    :widths: 25 25
    :header-rows: 1
 
