@@ -40,7 +40,7 @@ jobs:
           cd ..
       - name: Test
         run: |
-          cd locpix_points/demo
+          cd demo
           initialise
       # continue from here
 
