@@ -99,9 +99,9 @@ Demo (On small dataset) (~1-2 hours with a GPU)
 
 This includes 50 items from each class from the digits and letters dataset in the folder data/ which will be used to demo the pipeline.
 
-Note results are given in terms of classes 0,...,6 
+Note results are given in terms of classes: 0,...,6 
 
-These can be mapped to their "real" class
+These integers can be mapped to their "real" class
 
 .. list-table::
    :widths: 25 25
