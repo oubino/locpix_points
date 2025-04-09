@@ -203,10 +203,11 @@ The following commands can then be run on the command line.
        mv models/fold_4/*.pt models/fold_4/demo.pt
 
    * We will then run a jupyter-notebook, note the following important points
-     * DO NOT RUN ANY "patient" cells
-     * In the structure analysis section, the file_name is currently equal to None, change this to a file you want to visualise, using the filename without extension in output/preprocessed/featextract/clusters, it should also be given as a string (e.g. "three_10")
-     * In the structure analysis section, the subgraph config file needs to be amended so that num_classes is 7 AND max_nodes is an integer, defining the maximum number of nodes in the identified important subgraph (e.g. 4)
-     * You will not be able to run new cells after generating a visualisation, until you have closed the visualisation
+
+      * DO NOT RUN ANY "patient" cells
+      * In the structure analysis section, the file_name is currently equal to None, change this to a file you want to visualise, using the filename without extension in output/preprocessed/featextract/clusters, it should also be given as a string (e.g. "three_10")
+      * In the structure analysis section, the subgraph config file needs to be amended so that num_classes is 7 AND max_nodes is an integer, defining the maximum number of nodes in the identified important subgraph (e.g. 4)
+      * You will not be able to run new cells after generating a visualisation, until you have closed the visualisation
    
    * Then run notebook: scripts/analysis.ipynb using command
 
