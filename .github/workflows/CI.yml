@@ -24,20 +24,22 @@ jobs:
           channels: conda-forge
       - name: Set up first environment
         run: |
+          pip install torch --index-url https://download.pytorch.org/whl/cu126
           pip install .
-          git clone https://github.com/oubino/DIG
-          cd DIG
-          pip install .
-          cd ..
           git clone https://github.com/oubino/pytorch_geometric.git
           cd pytorch_geometric
           pip install -e .
           git checkout hetero_transforms
           cd ..
-          pip install open3d torch-scatter -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-sparse -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-cluster -f https://data.pyg.org/whl/torch-2.1.0+cu121.html torch-summary torchmetrics pytest --no-cache-dir
+          pip install open3d 
+          pip install torch-summary torchmetrics pytest
+          pip install torch-scatter torch-sparse torch-cluster -f https://data.pyg.org/whl/torch-2.6.0+cu126.html --no-cache-dir
+          git clone https://github.com/oubino/DIG
+          cd DIG
+          pip install .
+          cd ..
       - name: Test
         run: |
-          conda activate locpix-points
           cd locpix_points/demo
           initialise
       # continue from here
