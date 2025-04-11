@@ -24,7 +24,7 @@ jobs:
           channels: conda-forge
       - name: Set up first environment
         run: |
-          conda info
+          conda activate locpix-points
           pip install torch --index-url https://download.pytorch.org/whl/cu126
           pip install .
           git clone https://github.com/oubino/pytorch_geometric.git
