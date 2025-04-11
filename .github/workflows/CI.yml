@@ -41,7 +41,7 @@ jobs:
       - name: Test
         run: |
           cd demo
-          initialise
+          initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
       # continue from here
 
       #- name: Test with tox
@@ -64,3 +64,4 @@ jobs:
       #    flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics
       #    # exit-zero treats all errors as warnings. The GitHub editor is 127 chars wide
       #    flake8 . --count --exit-zero --max-complexity=10 --max-line-length=127 --statistics
+      # pip install https://files.pythonhosted.org/packages/41/4c/cd83913a6625032ebf2a9524b382e4a13dfa543d8452d10c6a5426a8b490/cilog-1.3.0-py3-none-any.whl
