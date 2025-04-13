@@ -203,27 +203,29 @@ def main(argv=None):
     dest = os.path.join(project_directory, "config")
     iterdir = dir.iterdir()
     for file in iterdir:
-        if (
-            file.name == "preprocess_null.yaml"
-            or file.name == "preprocess_present.yaml"
-            or file.name == "annotate.yaml"
-        ):
-            continue
-        shutil.copy(file, dest)
+        if file.isfile():
+            if (
+                file.name == "preprocess_null.yaml"
+                or file.name == "preprocess_present.yaml"
+                or file.name == "annotate.yaml"
+            ):
+                continue
+            shutil.copy(file, dest)
 
     # Copy template/scripts
     dir = files("locpix_points.template.scripts")
     dest = os.path.join(project_directory, "scripts")
     iterdir = dir.iterdir()
     for file in iterdir:
-        if (
-            file.name == "annotate_fov.py"
-            or file.name == "annotate_loc.py"
-            or file.name == "annotate_napari.py"
-            or file.name == "annotate.sh"
-        ):
-            continue
-        shutil.copy(file, dest)
+        if file.isfile():
+            if (
+                file.name == "annotate_fov.py"
+                or file.name == "annotate_loc.py"
+                or file.name == "annotate_napari.py"
+                or file.name == "annotate.sh"
+            ):
+                continue
+            shutil.copy(file, dest)
 
     # Copy preprocessed files from another task
     prompt = (
