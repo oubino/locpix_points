@@ -203,7 +203,7 @@ def main(argv=None):
     dest = os.path.join(project_directory, "config")
     iterdir = dir.iterdir()
     for file in iterdir:
-        if file.isfile():
+        if file.is_file():
             if (
                 file.name == "preprocess_null.yaml"
                 or file.name == "preprocess_present.yaml"
@@ -217,7 +217,7 @@ def main(argv=None):
     dest = os.path.join(project_directory, "scripts")
     iterdir = dir.iterdir()
     for file in iterdir:
-        if file.isfile():
+        if file.is_file():
             if (
                 file.name == "annotate_fov.py"
                 or file.name == "annotate_loc.py"
