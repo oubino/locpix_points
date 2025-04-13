@@ -213,7 +213,7 @@ class ClusterNet(torch.nn.Module):
         INF = OUTE
         OUTF = 88
         HIDDEN_MLP = 128
-        DROPOUT_supercluster = 0.2
+        DROPOUT_supercluster = 0.0
 
         # comment out MLPs for backwards compatability with old models
         # self.sc_mlp_0 = MLP(
