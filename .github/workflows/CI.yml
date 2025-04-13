@@ -43,6 +43,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd demo
+          ls '/usr/share/miniconda/envs/locpix-points/lib/python3.11/site-packages/locpix_points/template/config/'
           initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
       # continue from here
 
