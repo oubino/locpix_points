@@ -24,7 +24,7 @@ from torch_geometric.nn import (
     knn_graph,
     knn_interpolate,
 )
-from torch_geometric.utils import scatter, contains_self_loops
+from torch_geometric.utils import scatter, contains_self_loops, softmax
 
 
 class TransformerBlock(torch.nn.Module):
@@ -183,6 +183,9 @@ class PointTransformerEmbedding(torch.nn.Module):
             act="relu",
         )  # BN
 
+        self.attn_input_nn = Lin(in_channels, dim_model[0])
+        self.attn_input_gate = Lin(in_channels, 1)
+
         self.transformer_input = TransformerBlock(
             in_channels=dim_model[0],
             out_channels=dim_model[0],
@@ -232,7 +235,12 @@ class PointTransformerEmbedding(torch.nn.Module):
             x = torch.ones((pos.shape[0], 1), device=pos.get_device())
 
         # first block
-        x = self.mlp_input(x)
+        # x = self.mlp_input(x)
+        gate = self.attn_input_gate(x)
+        x = self.attn_input_nn(x)
+        gate = softmax(gate, batch, None, None, -2)
+        x = gate * x
+
         if edge_index is None:
             edge_index = knn_graph(pos, k=self.k, batch=batch)
         x = self.transformer_input(x, pos, edge_index)
