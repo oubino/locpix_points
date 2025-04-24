@@ -71,7 +71,7 @@ class ClusterEncoder(torch.nn.Module):
         if conv_type == "gin":
             nn = MLP(channel_list, plain_last=False, dropout=dropout)
             self.conv = HeteroConv(
-                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="max"
+                {("clusters", "near", "clusters"): conv.GINConv(nn)}, aggr="mean"
             )
         elif conv_type == "transformer":
             self.conv = HeteroConv(
@@ -85,7 +85,7 @@ class ClusterEncoder(torch.nn.Module):
                         dropout=dropout,
                     )
                 },
-                aggr="max",
+                aggr="mean",
             )
         elif conv_type == "pointnet":
             local_nn = MLP(channel_list[0], plain_last=True, dropout=dropout)  # BN
@@ -96,7 +96,7 @@ class ClusterEncoder(torch.nn.Module):
                         local_nn, global_nn, add_self_loops=False
                     )
                 },
-                aggr="max",
+                aggr="mean",
             )
         elif conv_type == "pointtransformer":
             pos_nn = MLP(  # BN
@@ -121,7 +121,7 @@ class ClusterEncoder(torch.nn.Module):
                         add_self_loops=False,
                     )
                 },
-                aggr="max",  # CHANGE
+                aggr="mean",  # CHANGE
             )
         else:
             raise ValueError(f"{conv_type} not supported")
@@ -239,7 +239,7 @@ class ClusterNet(torch.nn.Module):
         )  # BN
         # in, out
         self.cluster_encoder_0_0_new = conv.PointTransformerConv(
-            INA, OUTA, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="max"
+            INA, OUTA, pos_nn_0_0, attn_nn_0_0, add_self_loops=False, aggr="mean"
         )
 
         pos_nn_1_0 = MLP(
@@ -255,7 +255,7 @@ class ClusterNet(torch.nn.Module):
             act="relu",
         )  # BN
         self.cluster_encoder_1_0_new = conv.PointTransformerConv(
-            INB, OUTB, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="max"
+            INB, OUTB, pos_nn_1_0, attn_nn_1_0, add_self_loops=False, aggr="mean"
         )
 
         pos_nn_2_0 = MLP(
@@ -271,7 +271,7 @@ class ClusterNet(torch.nn.Module):
             act="relu",
         )  # BN
         self.cluster_encoder_2_0_new = conv.PointTransformerConv(
-            INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="max"
+            INC, OUTC, pos_nn_2_0, attn_nn_2_0, add_self_loops=False, aggr="mean"
         )
 
         # self.sc_mlp_1 = MLP(
@@ -297,7 +297,7 @@ class ClusterNet(torch.nn.Module):
         )  # BN
         # in, out
         self.cluster_encoder_0_1_new = conv.PointTransformerConv(
-            IND, OUTD, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="max"
+            IND, OUTD, pos_nn_0_1, attn_nn_0_1, add_self_loops=False, aggr="mean"
         )
 
         pos_nn_1_1 = MLP(
@@ -313,7 +313,7 @@ class ClusterNet(torch.nn.Module):
             act="relu",
         )  # BN
         self.cluster_encoder_1_1_new = conv.PointTransformerConv(
-            INE, OUTE, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="max"
+            INE, OUTE, pos_nn_1_1, attn_nn_1_1, add_self_loops=False, aggr="mean"
         )
 
         pos_nn_2_1 = MLP(
@@ -329,7 +329,7 @@ class ClusterNet(torch.nn.Module):
             act="relu",
         )  # BN
         self.cluster_encoder_2_1_new = conv.PointTransformerConv(
-            INF, OUTF, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="max"
+            INF, OUTF, pos_nn_2_1, attn_nn_2_1, add_self_loops=False, aggr="mean"
         )
 
         warnings.warn("Change back to number of classes")
@@ -429,7 +429,7 @@ class ClusterNet(torch.nn.Module):
             x = self.cluster_encoder_2_1_new(x, pos_dict["superclusters_1"], edge_index)
 
             # global max pool
-            x = global_max_pool(x, batch)
+            x = global_mean_pool(x, batch)
 
             return self.linear_new(x)
 
@@ -441,7 +441,7 @@ class ClusterNet(torch.nn.Module):
                 )
 
             else:
-                x_dict["clusters"] = global_max_pool(
+                x_dict["clusters"] = global_mean_pool(
                     x_dict["clusters"], batch
                 )  # CHANGE
 

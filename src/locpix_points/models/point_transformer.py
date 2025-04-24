@@ -64,7 +64,7 @@ class TransformerBlock(torch.nn.Module):
             out_channels,
             pos_nn=self.pos_nn,
             attn_nn=self.attn_nn,
-            aggr="max",
+            aggr="mean",
             add_self_loops=True,
         )
 
@@ -149,7 +149,7 @@ class TransitionDown(torch.nn.Module):
             id_k_neighbor[0],
             dim=0,
             dim_size=id_clusters.size(0),
-            reduce="max",
+            reduce="mean",
         )
 
         # keep only the clusters and their max-pooled features
