@@ -23,6 +23,7 @@ jobs:
           python-version: ${{ matrix.python-version }}
           channels: conda-forge
       - name: Set up first environment
+        shell: bash -l {0}
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cu126
           pip install .
@@ -39,9 +40,10 @@ jobs:
           pip install .
           cd ..
       - name: Test
+        shell: bash -l {0}
         run: |
           cd demo
-          initialise
+          initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
       # continue from here
 
       #- name: Test with tox

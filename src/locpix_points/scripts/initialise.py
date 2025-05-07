@@ -8,8 +8,6 @@ import polars as pl
 import shutil
 import time
 import os
-import tkinter as tk
-from tkinter import filedialog
 
 
 def get_valid_response(prompt, allowed):
@@ -36,6 +34,33 @@ def main(argv=None):
     )
 
     parser.add_argument(
+        "-u",
+        "--user_name",
+        action="store",
+        type=str,
+        help="user name for wandb",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-pn",
+        "--project_name",
+        action="store",
+        type=str,
+        help="name of the project",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-pp",
+        "--project_path",
+        action="store",
+        type=str,
+        help="path to the project",
+        required=False,
+    )
+
+    parser.add_argument(
         "-d",
         "--dataset_folder",
         action="store",
@@ -44,28 +69,116 @@ def main(argv=None):
         required=False,
     )
 
+    parser.add_argument(
+        "-dn",
+        "--dataset_name",
+        action="store",
+        type=str,
+        help="name of the datset",
+        required=False,
+    )
+
+    parser.add_argument(
+        "-cp",
+        "--copy_preprocessed",
+        action="store",
+        type=str,
+        help="copy preprocessed files",
+        required=False,
+        choices=["yes", "no"],
+    )
+
+    parser.add_argument(
+        "-ck",
+        "--copy_k_fold",
+        action="store",
+        type=str,
+        help="copy k fold",
+        required=False,
+        choices=["yes", "no"],
+    )
+
+    parser.add_argument(
+        "-cs",
+        "--csvs",
+        action="store",
+        type=str,
+        help="are the files csvs",
+        required=False,
+        choices=["yes", "no"],
+    )
+
+    parser.add_argument(
+        "-gt",
+        "--gt_label_present",
+        action="store",
+        type=str,
+        help="is the gt label present",
+        required=False,
+        choices=["yes", "no"],
+    )
+
+    parser.add_argument(
+        "-a",
+        "--annotate",
+        action="store",
+        type=str,
+        help="scale to annotate at",
+        required=False,
+        choices=["fov", "loc"],
+    )
+
+    parser.add_argument(
+        "-n",
+        "--napari",
+        action="store",
+        type=str,
+        help="napari",
+        required=False,
+        choices=["yes", "no"],
+    )
+
     args = parser.parse_args(argv)
     data_path = args.dataset_folder
+    user = args.user_name
+    project_name = args.project_name
+    project_path = args.project_path
+    dataset_name = args.dataset_name
+    copy_preprocessed = args.copy_preprocessed
+    copy_k_fold = args.copy_k_fold
+    csvs = args.csvs
+    gt_label_present = args.gt_label_present
+    annotate = args.annotate
+    napari = args.napari
 
     # Get user name (needs to match weights and bias entity)
-    user = input("Please input the user name (should match entity on wandbai): ")
+    if user is None:
+        user = input("Please input the user name (should match entity on wandbai): ")
 
     # Get project name/location
-    project_name = input("Please input the project name: ")
+    if project_name is None:
+        project_name = input("Please input the project name: ")
 
     # Get project path
-    project_path = input("Please input where you would like the project to be saved: ")
+    if project_path is None:
+        project_path = input(
+            "Please input where you would like the project to be saved: "
+        )
     project_directory = os.path.join(project_path, project_name)
 
     # Get dataset location
     if data_path is None:
+        import tkinter as tk
+        from tkinter import filedialog
+
         root = tk.Tk()
         root.withdraw()
         data_path = filedialog.askdirectory(title="Dataset folder")
     rel_data_path = os.path.relpath(data_path, start=project_directory)
 
     # Get dataset name
-    dataset_name = input("Please input the dataset name: ")
+    if dataset_name is None:
+        dataset_name = input("Please input the dataset name: ")
 
     # Create project directory
     os.makedirs(project_directory)
@@ -118,7 +231,8 @@ def main(argv=None):
         "Would you like to copy preprocessed files from another folder?\n"
         "(yes/no): "
     )
-    copy_preprocessed = get_valid_response(prompt, ["yes", "no"])
+    if copy_preprocessed is None:
+        copy_preprocessed = get_valid_response(prompt, ["yes", "no"])
 
     if copy_preprocessed == "yes":
         folder_loc = input("Location of the project folder: ")
@@ -148,7 +262,8 @@ def main(argv=None):
             "Would you like to copy k-fold splits from this folder?\n"
             "(yes/no): "
         )
-        copy_k_fold = get_valid_response(prompt, ["yes", "no"])
+        if copy_k_fold is None:
+            copy_k_fold = get_valid_response(prompt, ["yes", "no"])
 
         if copy_k_fold == "yes":
             # copy config
@@ -159,7 +274,8 @@ def main(argv=None):
         prompt = (
             "---------------------------\n" "Are your files .csv files?\n" "(yes/no): "
         )
-        csvs = get_valid_response(prompt, ["yes", "no"])
+        if csvs is None:
+            csvs = get_valid_response(prompt, ["yes", "no"])
 
         if csvs == "yes":
             # make data folder
@@ -188,7 +304,8 @@ def main(argv=None):
         "Does your data already have this label?\n"
         "(yes/no): "
     )
-    gt_label_present = get_valid_response(prompt, ["yes", "no"])
+    if gt_label_present is None:
+        gt_label_present = get_valid_response(prompt, ["yes", "no"])
 
     if gt_label_present == "yes":
         print("-----------------------------------\n")
@@ -221,7 +338,8 @@ def main(argv=None):
             "OR If you want to annotate each FOV enter: fov\n"
             "(fov/loc): "
         )
-        annotate = get_valid_response(prompt, ["fov", "loc"])
+        if annotate is None:
+            annotate = get_valid_response(prompt, ["fov", "loc"])
 
         if annotate == "fov":
             # copy annotate file
@@ -236,7 +354,8 @@ def main(argv=None):
                 "Do you want to annotate using napari?\n"
                 "(yes/no): "
             )
-            napari = get_valid_response(prompt, ["yes", "no"])
+            if napari is None:
+                napari = get_valid_response(prompt, ["yes", "no"])
 
             if napari == "yes":
                 # copy annotate file
