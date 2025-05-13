@@ -229,7 +229,7 @@ class PointTransformerEmbedding(torch.nn.Module):
     def forward(self, x, pos, batch=None, edge_index=None):
         # add dummy features in case there is none
         if x is None:
-            x = torch.ones((pos.shape[0], 1), device=pos.get_device())
+            x = torch.ones((pos.shape[0], 1), device=pos.device)
 
         # first block
         x = self.mlp_input(x)
