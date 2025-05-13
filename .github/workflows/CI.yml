@@ -40,10 +40,8 @@ jobs:
           pip install .
           cd ..
       - name: Login to wandb
-        #with: # Set the secret as an input
-        #    wandb_token: ${{ secrets.wandb_token }}
+        shell: bash -l {0}
         run: |
-          echo ${{ secrets.wandb_token }}
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
       - name: Demo the workflow (initialise, preprocess, featextract, generate splits, k-fold for 1 epoch)
