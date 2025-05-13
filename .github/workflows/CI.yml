@@ -39,14 +39,14 @@ jobs:
           cd DIG
           pip install .
           cd ..
-      - name: wandb
+      - name: Login to wandb
         #with: # Set the secret as an input
         #    wandb_token: ${{ secrets.wandb_token }}
         run: |
-          cat ${{ secrets.wandb_token }}
+          echo ${{ secrets.wandb_token }}
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
-      - name: Test
+      - name: Demo the workflow (initialise, preprocess, featextract, generate splits, k-fold for 1 epoch)
         shell: bash -l {0}
         run: |
           cd demo
