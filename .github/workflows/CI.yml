@@ -50,6 +50,7 @@ jobs:
           python scripts/featextract.py
           python scripts/generate_k_fold_splits.py
           sed -i 's/^epochs: [0-9]\+/epochs: 1/' config/train.yaml
+          sed -i 's/^train_on_gpu: True/train_on_gpu: False/' config/train.yaml
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
           python scripts/k_fold.py
