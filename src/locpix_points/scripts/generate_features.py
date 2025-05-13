@@ -44,11 +44,7 @@ def generate(
         loc_dfs (list) : List of clustres features from LocNet
         cluster_dfs (list) : List of cluster features from ClusterNet
         fov_dfs (list) : List of FOV features agg from ClusterNet
-        file_list (list) : Names of files
-
-    Raises:
-        NotImplementedError : If model doesn't have attentional aggregation
-            final layer"""
+        file_list (list) : Names of files"""
 
     model.to(device)
 
@@ -71,7 +67,11 @@ def generate(
         return hook
 
     # register forward hook
-    h_0 = model.loc_net.register_forward_hook(getActivation("locencoder"))
+    try:
+        h_0 = model.loc_net.register_forward_hook(getActivation("locencoder"))
+        loc_net = True
+    except:
+        loc_net = False
     h_1 = model.cluster_net.cluster_encoder_3.register_forward_hook(
         getActivation("clusterencoder")
     )
@@ -80,9 +80,10 @@ def generate(
             getActivation("globalpool")
         )
     except:
-        raise NotImplementedError(
-            "Only attention as final layer is currently implemented"
-        )
+        print("No attention present")
+    h_2 = model.cluster_net.global_pool.register_forward_hook(
+        getActivation("globalpool")
+    )
 
     for index, data in enumerate(loader):
         with torch.no_grad():
@@ -103,7 +104,10 @@ def generate(
                 output = []
                 for _ in range(repeats):
                     output.append(torch.exp(model(data)).cpu().numpy())
-                    loc_data.append(activation["locencoder"].cpu().numpy())
+                    if loc_net:
+                        loc_data.append(activation["locencoder"].cpu().numpy())
+                    else:
+                        loc_data.append(data["clusters"].x.detach().cpu().numpy())
                     cluster_data.append(activation["clusterencoder"].cpu().numpy())
                     fov_data.append(activation["globalpool"].cpu().numpy())
 
@@ -149,7 +153,8 @@ def generate(
                 fov_dfs.append(fov_df)
 
     # remove foward hook
-    h_0.remove()
+    if loc_net:
+        h_0.remove()
     h_1.remove()
     h_2.remove()
 
@@ -208,6 +213,14 @@ def main(argv=None):
         default=5,
     )
 
+    parser.add_argument(
+        "-rts",
+        "--reserved_test_set",
+        type=int,
+        required=False,
+        help="if given then evaluate on reserved test set with model from this fold",
+    )
+
     args = parser.parse_args(argv)
 
     if args.final_test:
@@ -251,135 +264,368 @@ def main(argv=None):
 
     OVERALL_test_file_list = []
 
-    # For each fold
-    for fold in range(args.folds):
-        # Load in model
-        processed_directory = os.path.join(project_directory, f"processed/fold_{fold}")
-        model_loc = os.path.join(project_directory, f"models/fold_{fold}", model_name)
+    if args.reserved_test_set is None:
+        # For each fold
+        for fold in range(args.folds):
+            # Load in model
+            processed_directory = os.path.join(
+                project_directory, f"processed/fold_{fold}"
+            )
+            model_loc = os.path.join(
+                project_directory, f"models/fold_{fold}", model_name
+            )
 
-        train_folder = os.path.join(processed_directory, "train")
-        val_folder = os.path.join(processed_directory, "val")
+            train_folder = os.path.join(processed_directory, "train")
+            val_folder = os.path.join(processed_directory, "val")
+            test_folder = os.path.join(processed_directory, "test")
+
+            train_files = pl.read_csv(os.path.join(train_folder, "file_map.csv"))[
+                "file_name"
+            ].to_list()
+            val_files = pl.read_csv(os.path.join(val_folder, "file_map.csv"))[
+                "file_name"
+            ].to_list()
+            test_files = pl.read_csv(os.path.join(test_folder, "file_map.csv"))[
+                "file_name"
+            ].to_list()
+            assert len([x for x in test_files if x in train_files]) == 0
+            assert len([x for x in test_files if x in val_files]) == 0
+            assert len([x for x in val_files if x in train_files]) == 0
+
+            if config["model"] == "loconlynet":
+                # load in train dataset
+                train_set = datastruc.LocDataset(
+                    None,  # raw_loc_dir_root
+                    train_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,  # gpu
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    feat=None,
+                    min_feat=None,
+                    max_feat=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbours=None,
+                    range_xy=False,
+                )
+
+                # load in val dataset
+                val_set = datastruc.LocDataset(
+                    None,  # raw_loc_dir_root
+                    val_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,  # gpu
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    feat=None,
+                    min_feat=None,
+                    max_feat=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbours=None,
+                    range_xy=False,
+                )
+
+                # load in test dataset
+                test_set = datastruc.LocDataset(
+                    None,  # raw_loc_dir_root
+                    test_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,  # gpu
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    feat=None,
+                    min_feat=None,
+                    max_feat=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbours=None,
+                    range_xy=False,
+                )
+
+            elif config["model"] in [
+                "locclusternet",
+                "clusternet",
+                "clustermlp",
+                "locnetonly_pointnet",
+                "locnetonly_pointtransformer",
+            ]:
+                train_set = datastruc.ClusterLocDataset(
+                    None,  # raw_loc_dir_root
+                    None,  # raw_cluster_dir_root
+                    train_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    loc_feat=None,
+                    cluster_feat=None,
+                    min_feat_locs=None,
+                    max_feat_locs=None,
+                    min_feat_clusters=None,
+                    max_feat_clusters=None,
+                    kneighboursclusters=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbourslocs=None,
+                    range_xy=False,
+                )
+
+                val_set = datastruc.ClusterLocDataset(
+                    None,  # raw_loc_dir_root
+                    None,  # raw_cluster_dir_root
+                    val_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    loc_feat=None,
+                    cluster_feat=None,
+                    min_feat_locs=None,
+                    max_feat_locs=None,
+                    min_feat_clusters=None,
+                    max_feat_clusters=None,
+                    kneighboursclusters=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbourslocs=None,
+                    range_xy=False,
+                )
+
+                test_set = datastruc.ClusterLocDataset(
+                    None,  # raw_loc_dir_root
+                    None,  # raw_cluster_dir_root
+                    test_folder,  # processed_dir_root
+                    label_level=config["label_level"],  # label_level
+                    pre_filter=None,  # pre_filter
+                    save_on_gpu=False,
+                    transform=None,  # transform
+                    pre_transform=None,  # pre_transform
+                    loc_feat=None,
+                    cluster_feat=None,
+                    min_feat_locs=None,
+                    max_feat_locs=None,
+                    min_feat_clusters=None,
+                    max_feat_clusters=None,
+                    kneighboursclusters=None,
+                    fov_x=None,
+                    fov_y=None,
+                    kneighbourslocs=None,
+                    range_xy=False,
+                )
+
+            else:
+                error_msg = config["model"]
+                raise ValueError(f"Have not written for {error_msg}")
+
+            train_loader = L.DataLoader(
+                train_set,
+                batch_size=1,
+                shuffle=False,
+                pin_memory=pin_memory,
+                num_workers=0,
+            )
+
+            val_loader = L.DataLoader(
+                val_set,
+                batch_size=1,
+                shuffle=False,
+                pin_memory=pin_memory,
+                num_workers=0,
+            )
+
+            test_loader = L.DataLoader(
+                test_set,
+                batch_size=1,
+                shuffle=False,
+                pin_memory=pin_memory,
+                num_workers=0,
+            )
+
+            for _, data in enumerate(test_loader):
+                first_item = data
+
+            if config["model"] in [
+                "locclusternet",
+                "clusternet",
+                "clustermlp",
+                "locnetonly_pointnet",
+                "locnetonly_pointtransformer",
+            ]:
+                dim = first_item["locs"].pos.shape[-1]
+            elif config["model"] in ["loconlynet"]:
+                dim = first_item.pos.shape[-1]
+            else:
+                raise ValueError("Model not defined")
+
+            # initialise model
+            model = model_choice(
+                config["model"],
+                # this should parameterise the chosen model
+                config[config["model"]],
+                dim=dim,
+                device=device,
+            )
+
+            print("\n")
+            print("Loading in best model")
+            print("\n")
+            model.load_state_dict(torch.load(model_loc, weights_only=False))
+            model.to(device)
+
+            # model summary
+            # print("\n")
+            # print("---- Model summary ----")
+            # print("\n")
+            # number_nodes = 1000  # this is just for summary, has no bearing on training
+            # summary(
+            #    model,
+            #    input_size=(test_set.num_node_features, number_nodes),
+            #    batch_size=1,
+            # )
+
+            repeats = args.repeats
+
+            # print("\n")
+            # print("---- Predict on train set... ----")
+            # print("\n")
+            loc_dfs, cluster_dfs, fov_dfs, train_file_list = generate(
+                gt_label_map,
+                model,
+                train_loader,
+                device,
+                fold,
+                repeats=repeats,
+            )
+
+            loc_dfs = pl.concat(loc_dfs)
+            train_loc_dfs.append(loc_dfs)
+
+            cluster_dfs = pl.concat(cluster_dfs)
+            train_cluster_dfs.append(cluster_dfs)
+
+            fov_dfs = pl.concat(fov_dfs)
+            train_fov_dfs.append(fov_dfs)
+
+            # print("\n")
+            # print("---- Predict on val set... ----")
+            # print("\n")
+            loc_dfs, cluster_dfs, fov_dfs, val_file_list = generate(
+                gt_label_map,
+                model,
+                val_loader,
+                device,
+                fold,
+                repeats=repeats,
+            )
+
+            loc_dfs = pl.concat(loc_dfs)
+            val_loc_dfs.append(loc_dfs)
+
+            cluster_dfs = pl.concat(cluster_dfs)
+            val_cluster_dfs.append(cluster_dfs)
+
+            fov_dfs = pl.concat(fov_dfs)
+            val_fov_dfs.append(fov_dfs)
+
+            # print("\n")
+            # print("---- Predict on test set... ----")
+            # print("\n")
+            loc_dfs, cluster_dfs, fov_dfs, test_file_list = generate(
+                gt_label_map,
+                model,
+                test_loader,
+                device,
+                fold,
+                repeats=repeats,
+            )
+
+            loc_dfs = pl.concat(loc_dfs)
+            test_loc_dfs.append(loc_dfs)
+
+            cluster_dfs = pl.concat(cluster_dfs)
+            test_cluster_dfs.append(cluster_dfs)
+
+            fov_dfs = pl.concat(fov_dfs)
+            test_fov_dfs.append(fov_dfs)
+
+            OVERALL_test_file_list.extend(test_file_list)
+
+            out = set(train_file_list) & set(val_file_list)
+            assert not out
+            out = set(train_file_list) & set(test_file_list)
+            assert not out
+            out = set(val_file_list) & set(test_file_list)
+            assert not out
+
+            print(f"{100*(fold + 1)/5}% complete")
+
+        train_loc_dfs = pl.concat(train_loc_dfs)
+        train_loc_path = os.path.join(project_directory, f"output/train_locs.csv")
+        train_loc_dfs.write_csv(train_loc_path, separator=",")
+
+        train_cluster_dfs = pl.concat(train_cluster_dfs)
+        train_clusters_path = os.path.join(
+            project_directory, f"output/train_clusters.csv"
+        )
+        train_cluster_dfs.write_csv(train_clusters_path, separator=",")
+
+        train_fov_dfs = pl.concat(train_fov_dfs)
+        train_fov_path = os.path.join(project_directory, f"output/train_fovs.csv")
+        train_fov_dfs.write_csv(train_fov_path, separator=",")
+
+        val_loc_dfs = pl.concat(val_loc_dfs)
+        val_loc_path = os.path.join(project_directory, f"output/val_locs.csv")
+        val_loc_dfs.write_csv(val_loc_path, separator=",")
+
+        val_cluster_dfs = pl.concat(val_cluster_dfs)
+        val_clusters_path = os.path.join(project_directory, f"output/val_clusters.csv")
+        val_cluster_dfs.write_csv(val_clusters_path, separator=",")
+
+        val_fov_dfs = pl.concat(val_fov_dfs)
+        val_fov_path = os.path.join(project_directory, f"output/val_fovs.csv")
+        val_fov_dfs.write_csv(val_fov_path, separator=",")
+
+        test_loc_dfs = pl.concat(test_loc_dfs)
+        test_loc_path = os.path.join(project_directory, f"output/test_locs.csv")
+        test_loc_dfs.write_csv(test_loc_path, separator=",")
+
+        test_cluster_dfs = pl.concat(test_cluster_dfs)
+        test_clusters_path = os.path.join(
+            project_directory, f"output/test_clusters.csv"
+        )
+        test_cluster_dfs.write_csv(test_clusters_path, separator=",")
+
+        test_fov_dfs = pl.concat(test_fov_dfs)
+        test_fov_path = os.path.join(project_directory, f"output/test_fovs.csv")
+        test_fov_dfs.write_csv(test_fov_path, separator=",")
+
+    else:
+        # Load in model
+        processed_directory = os.path.join(project_directory, f"RTS")
+        model_loc = os.path.join(
+            project_directory, f"models/fold_{args.reserved_test_set}", model_name
+        )
+
         test_folder = os.path.join(processed_directory, "test")
 
-        train_files = pl.read_csv(os.path.join(train_folder, "file_map.csv"))[
-            "file_name"
-        ].to_list()
-        val_files = pl.read_csv(os.path.join(val_folder, "file_map.csv"))[
-            "file_name"
-        ].to_list()
         test_files = pl.read_csv(os.path.join(test_folder, "file_map.csv"))[
             "file_name"
         ].to_list()
-        assert len([x for x in test_files if x in train_files]) == 0
-        assert len([x for x in test_files if x in val_files]) == 0
-        assert len([x for x in val_files if x in train_files]) == 0
 
-        if config["model"] == "loconlynet":
-            # load in train dataset
-            train_set = datastruc.LocDataset(
-                None,  # raw_loc_dir_root
-                train_folder,  # processed_dir_root
-                label_level=config["label_level"],  # label_level
-                pre_filter=None,  # pre_filter
-                save_on_gpu=False,  # gpu
-                transform=None,  # transform
-                pre_transform=None,  # pre_transform
-                feat=None,
-                min_feat=None,
-                max_feat=None,
-                fov_x=None,
-                fov_y=None,
-                kneighbours=None,
-                range_xy=False,
-            )
-
-            # load in val dataset
-            val_set = datastruc.LocDataset(
-                None,  # raw_loc_dir_root
-                val_folder,  # processed_dir_root
-                label_level=config["label_level"],  # label_level
-                pre_filter=None,  # pre_filter
-                save_on_gpu=False,  # gpu
-                transform=None,  # transform
-                pre_transform=None,  # pre_transform
-                feat=None,
-                min_feat=None,
-                max_feat=None,
-                fov_x=None,
-                fov_y=None,
-                kneighbours=None,
-                range_xy=False,
-            )
-
-            # load in test dataset
-            test_set = datastruc.LocDataset(
-                None,  # raw_loc_dir_root
-                test_folder,  # processed_dir_root
-                label_level=config["label_level"],  # label_level
-                pre_filter=None,  # pre_filter
-                save_on_gpu=False,  # gpu
-                transform=None,  # transform
-                pre_transform=None,  # pre_transform
-                feat=None,
-                min_feat=None,
-                max_feat=None,
-                fov_x=None,
-                fov_y=None,
-                kneighbours=None,
-                range_xy=False,
-            )
-
-        elif config["model"] in [
+        if config["model"] in [
             "locclusternet",
             "clusternet",
             "clustermlp",
             "locnetonly_pointnet",
             "locnetonly_pointtransformer",
         ]:
-            train_set = datastruc.ClusterLocDataset(
-                None,  # raw_loc_dir_root
-                None,  # raw_cluster_dir_root
-                train_folder,  # processed_dir_root
-                label_level=config["label_level"],  # label_level
-                pre_filter=None,  # pre_filter
-                save_on_gpu=False,
-                transform=None,  # transform
-                pre_transform=None,  # pre_transform
-                loc_feat=None,
-                cluster_feat=None,
-                min_feat_locs=None,
-                max_feat_locs=None,
-                min_feat_clusters=None,
-                max_feat_clusters=None,
-                kneighboursclusters=None,
-                fov_x=None,
-                fov_y=None,
-                kneighbourslocs=None,
-                range_xy=False,
-            )
-
-            val_set = datastruc.ClusterLocDataset(
-                None,  # raw_loc_dir_root
-                None,  # raw_cluster_dir_root
-                val_folder,  # processed_dir_root
-                label_level=config["label_level"],  # label_level
-                pre_filter=None,  # pre_filter
-                save_on_gpu=False,
-                transform=None,  # transform
-                pre_transform=None,  # pre_transform
-                loc_feat=None,
-                cluster_feat=None,
-                min_feat_locs=None,
-                max_feat_locs=None,
-                min_feat_clusters=None,
-                max_feat_clusters=None,
-                kneighboursclusters=None,
-                fov_x=None,
-                fov_y=None,
-                kneighbourslocs=None,
-                range_xy=False,
-            )
-
             test_set = datastruc.ClusterLocDataset(
                 None,  # raw_loc_dir_root
                 None,  # raw_cluster_dir_root
@@ -405,22 +651,6 @@ def main(argv=None):
         else:
             error_msg = config["model"]
             raise ValueError(f"Have not written for {error_msg}")
-
-        train_loader = L.DataLoader(
-            train_set,
-            batch_size=1,
-            shuffle=False,
-            pin_memory=pin_memory,
-            num_workers=0,
-        )
-
-        val_loader = L.DataLoader(
-            val_set,
-            batch_size=1,
-            shuffle=False,
-            pin_memory=pin_memory,
-            num_workers=0,
-        )
 
         test_loader = L.DataLoader(
             test_set,
@@ -475,48 +705,6 @@ def main(argv=None):
         repeats = args.repeats
 
         # print("\n")
-        # print("---- Predict on train set... ----")
-        # print("\n")
-        loc_dfs, cluster_dfs, fov_dfs, train_file_list = generate(
-            gt_label_map,
-            model,
-            train_loader,
-            device,
-            fold,
-            repeats=repeats,
-        )
-
-        loc_dfs = pl.concat(loc_dfs)
-        train_loc_dfs.append(loc_dfs)
-
-        cluster_dfs = pl.concat(cluster_dfs)
-        train_cluster_dfs.append(cluster_dfs)
-
-        fov_dfs = pl.concat(fov_dfs)
-        train_fov_dfs.append(fov_dfs)
-
-        # print("\n")
-        # print("---- Predict on val set... ----")
-        # print("\n")
-        loc_dfs, cluster_dfs, fov_dfs, val_file_list = generate(
-            gt_label_map,
-            model,
-            val_loader,
-            device,
-            fold,
-            repeats=repeats,
-        )
-
-        loc_dfs = pl.concat(loc_dfs)
-        val_loc_dfs.append(loc_dfs)
-
-        cluster_dfs = pl.concat(cluster_dfs)
-        val_cluster_dfs.append(cluster_dfs)
-
-        fov_dfs = pl.concat(fov_dfs)
-        val_fov_dfs.append(fov_dfs)
-
-        # print("\n")
         # print("---- Predict on test set... ----")
         # print("\n")
         loc_dfs, cluster_dfs, fov_dfs, test_file_list = generate(
@@ -524,7 +712,7 @@ def main(argv=None):
             model,
             test_loader,
             device,
-            fold,
+            args.reserved_test_set,
             repeats=repeats,
         )
 
@@ -539,50 +727,19 @@ def main(argv=None):
 
         OVERALL_test_file_list.extend(test_file_list)
 
-        out = set(train_file_list) & set(val_file_list)
-        assert not out
-        out = set(train_file_list) & set(test_file_list)
-        assert not out
-        out = set(val_file_list) & set(test_file_list)
-        assert not out
+        test_loc_dfs = pl.concat(test_loc_dfs)
+        test_loc_path = os.path.join(project_directory, f"output/test_locs_RTS.csv")
+        test_loc_dfs.write_csv(test_loc_path, separator=",")
 
-        print(f"{100*(fold + 1)/5}% complete")
+        test_cluster_dfs = pl.concat(test_cluster_dfs)
+        test_clusters_path = os.path.join(
+            project_directory, f"output/test_clusters_RTS.csv"
+        )
+        test_cluster_dfs.write_csv(test_clusters_path, separator=",")
 
-    train_loc_dfs = pl.concat(train_loc_dfs)
-    train_loc_path = os.path.join(project_directory, f"output/train_locs.csv")
-    train_loc_dfs.write_csv(train_loc_path, separator=",")
-
-    train_cluster_dfs = pl.concat(train_cluster_dfs)
-    train_clusters_path = os.path.join(project_directory, f"output/train_clusters.csv")
-    train_cluster_dfs.write_csv(train_clusters_path, separator=",")
-
-    train_fov_dfs = pl.concat(train_fov_dfs)
-    train_fov_path = os.path.join(project_directory, f"output/train_fovs.csv")
-    train_fov_dfs.write_csv(train_fov_path, separator=",")
-
-    val_loc_dfs = pl.concat(val_loc_dfs)
-    val_loc_path = os.path.join(project_directory, f"output/val_locs.csv")
-    val_loc_dfs.write_csv(val_loc_path, separator=",")
-
-    val_cluster_dfs = pl.concat(val_cluster_dfs)
-    val_clusters_path = os.path.join(project_directory, f"output/val_clusters.csv")
-    val_cluster_dfs.write_csv(val_clusters_path, separator=",")
-
-    val_fov_dfs = pl.concat(val_fov_dfs)
-    val_fov_path = os.path.join(project_directory, f"output/val_fovs.csv")
-    val_fov_dfs.write_csv(val_fov_path, separator=",")
-
-    test_loc_dfs = pl.concat(test_loc_dfs)
-    test_loc_path = os.path.join(project_directory, f"output/test_locs.csv")
-    test_loc_dfs.write_csv(test_loc_path, separator=",")
-
-    test_cluster_dfs = pl.concat(test_cluster_dfs)
-    test_clusters_path = os.path.join(project_directory, f"output/test_clusters.csv")
-    test_cluster_dfs.write_csv(test_clusters_path, separator=",")
-
-    test_fov_dfs = pl.concat(test_fov_dfs)
-    test_fov_path = os.path.join(project_directory, f"output/test_fovs.csv")
-    test_fov_dfs.write_csv(test_fov_path, separator=",")
+        test_fov_dfs = pl.concat(test_fov_dfs)
+        test_fov_path = os.path.join(project_directory, f"output/test_fovs_RTS.csv")
+        test_fov_dfs.write_csv(test_fov_path, separator=",")
 
     return OVERALL_test_file_list
 

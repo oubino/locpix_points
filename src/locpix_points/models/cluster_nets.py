@@ -197,6 +197,8 @@ class ClusterNet(torch.nn.Module):
             self.attention_readout_fn = AttentionalAggregation(
                 attention_readout_gate, attention_readout_nn
             )
+        else:
+            self.global_pool = MaxAggregation()
 
         HIDDEN = 32
         DIM = 2
@@ -213,7 +215,7 @@ class ClusterNet(torch.nn.Module):
         INF = OUTE
         OUTF = 88
         HIDDEN_MLP = 128
-        DROPOUT_supercluster = 0.2
+        DROPOUT_supercluster = 0.0
 
         # comment out MLPs for backwards compatability with old models
         # self.sc_mlp_0 = MLP(
@@ -441,8 +443,8 @@ class ClusterNet(torch.nn.Module):
                 )
 
             else:
-                x_dict["clusters"] = global_max_pool(
-                    x_dict["clusters"], batch
+                x_dict["clusters"] = self.global_pool(
+                    x_dict["clusters"], index=batch
                 )  # CHANGE
 
             # linear layer on each fov feature vector

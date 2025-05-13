@@ -76,7 +76,7 @@ def train_loop(
             data.to(device)
 
             # forward pass - with autocasting
-            with torch.autocast(device_type="cuda"):
+            with torch.autocast(device_type=device.type):
                 output = model(data)
                 loss = loss_fn(output, data.y)
                 running_train_loss += loss
@@ -112,7 +112,7 @@ def train_loop(
                 data.to(device)
 
                 # forward pass - with autocasting
-                with torch.autocast(device_type="cuda"):
+                with torch.autocast(device_type=device.type):
                     output = model(data)
                     loss = loss_fn(output, data.y)
                     running_val_loss += loss

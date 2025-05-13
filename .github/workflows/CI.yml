@@ -23,9 +23,10 @@ jobs:
           python-version: ${{ matrix.python-version }}
           channels: conda-forge
       - name: Set up first environment
+        shell: bash -l {0}
         run: |
           pip install torch --index-url https://download.pytorch.org/whl/cu126
-          pip install .
+          pip install -e .
           git clone https://github.com/oubino/pytorch_geometric.git
           cd pytorch_geometric
           pip install -e .
@@ -38,10 +39,23 @@ jobs:
           cd DIG
           pip install .
           cd ..
-      - name: Test
+      - name: Demo the workflow (initialise, preprocess, featextract, generate splits, k-fold for 1 epoch)
+        shell: bash -l {0}
         run: |
           cd demo
-          initialise
+          initialise -u oliver-umney -pn output -pp . -d data -dn demo -cp no -cs no -gt yes
+          cp -rf config output/
+          cd output
+          python scripts/preprocess.py
+          python scripts/featextract.py
+          python scripts/generate_k_fold_splits.py
+          sed -i 's/^epochs: [0-9]\+/epochs: 1/' config/train.yaml
+          sed -i 's/^train_on_gpu: True/train_on_gpu: False/' config/train.yaml
+          sed -i 's/^eval_on_gpu: True/eval_on_gpu: False/' config/evaluate.yaml
+          export WANDB_API_KEY=${{ secrets.wandb_token }}
+          wandb login
+          python scripts/k_fold.py
+
       # continue from here
 
       #- name: Test with tox

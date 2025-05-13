@@ -289,8 +289,8 @@ def visualise_umap_embedding(
             {
                 "GT label": df.type,
                 "prediction": df.prediction,
-                "all-WT": df.all_wt,
-                "all-WT response": df.wt_response,
+                # "all-WT": df.all_wt,
+                # "all-WT response": df.wt_response,
                 "file_name": df.file_name,
                 "patient": df.patient,
                 "best_r": df.best_r,
