@@ -138,6 +138,8 @@ def main(argv=None):
     else:
         raise ValueError("Specify cpu or gpu !")
 
+    print("Device: ", device)
+
     # folder
     if args.processed_directory is not None:
         processed_directory = os.path.join(project_directory, args.processed_directory)
