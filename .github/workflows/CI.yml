@@ -44,6 +44,14 @@ jobs:
         run: |
           cd demo
           initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
+          cp -rf config output/
+          cd output
+          python scripts/preprocess.py
+          python scripts/featextract.py
+          python scripts/generate_k_fold_splits.py
+          sed -i 's/^epochs: [0-9]\+/epochs: 1/' config/train.yaml
+          python scripts/k_fold.py
+
       # continue from here
 
       #- name: Test with tox
