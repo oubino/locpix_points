@@ -39,11 +39,6 @@ jobs:
           cd DIG
           pip install .
           cd ..
-      - name: Login to wandb
-        shell: bash -l {0}
-        run: |
-          export WANDB_API_KEY=${{ secrets.wandb_token }}
-          wandb login
       - name: Demo the workflow (initialise, preprocess, featextract, generate splits, k-fold for 1 epoch)
         shell: bash -l {0}
         run: |
@@ -55,6 +50,8 @@ jobs:
           python scripts/featextract.py
           python scripts/generate_k_fold_splits.py
           sed -i 's/^epochs: [0-9]\+/epochs: 1/' config/train.yaml
+          export WANDB_API_KEY=${{ secrets.wandb_token }}
+          wandb login
           python scripts/k_fold.py
 
       # continue from here
