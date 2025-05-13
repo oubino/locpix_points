@@ -43,7 +43,7 @@ jobs:
         shell: bash -l {0}
         run: |
           cd demo
-          initialise -u oliver-umney -pn output -pp . -d ../data -dn demo -cp no -cs no -gt yes
+          initialise -u oliver-umney -pn output -pp . -d data -dn demo -cp no -cs no -gt yes
           cp -rf config output/
           cd output
           python scripts/preprocess.py
