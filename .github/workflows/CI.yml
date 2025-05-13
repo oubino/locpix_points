@@ -40,6 +40,8 @@ jobs:
           pip install .
           cd ..
       - name: Test
+        with: # Set the secret as an input
+          wandb_token: ${{ secrets.wandb_token }}
         shell: bash -l {0}
         run: |
           cd demo
@@ -50,6 +52,9 @@ jobs:
           python scripts/featextract.py
           python scripts/generate_k_fold_splits.py
           sed -i 's/^epochs: [0-9]\+/epochs: 1/' config/train.yaml
+          cat "$wandb_token"
+          export WANDB_API_KEY="$wandb_token"
+          wandb login
           python scripts/k_fold.py
 
       # continue from here
