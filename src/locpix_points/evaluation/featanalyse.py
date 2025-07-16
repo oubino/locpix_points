@@ -218,13 +218,27 @@ def visualise_umap_embedding(
         try:
             unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
-            color_key_cmap = "Spectral"
-            color_key = _to_hex(
-                plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
-            )
-            if "#ffffbe" in color_key:
-                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
-
+            if num_labels <= 11:
+                color_key = [
+                    "#1f78b4",
+                    "#e31a1c",
+                    "#33a02c",
+                    "#a6cee3",
+                    "#b2df8a",
+                    "#fb9a99",
+                    "#fdbf6f",
+                    "#ff7f00",
+                    "#cab2d6",
+                    "#6a3d9a",
+                    "#b15928",
+                ]
+            else:
+                color_key_cmap = "Spectral"
+                color_key = _to_hex(
+                    plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
+                )
+                if "#ffffbe" in color_key:
+                    color_key[color_key.index("#ffffbe")] = "#ee2a7b"
             ax = umap.plot.points(embedding, labels=labels, color_key=color_key)
             ax.collections[0].set_sizes(len(df) * [point_size])
         except:
