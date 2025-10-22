@@ -43,9 +43,11 @@ def load_loc_cluster(
     kneighboursclusters,
     fov_x,
     fov_y,
+    fov_z,
+    dim,
     kneighbourslocs=None,
     superclusters=False,
-    range_xy=False,
+    range=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -66,24 +68,25 @@ def load_loc_cluster(
             cluster dataset
         fov_x (float) : Size of fov (x) in units of data
         fov_y (float) : Size of fov (y) in units of data
+        fov_z (float) : Size of fov (z) in units of data
+        dim (int) : Dimensions of the data
         kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If "all" then connects all locs within each cluster. Default (None)
         superclusters (bool) : If true extracts superclusters
-        range_xy (float) : Range of the data over whole dataset. If not given calculate range
-            on per item basis, otherwise use range_xy to define normalisation for each item. If
+        range (float) : Range of the data over whole dataset. If not given calculate range
+            on per item basis, otherwise use range to define normalisation for each item. If
             False then shouldn't be processing the data
 
     Returns:
         data (torch_geometric data) : Data with
-            position and feature for eacch node
+            position and feature for each node
 
     Raises:
-        ValueError: If try and process data when range_xy has not been calculated"""
+        ValueError: If try and process data when range has not been calculated
+        NotImplementedError: If try to run superclusters in 3D"""
 
-    if range_xy is False:
-        raise ValueError(
-            "should not be processing the data haven't considered range_xy"
-        )
+    if range is False:
+        raise ValueError("should not be processing the data haven't considered range")
 
     loc_table = pl.from_arrow(loc_table)
     cluster_table = pl.from_arrow(cluster_table)
@@ -92,6 +95,9 @@ def load_loc_cluster(
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
+
+    if dim == 3:
+        z_locs = torch.tensor(loc_table["z"].to_numpy())
 
     # load in features
     if min_feat_locs is None:
@@ -136,9 +142,14 @@ def load_loc_cluster(
     # knn on clusters
     x = torch.tensor(cluster_table["x_mean"].to_numpy())
     y = torch.tensor(cluster_table["y_mean"].to_numpy())
+    if dim == 3:
+        z = torch.tensor(cluster_table["z_mean"].to_numpy())
     # first need to check that clusterID is also in correct ordered from 0 to max cluster ID
     assert np.array_equal(cluster_table["clusterID"].to_numpy(), np.arange(0, len(x)))
-    coords = torch.stack([x, y], axis=-1)
+    if dim == 2:
+        coords = torch.stack([x, y], axis=-1)
+    elif dim == 3:
+        coords = torch.stack([x, y, z], axis=-1)
     batch = torch.zeros(len(coords))
     # add 1 as with loop = True considers itself as one of the k neighbours
     cluster_cluster_edges = knn_graph(
@@ -168,7 +179,10 @@ def load_loc_cluster(
     else:
         batch_loc_loc = torch.tensor(loc_table["clusterID"].to_numpy())
         # loc_indices = np.arange(0, len(loc_table))[indices]
-        loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+        if dim == 2:
+            loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+        elif dim == 3:
+            loc_coords = torch.stack([x_locs, y_locs, z_locs], axis=-1)
         # add 1 as with loop = True considers itself as one of the k neighbours
         loc_loc_edges = knn_graph(
             loc_coords, k=kneighbourslocs + 1, batch=batch_loc_loc, loop=True
@@ -180,7 +194,9 @@ def load_loc_cluster(
     # scale positions
     min_x = x_locs.min()
     min_y = y_locs.min()
-    if range_xy is None:
+    if dim == 3:
+        min_z = z_locs.min()
+    if range is None:
         per_item = True
         x_range = x_locs.max() - min_x
         y_range = y_locs.max() - min_y
@@ -192,50 +208,85 @@ def load_loc_cluster(
             logging.info(
                 f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
             )
-        range_xy = max(x_range, y_range)
+        range = max(x_range, y_range)
+        if dim == 3:
+            z_range = z_locs.max() - min_z
+            if z_range < 0.95 * fov_z:
+                logging.info(
+                    f"Range of z data: {z_range} is smaller than 95% of the height of the fov: {fov_z}"
+                )
+            range = max(z_range, range)
     else:
         per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
-    x_locs = (x_locs - min_x) / range_xy
-    y_locs = (y_locs - min_y) / range_xy
+    x_locs = (x_locs - min_x) / range
+    y_locs = (y_locs - min_y) / range
     x_locs = torch.clamp(x_locs, min=0, max=1)
     y_locs = torch.clamp(y_locs, min=0, max=1)
+    if dim == 3:
+        z_locs = (z_locs - min_z) / range
+        z_locs = torch.clamp(z_locs, min=0, max=1)
     # scale to between -1 and 1
     if per_item:
         x_locs = 2.0 * x_locs - 1.0
         y_locs = 2.0 * y_locs - 1.0
-        assert x_locs.min() == -1.0 or y_locs.min() == 1.0
-        assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+        if dim == 2:
+            assert x_locs.min() == -1.0 or y_locs.min() == -1.0
+            assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+        if dim == 3:
+            z_locs = 2.0 * z_locs - 1.0
+            assert x_locs.min() == -1.0 or y_locs.min() == -1.0 or z_locs.min() == -1.0
+            assert x_locs.max() == 1.0 or y_locs.max() == 1.0 or z_locs.max() == 1.0
     else:
         max_x = x_locs.max()
         max_y = y_locs.max()
         x_locs = 2.0 * x_locs - max_x
         y_locs = 2.0 * y_locs - max_y
-    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+        if dim == 3:
+            max_z = z_locs.max()
+            z_locs = 2.0 * z_locs - max_z
+    if dim == 2:
+        loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    elif dim == 3:
+        loc_coords = torch.stack((x_locs, y_locs, z_locs), dim=1)
     data["locs"].pos = loc_coords.float()
 
     # scale cluster coordinates
     x_clusters = torch.tensor(cluster_table["x_mean"].to_numpy())
     y_clusters = torch.tensor(cluster_table["y_mean"].to_numpy())
+    if dim == 3:
+        z_clusters = torch.tensor(cluster_table["z_mean"].to_numpy())
 
     # scale from -1 to 1
-    x_clusters = (x_clusters - min_x) / range_xy
-    y_clusters = (y_clusters - min_y) / range_xy
+    x_clusters = (x_clusters - min_x) / range
+    y_clusters = (y_clusters - min_y) / range
     x_clusters = torch.clamp(x_clusters, min=0, max=1)
     y_clusters = torch.clamp(y_clusters, min=0, max=1)
+    if dim == 3:
+        z_clusters = (z_clusters - min_z) / range
+        z_clusters = torch.clamp(z_clusters, min=0, max=1)
     # scale from -1 to 1
     if per_item:
         x_clusters = 2.0 * x_clusters - 1.0
         y_clusters = 2.0 * y_clusters - 1.0
+        if dim == 3:
+            z_clusters = 2.0 * z_clusters - 1.0
     else:
         x_clusters = 2.0 * x_clusters - max_x
         y_clusters = 2.0 * y_clusters - max_y
-    cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
+        if dim == 3:
+            z_clusters = 2.0 * z_clusters - max_z
+    if dim == 2:
+        cluster_coords = torch.stack((x_clusters, y_clusters), dim=1)
+    elif dim == 3:
+        cluster_coords = torch.stack((x_clusters, y_clusters, z_clusters), dim=1)
     data["clusters"].pos = cluster_coords.float()
 
     if superclusters:
+        if dim == 3:
+            raise NotImplementedError("Superclusters not implemented for 3D yet...")
         #  ---- superclusters_0 ----
         data, x_sc_0, y_sc_0, cluster_id_sc_0 = supercluster_ID(
             data,
@@ -267,7 +318,7 @@ def load_loc_cluster(
     # warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
     # warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
 
-    # warnings.warn(f'1 unit in new space == {range_xy/2.0} in original units')
+    # warnings.warn(f'1 unit in new space == {range/2.0} in original units')
     # warnings.warn("Need to check that graph is connected correctly")
     # warnings.warn("Data should be normalised and scaled correctly")
     data.validate(raise_on_error=True)
@@ -357,8 +408,10 @@ def load_loc(
     max_feat_locs,
     fov_x,
     fov_y,
+    fov_z,
+    dim,
     kneighbours=None,
-    range_xy=False,
+    range=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -372,10 +425,12 @@ def load_loc(
         max_feat_locs (dict) : Maxmimum values of features over locs training dataset
         fov_x (float) : Size of fov (x) in units of data
         fov_y (float) : Size of fov (y) in units of data
+        fov_z (float) : Size of fov (z) in units of data
+        dim (int) : Dimensions of the data
         kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If None then no edges between locs Default (None)
-        range_xy (float) : Range of the data over whole dataset. If not given calculate range
-            on per item basis, otherwise use range_xy to define normalisation for each item. If
+        range (float) : Range of the data over whole dataset. If not given calculate range
+            on per item basis, otherwise use range to define normalisation for each item. If
             False should not be processing the data.
 
     Returns:
@@ -383,18 +438,18 @@ def load_loc(
             position and feature for eacch node
 
     Raises:
-        ValueError: If try to process data and haven't define range_xy"""
+        ValueError: If try to process data and haven't define range"""
 
-    if range_xy is False:
-        raise ValueError(
-            "should not be processing the data haven't considered range_xy"
-        )
+    if range is False:
+        raise ValueError("should not be processing the data haven't considered range")
 
     loc_table = pl.from_arrow(loc_table)
 
     # load in positions
     x_locs = torch.tensor(loc_table["x"].to_numpy())
     y_locs = torch.tensor(loc_table["y"].to_numpy())
+    if dim == 3:
+        z_locs = torch.tensor(loc_table["z"].to_numpy())
 
     # load in features
     if min_feat_locs is None:
@@ -414,7 +469,10 @@ def load_loc(
 
     if kneighbours is not None:
         batch = torch.zeros(len(data["locs"].x))
-        loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+        if dim == 2:
+            loc_coords = torch.stack([x_locs, y_locs], axis=-1)
+        elif dim == 3:
+            loc_coords = torch.stack([x_locs, y_locs, z_locs], axis=-1)
         # add 1 as with loop = True considers itself as one of the k neighbours
         loc_loc_edges = knn_graph(loc_coords, k=kneighbours + 1, batch=batch, loop=True)
         data.edge_index = loc_loc_edges
@@ -426,7 +484,9 @@ def load_loc(
     # scale positions
     min_x = x_locs.min()
     min_y = y_locs.min()
-    if range_xy is None:
+    if dim == 3:
+        min_z = z_locs.min()
+    if range is None:
         per_item = True
         x_range = x_locs.max() - min_x
         y_range = y_locs.max() - min_y
@@ -438,29 +498,51 @@ def load_loc(
             logging.info(
                 f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
             )
-        range_xy = max(x_range, y_range)
+        range = max(x_range, y_range)
+        if dim == 3:
+            z_range = z_locs.max() - min_z
+            if z_range < 0.95 * fov_z:
+                logging.info(
+                    f"Range of z data: {z_range} is smaller than 95% of the height of the fov: {fov_z}"
+                )
+            range = max(z_range, range)
     else:
         per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
-    x_locs = (x_locs - min_x) / range_xy
-    y_locs = (y_locs - min_y) / range_xy
+    x_locs = (x_locs - min_x) / range
+    y_locs = (y_locs - min_y) / range
     x_locs = torch.clamp(x_locs, min=0, max=1)
     y_locs = torch.clamp(y_locs, min=0, max=1)
+    if dim == 3:
+        z_locs = (z_locs - min_z) / range
+        z_locs = torch.clamp(z_locs, min=0, max=1)
 
     if per_item:
         # scale to between -1 and 1
         x_locs = 2.0 * x_locs - 1.0
         y_locs = 2.0 * y_locs - 1.0
-        assert x_locs.min() == -1.0 or y_locs.min() == 1.0
-        assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+        if dim == 2:
+            assert x_locs.min() == -1.0 or y_locs.min() == -1.0
+            assert x_locs.max() == 1.0 or y_locs.max() == 1.0
+        elif dim == 3:
+            z_locs = 2.0 * z_locs - 1.0
+            assert x_locs.min() == -1.0 or y_locs.min() == -1.0 or z_locs.min() == -1.0
+            assert x_locs.max() == 1.0 or y_locs.max() == 1.0 or z_locs.max() == 1.0
+
     else:
         max_x = x_locs.max()
         max_y = y_locs.max()
         x_locs = 2.0 * x_locs - max_x
         y_locs = 2.0 * y_locs - max_y
-    loc_coords = torch.stack((x_locs, y_locs), dim=1)
+        if dim == 3:
+            max_z = z_locs.max()
+            z_locs = 2.0 * z_locs - max_z
+    if dim == 2:
+        loc_coords = torch.stack((x_locs, y_locs), dim=1)
+    elif dim == 3:
+        loc_coords = torch.stack((x_locs, y_locs, z_locs), dim=1)
     data.pos = loc_coords.float()
 
     data.validate(raise_on_error=True)
