@@ -341,6 +341,7 @@ class item:
 
         Raises:
             ValueError: If try to manually segment file which already has gt labels
+            NotImplementedError: Segmenting 3D image not implemented yet
         """
 
         # if already has gt label raise error
@@ -402,7 +403,7 @@ class item:
                     print("You must add labels!")
 
             elif self.dim == 3:
-                print("segment 3D image")
+                raise NotImplementedError("Segmenting 3D image not implemented yet")
 
         # segment the coordinates
         self._manual_seg_pixel_2_coord()
@@ -411,6 +412,9 @@ class item:
         """Get the localisations associated with manual annotation.
         Each integer should represent a different label, where 0 is reserved
         for background.
+
+        Raises:
+            NotImplementedError: Segmenting 3D image not implemented yet
         """
 
         if self.dim == 2:
@@ -447,7 +451,7 @@ class item:
             # print(self.df.head(10))
 
         elif self.dim == 3:
-            print("segment the 3d coords")
+            raise NotImplementedError("Segmenting 3D coords not implemented yet")
 
     def mask_pixel_2_coord(
         self, img_mask: np.ndarray, col_name="pred_label"
@@ -470,7 +474,10 @@ class item:
 
         Returns:
             df (polars dataframe): Original dataframe with
-                additional column with the predicted label"""
+                additional column with the predicted label
+
+        Raises:
+            NotImplementedError: Segmenting 3D image not implemented yet"""
 
         if self.dim == 2:
             # list of mask dataframes, each mask dataframe contains
@@ -514,7 +521,7 @@ class item:
             return df
 
         elif self.dim == 3:
-            print("segment the 3d coords")
+            raise NotImplementedError("Segmenting 3D coords not implemented yet")
 
     def save_df_to_csv(
         self, csv_loc, drop_zero_label=False, drop_pixel_col=True, save_chan_label=True
@@ -795,7 +802,13 @@ class item:
                 label in the first axis of the histogram, second value
                 is the channel in the second axis of the histogram etc.
                 e.g. ['egfr','ereg'] : egfr is in 1st axis, ereg in 2nd axis
+
+        Raises:
+            NotImplementedError: Segmenting 3D image not implemented yet
         """
+
+        if self.dim == 3:
+            raise NotImplementedError("Rendering 3D histogram not implemented yet")
 
         histos = []
 
@@ -832,7 +845,13 @@ class item:
         """Render the segmentation of the histogram
 
         Returns:
-            histo (np.histogram) : Segmentation of the histogram"""
+            histo (np.histogram) : Segmentation of the histogram
+
+        Raises:
+            NotImplementedError: Segmenting 3D image not implemented yet"""
+
+        if self.dim == 3:
+            raise NotImplementedError("Rendering 3D segmentation not implemented yet")
 
         labels = self.df.select(pl.col("gt_label")).to_numpy()
         x_pixels = self.df.select(pl.col("x_pixel")).to_numpy()
