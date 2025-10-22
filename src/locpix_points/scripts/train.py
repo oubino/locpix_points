@@ -176,7 +176,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in val dataset
@@ -201,7 +201,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in test dataset
@@ -226,7 +226,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -247,7 +247,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in val dataset
@@ -267,7 +267,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in test dataset
@@ -287,7 +287,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
     else:
         raise ValueError("Model not defined for train script")

@@ -1989,7 +1989,7 @@ def test_ensemble_averaging(
         fov_z=None,
         dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     val_set = datastruc.ClusterLocDataset(
@@ -2013,7 +2013,7 @@ def test_ensemble_averaging(
         fov_z=None,
         dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     test_set = datastruc.ClusterLocDataset(
@@ -2037,7 +2037,7 @@ def test_ensemble_averaging(
         fov_z=None,
         dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     # Get prediction
