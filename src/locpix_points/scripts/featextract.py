@@ -110,6 +110,9 @@ def main(argv=None):
         print("file", file)
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(os.path.join(preprocessed_folder, f"gt_label/{file}"))
+        if index == 0:
+            dim = item.dim
+            print(f"Treating data as {dim}D")
 
         # clustering (clusterID)
         if "dbscan" in config.keys():
@@ -119,7 +122,9 @@ def main(argv=None):
                 minpts=config["dbscan"]["minpts"],
                 x_col="x",
                 y_col="y",
+                z_col="z",
                 method="dbscan",
+                dim=dim,
             )
         elif "kmeans" in config.keys():
             df = featextract.cluster_data(
@@ -127,7 +132,9 @@ def main(argv=None):
                 n_clusters=config["kmeans"]["n_clusters"],
                 x_col="x",
                 y_col="y",
+                z_col="z",
                 method="kmeans",
+                dim=dim,
             )
         else:
             raise ValueError("Only support dbscan or kmeans clustering")
@@ -140,7 +147,14 @@ def main(argv=None):
         # warnings.warn(
         #    "Dropping all clusters with 2 or fewer locs - otherwise convex hull/PCA fail"
         # )
-        small_clusters = df.group_by("clusterID").count().filter(pl.col("count") < 3)
+        if dim == 2:
+            small_clusters = (
+                df.group_by("clusterID").count().filter(pl.col("count") < 3)
+            )
+        elif dim == 3:
+            small_clusters = (
+                df.group_by("clusterID").count().filter(pl.col("count") < 4)
+            )
         df = df.filter(~pl.col("clusterID").is_in(small_clusters["clusterID"]))
 
         # remap the clusterIDs
@@ -151,13 +165,13 @@ def main(argv=None):
         # warnings.warn("If no clusters then rest will fail")
 
         # basic features (com cluster, locs per cluster, radius of gyration)
-        basic_cluster_df = featextract.basic_cluster_feats(df)
+        basic_cluster_df = featextract.basic_cluster_feats(df, dim)
 
         # pca on cluster (linearity, circularity see DIMENSIONALITY BASED SCALE SELECTION IN 3D LIDAR POINT CLOUDS)
-        pca_cluster_df = featextract.pca_cluster(df)
+        pca_cluster_df = featextract.pca_cluster(df, dim)
 
-        # convex hull (perimeter, area, length)
-        convex_hull_cluster_df = featextract.convex_hull_cluster(df)
+        # convex hull in 2D: (perimeter, area, length)... in 3D: (area, volume, length)
+        convex_hull_cluster_df = featextract.convex_hull_cluster(df, dim)
 
         # merge cluster df
         cluster_df = basic_cluster_df.join(pca_cluster_df, on="clusterID", how="inner")
@@ -171,13 +185,24 @@ def main(argv=None):
             raise ValueError("2 or fewer clusters")
 
         # cluster density do this here
-        cluster_df = cluster_df.with_columns(
-            (pl.col("count") / pl.col("area_convex_hull")).alias("density_convex_hull")
-        )
-        cluster_df = cluster_df.with_columns(
-            (pl.col("count") / pl.col("area_pca")).alias("density_pca")
-        )
-
+        if dim == 2:
+            cluster_df = cluster_df.with_columns(
+                (pl.col("count") / pl.col("area_convex_hull")).alias(
+                    "density_convex_hull"
+                )
+            )
+            cluster_df = cluster_df.with_columns(
+                (pl.col("count") / pl.col("area_pca")).alias("density_pca")
+            )
+        elif dim == 3:
+            cluster_df = cluster_df.with_columns(
+                (pl.col("count") / pl.col("volume_convex_hull")).alias(
+                    "volume_convex_hull"
+                )
+            )
+            cluster_df = cluster_df.with_columns(
+                (pl.col("count") / pl.col("volume_pca")).alias("volume_pca")
+            )
         # identify superclusters
         if "superclusters" in config.keys():
             raise ValueError(

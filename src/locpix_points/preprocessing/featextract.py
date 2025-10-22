@@ -16,7 +16,15 @@ from sklearn.cluster import DBSCAN, KMeans
 
 
 def cluster_data(
-    df, eps=50.0, minpts=10, n_clusters=8, x_col="x", y_col="y", method="dbscan"
+    df,
+    eps=50.0,
+    minpts=10,
+    n_clusters=8,
+    x_col="x",
+    y_col="y",
+    z_col="z",
+    method="dbscan",
+    dim=2,
 ):
     """Cluster the data using DBSCAN or KMeans
 
@@ -27,7 +35,9 @@ def cluster_data(
         n_clusters (int) : num samples for KMeans
         x_col (string) : Name for the x column
         y_col (string) : Name for the y column
+        z_col (string) : Name for the z column
         method (string) : Choice of clustering method
+        dim (int) : Dimensions of the data
 
     Returns:
         df (polars df) : Dataframe with additional column for cluster"""
@@ -35,6 +45,8 @@ def cluster_data(
     dataframe = pd.DataFrame()
     dataframe["x"] = df[x_col].to_numpy()
     dataframe["y"] = df[y_col].to_numpy()
+    if dim == 3:
+        dataframe["z"] = df[z_col].to_numpy()
 
     if method == "dbscan":
         dbscan = DBSCAN(eps=eps, min_samples=minpts)
@@ -83,45 +95,69 @@ def super_cluster(
     return df
 
 
-def basic_cluster_feats(df, col_name="clusterID", x_name="x", y_name="y"):
+def basic_cluster_feats(
+    df, dim, col_name="clusterID", x_name="x", y_name="y", z_name="z"
+):
     """Calculate basic cluster features for the dataframe:
         locs per cluster, cluster COM, radius of gyration
 
     Args:
         df (pl.DataFrame): Dataframe containing the clusters
+        dim (int): Dimensions of the data
         col_name (string): Name of the column that identifies the clusters
         x_name (string): Name of the column that contains the x coords
             of the clusters
         y_name (string): Name of the column that contains the y coords
+            of the clusters
+        z_name (string): Name of the column that contains the z coords
             of the clusters
 
     Returns:
         cluster_df (pl.DataFrame): Dataframe with cluters and the new features"""
 
     # take in loc df with cluster id per cluster
-    cluster_df = df.group_by(col_name).agg(
-        [
-            pl.count(),
-            pl.col(x_name).mean().alias(f"{x_name}_mean"),
-            pl.col(y_name).mean().alias(f"{y_name}_mean"),
-            (
+    if dim == 2:
+        cluster_df = df.group_by(col_name).agg(
+            [
+                pl.count(),
+                pl.col(x_name).mean().alias(f"{x_name}_mean"),
+                pl.col(y_name).mean().alias(f"{y_name}_mean"),
                 (
-                    ((pl.col(x_name) - pl.col(x_name).mean()) ** 2).sum()
-                    + ((pl.col(y_name) - pl.col(y_name).mean()) ** 2).sum()
-                )
-                / pl.count()
-            ).alias("RGyration"),
-        ]
-    )
+                    (
+                        ((pl.col(x_name) - pl.col(x_name).mean()) ** 2).sum()
+                        + ((pl.col(y_name) - pl.col(y_name).mean()) ** 2).sum()
+                    )
+                    / pl.count()
+                ).alias("RGyration"),
+            ]
+        )
+    elif dim == 3:
+        cluster_df = df.group_by(col_name).agg(
+            [
+                pl.count(),
+                pl.col(x_name).mean().alias(f"{x_name}_mean"),
+                pl.col(y_name).mean().alias(f"{y_name}_mean"),
+                pl.col(z_name).mean().alias(f"{z_name}_mean"),
+                (
+                    (
+                        ((pl.col(x_name) - pl.col(x_name).mean()) ** 2).sum()
+                        + ((pl.col(y_name) - pl.col(y_name).mean()) ** 2).sum()
+                        + ((pl.col(z_name) - pl.col(z_name).mean()) ** 2).sum()
+                    )
+                    / pl.count()
+                ).alias("RGyration"),
+            ]
+        )
 
     return cluster_df
 
 
-def pca_fn(X):
+def pca_fn(X, dim):
     """Calculates PCA for an array
 
     Args:
         X (array): Array to calculate PCA for
+        dim (int): Dimensions of the data
 
     Returns:
         linearity (float): Linearity for the cluster
@@ -129,31 +165,42 @@ def pca_fn(X):
         length_pca (float): Length of the cluster according to PCA
         area_pca (float): Area of the cluster according to PCA
     """
-    pca = PCA(n_components=2)
+    pca = PCA(n_components=dim)
     pca.fit(X)
     # eigenvalues in order of size: variance[0], variance[1]
     variance = pca.explained_variance_
     # from 10.5194/isprsarchives-XXXVIII-5-W12-97-2011
     sigma_0 = math.sqrt(variance[0])
     sigma_1 = math.sqrt(variance[1])
+    if dim == 3:
+        sigma_2 = math.sqrt(variance[2])
+    else:
+        sigma_2 = 0
     linearity = (sigma_0 - sigma_1) / sigma_0
-    planarity = sigma_1 / sigma_0
+    planarity = (sigma_1 - sigma_2) / sigma_0
     # as in 10.1073/pnas.0908971106
     # ratio between fwhm and s.d. is 2.35 therefore multiply sd by 2.35
     length_pca = 2.35 * sigma_0
     width_pca = 2.35 * sigma_1
-
     area_pca = length_pca * width_pca
-    return linearity, planarity, length_pca, area_pca
+    if dim == 2:
+        return linearity, planarity, length_pca, area_pca
+    elif dim == 3:
+        scatter = sigma_2 / sigma_0
+        depth_pca = 2.35 * sigma_2
+        volume_pca = length_pca * width_pca * depth_pca
+        return linearity, planarity, scatter, length_pca, area_pca, volume_pca
 
 
-def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
+def pca_cluster(df, dim, x_col="x", y_col="y", z_col="z", col_name="clusterID"):
     """Calculate pca for each cluster
 
     Args:
         df (polars df) : Input dataframe
+        dim (int) : Dimensions of the data
         x_col (string) : Name of the x column
         y_col (string) : Name of the y column
+        z_col (string) : Name of the z column
         col_name (string) : Name for the cluster column
 
     Returns:
@@ -162,31 +209,55 @@ def pca_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [
-        df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
-    ]  # slow
+    if dim == 2:
+        array_list = [
+            df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
+        ]  # slow
+    elif dim == 3:
+        array_list = [
+            df.select(pl.col([x_col, y_col, z_col])).to_numpy() for df in df_split
+        ]  # slow
 
     results = []
 
     for arr in array_list:
-        result = pca_fn(arr)
+        result = pca_fn(arr, dim)
         results.append(result)
 
     array = np.array(results)
     linearities = array[:, 0]
     planarities = array[:, 1]
-    lengths = array[:, 2]
-    areas = array[:, 3]
+    if dim == 2:
+        lengths = array[:, 2]
+        areas = array[:, 3]
 
-    cluster_df = pl.DataFrame(
-        {
-            "clusterID": cluster_id,
-            "linearity": linearities,
-            "planarity": planarities,
-            "length_pca": lengths,
-            "area_pca": areas,
-        }
-    )
+        cluster_df = pl.DataFrame(
+            {
+                "clusterID": cluster_id,
+                "linearity": linearities,
+                "planarity": planarities,
+                "length_pca": lengths,
+                "area_pca": areas,
+            }
+        )
+
+    elif dim == 3:
+        scatters = array[:, 2]
+        lengths = array[:, 3]
+        areas = array[:, 4]
+        volumes = array[:, 5]
+
+        cluster_df = pl.DataFrame(
+            {
+                "clusterID": cluster_id,
+                "linearity": linearities,
+                "planarity": planarities,
+                "scatter": scatters,
+                "length_pca": lengths,
+                "area_pca": areas,
+                "volume_pca": volumes,
+            }
+        )
 
     return cluster_df
 
@@ -207,21 +278,23 @@ def convex_hull(array):
     neigh = NearestNeighbors(n_neighbors=len(vertices))
     neigh.fit(array[vertices])
     neigh_dist, _ = neigh.kneighbors(array[vertices], return_distance=True)
-    perimeter = hull.area
-    area = hull.volume
+    area = hull.area
+    volume = hull.volume
     length = np.max(neigh_dist)
     # print("length via convex hull", length)
-    return perimeter, area, length
+    return area, volume, length
 
 
-def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
+def convex_hull_cluster(df, dim, x_col="x", y_col="y", z_col="z", col_name="clusterID"):
     """Calculate convex hull for each cluster
 
     Args:
         df (polars df) : Input dataframe
+        dim (int) : Dimensions of the data
         col_name (string) : Name for the cluster column
         x_col (string) : Name for the x column
         y_col (string) : Name for the y column
+        z_col (string) : Name for the z column
 
     Returns:
         cluster_df (polars df) : Dataframe detailing the cluster details"""
@@ -229,9 +302,14 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
     df_split = df.partition_by(col_name)
     cluster_id = df[col_name].unique().to_numpy()
 
-    array_list = [
-        df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
-    ]  # slow
+    if dim == 2:
+        array_list = [
+            df.select(pl.col([x_col, y_col])).to_numpy() for df in df_split
+        ]  # slow
+    elif dim == 3:
+        array_list = [
+            df.select(pl.col([x_col, y_col, z_col])).to_numpy() for df in df_split
+        ]  # slow
 
     results = []
 
@@ -240,17 +318,30 @@ def convex_hull_cluster(df, x_col="x", y_col="y", col_name="clusterID"):
         results.append(result)
 
     array = np.array(results)
-    perimeters = array[:, 0]
-    areas = array[:, 1]
-    lengths = array[:, 2]
 
-    cluster_df = pl.DataFrame(
-        {
-            "clusterID": cluster_id,
-            "perimeter": perimeters,
-            "area_convex_hull": areas,
-            "length_convex_hull": lengths,
-        }
-    )
+    lengths = array[:, 2]
+    if dim == 2:
+        perimeters = array[:, 0]
+        areas = array[:, 1]
+        cluster_df = pl.DataFrame(
+            {
+                "clusterID": cluster_id,
+                "perimeter": perimeters,
+                "area_convex_hull": areas,
+                "length_convex_hull": lengths,
+            }
+        )
+    elif dim == 3:
+        areas = array[:, 0]
+        volumes = array[:, 1]
+
+        cluster_df = pl.DataFrame(
+            {
+                "clusterID": cluster_id,
+                "surface_area_convex_hull": areas,
+                "volume_convex_hull": volumes,
+                "length_convex_hull": lengths,
+            }
+        )
 
     return cluster_df
