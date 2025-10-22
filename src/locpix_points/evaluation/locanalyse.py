@@ -152,6 +152,8 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
         range_xy=False,
     )
@@ -170,6 +172,8 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
         range_xy=False,
     )
@@ -188,6 +192,8 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
         range_xy=False,
     )

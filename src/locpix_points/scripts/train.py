@@ -173,6 +173,8 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
             range_xy=False,
         )
@@ -196,6 +198,8 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
             range_xy=False,
         )
@@ -219,6 +223,8 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
             range_xy=False,
         )
@@ -238,6 +244,8 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
             range_xy=False,
         )
@@ -256,6 +264,8 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
             range_xy=False,
         )
@@ -274,6 +284,8 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
             range_xy=False,
         )
@@ -387,7 +399,7 @@ def main(argv=None):
         dim = first_train_item.pos.shape[-1]
     else:
         raise ValueError("Model not listed in train")
-    print("Dim", dim)
+    print("Dimension of the data: ", dim)
 
     # initialise model
     model = model_choice(

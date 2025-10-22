@@ -166,6 +166,8 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
             range_xy=False,
         )
@@ -185,6 +187,8 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
             range_xy=False,
         )

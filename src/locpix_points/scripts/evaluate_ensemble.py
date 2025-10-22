@@ -359,6 +359,8 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
                     range_xy=False,
                 )
@@ -377,6 +379,8 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
                     range_xy=False,
                 )
@@ -395,6 +399,8 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
                     range_xy=False,
                 )
@@ -424,6 +430,8 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
                     range_xy=False,
                 )
@@ -446,6 +454,8 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
                     range_xy=False,
                 )
@@ -468,6 +478,8 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
                     range_xy=False,
                 )
@@ -766,6 +778,22 @@ def main(argv=None):
             model_loc = os.path.join(project_directory, f"models/fold_{fold}")
             model_loc = os.path.join(model_loc, args.model_name)
 
+            # get dimensions of data
+            if fold == 0:
+                dummy_df = pl.read_parquet(
+                    os.path.join(
+                        input_folder_train,
+                        "featextract/locs",
+                        train_list[0] + ".parquet",
+                    )
+                )
+                if "z" in dummy_df.columns:
+                    dim = 3
+                else:
+                    dim = 2
+
+                print(f"Data is {dim}D")
+
             RTS_set = datastruc.ClusterLocDataset(
                 os.path.join(input_folder_RTS, "featextract/locs"),
                 os.path.join(input_folder_RTS, "featextract/clusters"),
@@ -784,6 +812,8 @@ def main(argv=None):
                 process_config["kneighboursclusters"],
                 process_config["fov_x"],
                 process_config["fov_y"],
+                process_config["fov_z"],
+                dim,
                 kneighbourslocs=process_config["kneighbourslocs"],
                 superclusters=superclusters,
                 range_xy=range_xy,
