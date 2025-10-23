@@ -47,7 +47,7 @@ jobs:
           cp -rf config output/
           cd output
           echo "here 1"
-          python -c "from torch_geometric.loader import DataLoader"
+          python -c "from torch_geometric.loader.dataloader import DataLoader"
           echo "here 2"
           python -c "import torch_geometric.loader as L"
           python scripts/preprocess.py
