@@ -55,6 +55,7 @@ jobs:
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
           echo "Pre k-fold script"
+          python -c "import torch_geometric.loader as L"
           python scripts/k_fold.py
 
       # continue from here
