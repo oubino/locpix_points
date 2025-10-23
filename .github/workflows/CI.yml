@@ -46,6 +46,9 @@ jobs:
           initialise -u oliver-umney -pn output -pp . -d data -dn demo -cp no -cs no -gt yes
           cp -rf config output/
           cd output
+          echo "here 0"
+          python -c "from collections.abc import Mapping"
+          python -c "from typing import Any, List, Optional, Sequence, Union"
           echo "here 1"
           python -c "from torch_geometric.loader.dataloader import DataLoader"
           echo "here 2"
