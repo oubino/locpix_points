@@ -18,9 +18,17 @@ import yaml
 from torchsummary import summary
 
 import wandb
+
+print("Here A", flush=True)
 from locpix_points.data_loading import datastruc
+
+print("Here B", flush=True)
 from locpix_points.evaluation import evaluate
+
+print("Here C", flush=True)
 from locpix_points.models import model_choice
+
+print("Here D", flush=True)
 
 # import torch
 # import torch_geometric.transforms as T
