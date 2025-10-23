@@ -46,6 +46,9 @@ jobs:
           initialise -u oliver-umney -pn output -pp . -d data -dn demo -cp no -cs no -gt yes
           cp -rf config output/
           cd output
+          echo "here 1"
+          python -c "from torch_geometric.loader import DataLoader"
+          echo "here 2"
           python -c "import torch_geometric.loader as L"
           python scripts/preprocess.py
           python scripts/featextract.py
