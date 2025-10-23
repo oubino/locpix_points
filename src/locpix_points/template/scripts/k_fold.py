@@ -47,4 +47,5 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
+    print("Running k-fold pre (main)...", flush=True)
     main()
