@@ -1,18 +1,11 @@
 """Test pipeline"""
 
-print("here 1", flush=True)
 from locpix_points.scripts.k_fold import main as main_k
-
-print("here 2", flush=True)
 import argparse
-
-print("here 3", flush=True)
 
 
 def main(argv=None):
     parser = argparse.ArgumentParser(description="k-fold")
-
-    print("Running k-fold...", flush=True)
 
     parser.add_argument(
         "-f",
@@ -23,8 +16,6 @@ def main(argv=None):
     )
 
     args = parser.parse_args(argv)
-
-    print("Running k-fold...", flush=True)
 
     if args.fold is None:
         # run k-fold on data
@@ -52,5 +43,4 @@ def main(argv=None):
 
 
 if __name__ == "__main__":
-    print("Running k-fold pre (main)...", flush=True)
     main()

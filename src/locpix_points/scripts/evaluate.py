@@ -6,45 +6,21 @@ Recipe :
     3. Evaluate on test set
 """
 
-print("Here !", flush=True)
-
 import argparse
 import json
 import os
 import time
 
 import pandas as pd
-
-print("Here sue", flush=True)
-
 import torch
-
-print("Here amy", flush=True)
-
 import torch_geometric.loader as L
-
-print("Here jen", flush=True)
-
 import yaml
-
-print("Here bob", flush=True)
-
 from torchsummary import summary
 
-print("Here felix", flush=True)
-
 import wandb
-
-print("Here A", flush=True)
 from locpix_points.data_loading import datastruc
-
-print("Here B", flush=True)
 from locpix_points.evaluation import evaluate
-
-print("Here C", flush=True)
 from locpix_points.models import model_choice
-
-print("Here D", flush=True)
 
 # import torch
 # import torch_geometric.transforms as T

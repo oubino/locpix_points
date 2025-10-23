@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11.12"]
+        python-version: ["3.11"]
     steps:
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
@@ -46,13 +46,6 @@ jobs:
           initialise -u oliver-umney -pn output -pp . -d data -dn demo -cp no -cs no -gt yes
           cp -rf config output/
           cd output
-          echo "here 0"
-          python -c "from collections.abc import Mapping"
-          python -c "from typing import Any, List, Optional, Sequence, Union"
-          echo "here 1"
-          python -c "from torch_geometric.loader.dataloader import DataLoader"
-          echo "here 2"
-          python -c "import torch_geometric.loader as L"
           python scripts/preprocess.py
           python scripts/featextract.py
           python scripts/generate_k_fold_splits.py
@@ -61,8 +54,6 @@ jobs:
           sed -i 's/^eval_on_gpu: True/eval_on_gpu: False/' config/evaluate.yaml
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
-          echo "Pre k-fold script"
-          python -c "import torch_geometric.loader as L"
           python scripts/k_fold.py
 
       # continue from here

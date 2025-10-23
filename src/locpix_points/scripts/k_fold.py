@@ -5,39 +5,18 @@ Recipe :
     2. Process
     3. Train
 """
-print("here 10", flush=True)
+
 import argparse
-
-print("here 11", flush=True)
 import logging
-
-print("here 12", flush=True)
 import os
-
-print("here 13", flush=True)
 import json
-
-print("here 14", flush=True)
 import time
-
-print("here 15", flush=True)
 import yaml
-
-print("here 16", flush=True)
 import wandb
 
-print("here 17", flush=True)
-
-
 from locpix_points.scripts.evaluate import main as main_eval
-
-print("here 18", flush=True)
 from locpix_points.scripts.process import main as main_process
-
-print("here 19", flush=True)
 from locpix_points.scripts.train import main as main_train
-
-print("here 20", flush=True)
 
 
 def main(argv=None):
@@ -84,8 +63,6 @@ def main(argv=None):
 
     project_directory = args.project_directory
 
-    print("In main body of k fold script... ", flush=True)
-
     # load yaml
     k_fold_yaml = os.path.join(args.config, "k_fold.yaml")
     with open(k_fold_yaml, "r") as ymlfile:
@@ -111,8 +88,6 @@ def main(argv=None):
         with open(metadata_path, "w") as outfile:
             json.dump(metadata, outfile)
 
-    print("Login to wandb...", flush=True)
-
     # login to wandb
     wandb.login()
 
@@ -130,8 +105,6 @@ def main(argv=None):
 
     # log errors
     logging.basicConfig(filename="errors.txt", level=logging.DEBUG)
-
-    print("Pre-splits...", flush=True)
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):
