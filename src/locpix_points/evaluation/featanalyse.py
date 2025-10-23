@@ -208,6 +208,8 @@ def visualise_umap_embedding(
         labels = df["correct"]
     elif colour_by == "best_r":
         labels = df["best_r"]
+    elif colour_by == "file_name":
+        labels = df["file_name"]
     else:
         raise ValueError(f"{colour_by} not supported")
 
@@ -306,13 +308,15 @@ def visualise_umap_embedding(
                 # "all-WT": df.all_wt,
                 # "all-WT response": df.wt_response,
                 "file_name": df.file_name,
-                "patient": df.patient,
-                "best_r": df.best_r,
                 "fold": df.fold,
                 "GT label (integer)": df.type.map(label_map),
                 "index": np.arange(len(df)),
             }
         )
+        if "patient" in df.columns:
+            hover_data.insert(-1, "patient", df.patient)
+        if "best_r" in df.columns:
+            hover_data.insert(-1, "best_r", df.best_r)
         umap.plot.output_notebook()
 
         # replace yellow with pink for better visualisation
