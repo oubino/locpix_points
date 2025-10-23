@@ -81,9 +81,9 @@ def generate(
         )
     except:
         print("No attention present")
-    h_2 = model.cluster_net.global_pool.register_forward_hook(
-        getActivation("globalpool")
-    )
+        h_2 = model.cluster_net.global_pool.register_forward_hook(
+            getActivation("globalpool")
+        )
 
     for index, data in enumerate(loader):
         with torch.no_grad():
