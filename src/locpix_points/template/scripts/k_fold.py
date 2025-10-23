@@ -7,6 +7,8 @@ import argparse
 def main(argv=None):
     parser = argparse.ArgumentParser(description="k-fold")
 
+    print("Running k-fold...", flush=True)
+
     parser.add_argument(
         "-f",
         "--fold",
@@ -17,7 +19,7 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
-    print("Running k-fold...")
+    print("Running k-fold...", flush=True)
 
     if args.fold is None:
         # run k-fold on data
