@@ -63,6 +63,8 @@ def main(argv=None):
 
     project_directory = args.project_directory
 
+    print("In main body of k fold script... ")
+
     # load yaml
     k_fold_yaml = os.path.join(args.config, "k_fold.yaml")
     with open(k_fold_yaml, "r") as ymlfile:
@@ -88,6 +90,8 @@ def main(argv=None):
         with open(metadata_path, "w") as outfile:
             json.dump(metadata, outfile)
 
+    print("Login to wandb...")
+
     # login to wandb
     wandb.login()
 
@@ -105,6 +109,8 @@ def main(argv=None):
 
     # log errors
     logging.basicConfig(filename="errors.txt", level=logging.DEBUG)
+
+    print("Pre-splits...")
 
     # for split in splits
     for index, train_fold in enumerate(train_folds):

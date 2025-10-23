@@ -9,8 +9,11 @@ micromamba activate locpix-points
 while getopts ":a:bf:" opt; do
   case $opt in
     f)
+      echo "line 12"
       fold="$OPTARG"
+      echo "line 14"
       python scripts/k_fold.py -f $fold
+      echo "line 16"
       exit 1
       ;;
   esac

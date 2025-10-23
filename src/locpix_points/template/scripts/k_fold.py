@@ -17,6 +17,8 @@ def main(argv=None):
 
     args = parser.parse_args(argv)
 
+    print("Running k-fold...")
+
     if args.fold is None:
         # run k-fold on data
         main_k(
