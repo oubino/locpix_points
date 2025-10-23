@@ -5,18 +5,39 @@ Recipe :
     2. Process
     3. Train
 """
-
+print("here 10", flush=True)
 import argparse
+
+print("here 11", flush=True)
 import logging
+
+print("here 12", flush=True)
 import os
+
+print("here 13", flush=True)
 import json
+
+print("here 14", flush=True)
 import time
+
+print("here 15", flush=True)
 import yaml
+
+print("here 16", flush=True)
 import wandb
 
+print("here 17", flush=True)
+
+
 from locpix_points.scripts.evaluate import main as main_eval
+
+print("here 18", flush=True)
 from locpix_points.scripts.process import main as main_process
+
+print("here 19", flush=True)
 from locpix_points.scripts.train import main as main_train
+
+print("here 20", flush=True)
 
 
 def main(argv=None):
