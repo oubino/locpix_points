@@ -158,7 +158,7 @@ class TransitionDown(torch.nn.Module):
 
 
 class PointTransformerEmbedding(torch.nn.Module):
-    def __init__(self, config, dim=2):
+    def __init__(self, config, dim):
         super().__init__()
 
         self.name = "PointTransformerClassifier"

@@ -222,7 +222,7 @@ def main(argv=None):
         config["model"],
         # this should parameterise the chosen model
         config[config["model"]],
-        dim=dim,
+        dim,
         device=device,
     )
 
