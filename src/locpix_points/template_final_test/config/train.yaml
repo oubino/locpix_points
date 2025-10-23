@@ -116,8 +116,6 @@ model: [CHANGE]
 #   pt_tr_pos_nn_layers: 32
 #   # size of hidden channel for attention NN
 #   pt_tr_attn_nn_layers: 32
-#   # dimensions of data: options = [2,3]
-#   pt_tr_dim: 2
 #   # -------------------------------------------------
 # model: clusternet
 # clusternet:
@@ -157,8 +155,6 @@ model: [CHANGE]
 #   pt_tr_pos_nn_layers: 32
 #   # size of hidden channel for attention NN
 #   pt_tr_attn_nn_layers: 32
-#   # dimensions of data: options = [2,3]
-#   pt_tr_dim: 2
 #   # -------------------------------------------------
 #
 # model: clustermlp
