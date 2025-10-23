@@ -1,7 +1,12 @@
 """Test pipeline"""
 
+print("here 1", flush=True)
 from locpix_points.scripts.k_fold import main as main_k
+
+print("here 2", flush=True)
 import argparse
+
+print("here 3", flush=True)
 
 
 def main(argv=None):
