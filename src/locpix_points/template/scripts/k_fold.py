@@ -25,6 +25,7 @@ def main(argv=None):
                 ".",
                 "-c",
                 "./config",
+                "-w",
             ]
         )
 
@@ -38,6 +39,7 @@ def main(argv=None):
                 "./config",
                 "-f",
                 f"{args.fold}",
+                "-w",
             ]
         )
 
