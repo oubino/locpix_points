@@ -208,6 +208,8 @@ def visualise_umap_embedding(
         labels = df["correct"]
     elif colour_by == "best_r":
         labels = df["best_r"]
+    elif colour_by == "file_name":
+        labels = df["file_name"]
     else:
         raise ValueError(f"{colour_by} not supported")
 
@@ -218,13 +220,27 @@ def visualise_umap_embedding(
         try:
             unique_labels = np.unique(labels)
             num_labels = unique_labels.shape[0]
-            color_key_cmap = "Spectral"
-            color_key = _to_hex(
-                plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
-            )
-            if "#ffffbe" in color_key:
-                color_key[color_key.index("#ffffbe")] = "#ee2a7b"
-
+            if num_labels <= 11:
+                color_key = [
+                    "#1f78b4",
+                    "#e31a1c",
+                    "#33a02c",
+                    "#a6cee3",
+                    "#b2df8a",
+                    "#fb9a99",
+                    "#fdbf6f",
+                    "#ff7f00",
+                    "#cab2d6",
+                    "#6a3d9a",
+                    "#b15928",
+                ]
+            else:
+                color_key_cmap = "Spectral"
+                color_key = _to_hex(
+                    plt.get_cmap(color_key_cmap)(np.linspace(0, 1, num_labels))
+                )
+                if "#ffffbe" in color_key:
+                    color_key[color_key.index("#ffffbe")] = "#ee2a7b"
             ax = umap.plot.points(embedding, labels=labels, color_key=color_key)
             ax.collections[0].set_sizes(len(df) * [point_size])
         except:
@@ -292,13 +308,15 @@ def visualise_umap_embedding(
                 # "all-WT": df.all_wt,
                 # "all-WT response": df.wt_response,
                 "file_name": df.file_name,
-                "patient": df.patient,
-                "best_r": df.best_r,
                 "fold": df.fold,
                 "GT label (integer)": df.type.map(label_map),
                 "index": np.arange(len(df)),
             }
         )
+        if "patient" in df.columns:
+            hover_data.insert(-1, "patient", df.patient)
+        if "best_r" in df.columns:
+            hover_data.insert(-1, "best_r", df.best_r)
         umap.plot.output_notebook()
 
         # replace yellow with pink for better visualisation
@@ -411,6 +429,7 @@ def struc_analysis_prep(
     model_config,
     n_repeats,
     device,
+    dim,
 ):
     """Prepares for structure analysis by generating a homogeneous dataset and model
 
@@ -423,7 +442,7 @@ def struc_analysis_prep(
         model_config (dict): Parameters for the model
         n_repeats (int): Number of times to run through the LocNet model
         device (str): Device to run things on
-
+        dim (int): Dimensions of the data
     """
 
     # ---- Generate homogeneous cluster model ---- #
@@ -435,6 +454,7 @@ def struc_analysis_prep(
     model = model_choice(
         model_type,
         model_config,
+        dim,
         device=device,
     )
 
@@ -457,7 +477,7 @@ def struc_analysis_prep(
         loc_model = None
 
     # need to create a model that acts on the homogeneous data for cluster and locs
-    cluster_model = ClusterNetHomogeneous(model.cluster_net, model_config)
+    cluster_model = ClusterNetHomogeneous(model.cluster_net, model_config, dim)
     output_folder = os.path.join(project_directory, f"output/homogeneous_dataset")
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
@@ -512,6 +532,8 @@ def struc_analysis_prep(
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -528,6 +550,8 @@ def struc_analysis_prep(
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -544,6 +568,8 @@ def struc_analysis_prep(
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -1502,13 +1528,14 @@ def features_to_csv(
         )
 
 
-def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
+def analyse_nn_feats(project_directory, config, final_test, dim, n_repeats=1):
     """Analyse the features of the clusters from neural network
 
     Args:
         project_directory (str): Location of the project directory
         config (dict): Configuration for this script
         final_test (bool): Whether final test
+        dim (int): Dimensions of the data
         n_repeats (int): number of times to run data through loc model for averaging
 
     Raises:
@@ -1549,6 +1576,7 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
         model_type,
         # this should parameterise the chosen model
         config[model_type],
+        dim,
         device=device,
     )
 
@@ -1643,6 +1671,8 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -1659,6 +1689,8 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -1675,6 +1707,8 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
         pre_transform=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         from_hetero_loc_cluster=True,
         loc_net=loc_model,
         n_repeats=n_repeats,
@@ -1768,6 +1802,7 @@ def analyse_nn_feats(project_directory, config, final_test, n_repeats=1):
 def explain(
     project_directory,
     config,
+    dim,
     neuralnet=False,
     final_test=False,
     n_repeats=1,
@@ -1777,6 +1812,7 @@ def explain(
     Args:
         project_directory (str): Location of project directory
         config (str): Configuration file for evaluating
+        dim (int): Dimensions of the data
         neuralnet (bool): If TRUE output of neural net is analyse rather than manual features
         final_test (bool): If TRUE running final_test
         n_repeats (int): Number of times to run data through locnet if neuralnet=True
@@ -1848,7 +1884,9 @@ def explain(
             project_directory, train_loc_files, test_loc_files, final_test
         )
     elif neuralnet:
-        analyse_nn_feats(project_directory, config, final_test, n_repeats=n_repeats)
+        analyse_nn_feats(
+            project_directory, config, final_test, dim, n_repeats=n_repeats
+        )
     else:
         raise ValueError("Should be neural net or manual")
 
@@ -1901,11 +1939,12 @@ def test_ensemble_averaging(
 
     gt_label_map = {int(key): val for key, val in gt_label_map.items()}
 
+    raise ValueError("BUG: dim is not specified in model choice...")
     model = model_choice(
         config["model"],
         # this should parameterise the chosen model
         config[config["model"]],
-        dim=2,
+        dim,
         device=device,
     )
 
@@ -1960,8 +1999,10 @@ def test_ensemble_averaging(
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     val_set = datastruc.ClusterLocDataset(
@@ -1982,8 +2023,10 @@ def test_ensemble_averaging(
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     test_set = datastruc.ClusterLocDataset(
@@ -2004,8 +2047,10 @@ def test_ensemble_averaging(
         kneighboursclusters=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbourslocs=None,
-        range_xy=False,
+        range=False,
     )
 
     # Get prediction

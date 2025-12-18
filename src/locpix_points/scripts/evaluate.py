@@ -166,8 +166,10 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -185,8 +187,10 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
 
     else:
@@ -218,7 +222,7 @@ def main(argv=None):
         config["model"],
         # this should parameterise the chosen model
         config[config["model"]],
-        dim=dim,
+        dim,
         device=device,
     )
 

@@ -54,8 +54,11 @@ class Subsample(BaseTransform):
         Raises:
             ValueError: If edge index is specified currently
                 am not considering it so raise error
+            NotImplementedError: Doesn't support 3D yet
         """
         idx = np.random.choice(data.num_nodes, 1)
+
+        raise NotImplementedError("Not implemented subsample for 3D yet...")
 
         data_min_x = data.pos[:, 0] > data.pos[idx[0]][0] - self.x / 2
         data_max_x = data.pos[:, 0] < data.pos[idx[0]][0] + self.x / 2

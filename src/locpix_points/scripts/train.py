@@ -173,8 +173,10 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in val dataset
@@ -196,8 +198,10 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in test dataset
@@ -219,8 +223,10 @@ def main(argv=None):
             kneighboursclusters=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbourslocs=None,
-            range_xy=False,
+            range=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -238,8 +244,10 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in val dataset
@@ -256,8 +264,10 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
 
         # load in test dataset
@@ -274,8 +284,10 @@ def main(argv=None):
             max_feat=None,
             fov_x=None,
             fov_y=None,
+            fov_z=None,
+            dim=None,
             kneighbours=None,
-            range_xy=False,
+            range=False,
         )
     else:
         raise ValueError("Model not defined for train script")
@@ -387,14 +399,14 @@ def main(argv=None):
         dim = first_train_item.pos.shape[-1]
     else:
         raise ValueError("Model not listed in train")
-    print("Dim", dim)
+    print("Dimension of the data: ", dim)
 
     # initialise model
     model = model_choice(
         config["model"],
         # this should parameterise the chosen model
         config[config["model"]],
-        dim=dim,
+        dim,
         device=device,
     )
 

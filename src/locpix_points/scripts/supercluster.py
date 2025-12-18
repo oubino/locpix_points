@@ -47,6 +47,9 @@ for file in os.listdir(folder):
     dataframe["x"] = df["x_mean"].to_numpy()
     dataframe["y"] = df["y_mean"].to_numpy()
 
+    if "z_mean" in df.columns or item_loc.dim == 3:
+        raise NotImplementedError("3D not implemented for superclusters")
+
     clusters.append(len(df))
 
     if len(df) < 42:

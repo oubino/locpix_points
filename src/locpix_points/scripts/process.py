@@ -118,19 +118,20 @@ def minmax(config, feat_str, file_directory, train_list):
     return min_vals, max_vals
 
 
-def minmaxpos(file_directory, train_list):
+def minmaxpos(file_directory, train_list, dim):
     """Calculate minimum and maximum values of the positions
     in the file
 
     Args:
         file_directory (str): Directory containing the files
         train_list (list): List of files to load in
+        dim (int): Dimensions of the data
 
     Returns:
-        range_xy (float): Range of the xy data
+        range (float): Range of the data (in xy if 2D or xyz in 3D)
     """
 
-    range_xy = -1
+    range = -1
     for _, file in enumerate(train_list):
         df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
         # load in positions
@@ -141,11 +142,16 @@ def minmaxpos(file_directory, train_list):
         min_y = y_locs.min()
         x_range = x_locs.max() - min_x
         y_range = y_locs.max() - min_y
-        range_xy_temp = max(x_range, y_range)
+        range_temp = max(x_range, y_range)
+        if dim == 3:
+            z_locs = torch.tensor(df["z"].to_numpy())
+            min_z = z_locs.min()
+            z_range = z_locs.max() - min_z
+            range_temp = max(range_temp, z_range)
 
-        range_xy = max(range_xy_temp, range_xy)
+        range = max(range_temp, range)
 
-    return range_xy
+    return range
 
 
 def main(argv=None):
@@ -387,6 +393,15 @@ def main(argv=None):
         input_folder_val = input_folder_train
         input_folder_test = os.path.join(project_directory, args.final_test[1][0])
 
+    # get dimensions of data
+    dummy_df = pl.read_parquet(
+        os.path.join(input_folder_train, "featextract/locs", train_list[0] + ".parquet")
+    )
+    if "z" in dummy_df.columns:
+        dim = 3
+    else:
+        dim = 2
+
     # calculate min/max features on training data
     if config["model"] == "ClusterLoc":
         file_directory = os.path.join(input_folder_train, "featextract/locs")
@@ -395,10 +410,10 @@ def main(argv=None):
         )
 
         if config["normalise"] == "per_dataset":
-            # calculate xy range
-            range_xy = minmaxpos(file_directory, train_list)
+            # calculate range
+            range = minmaxpos(file_directory, train_list, dim)
         elif config["normalise"] == "per_item":
-            range_xy = None
+            range = None
         else:
             raise NotImplementedError("Normalise should be per-item or per-dataset")
 
@@ -432,9 +447,11 @@ def main(argv=None):
             config["kneighboursclusters"],
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range_xy=range_xy,
+            range=range,
         )
 
         print("Val set...")
@@ -457,9 +474,11 @@ def main(argv=None):
             config["kneighboursclusters"],
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range_xy=range_xy,
+            range=range,
         )
 
         print("Test set...")
@@ -482,9 +501,11 @@ def main(argv=None):
             config["kneighboursclusters"],
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range_xy=range_xy,
+            range=range,
         )
 
         # save yaml file
@@ -505,10 +526,10 @@ def main(argv=None):
             max_feat = None
 
         if config["normalise"] == "per_dataset":
-            # calculate xy range
-            range_xy = minmaxpos(file_directory, train_list)
+            # calculate range
+            range = minmaxpos(file_directory, train_list, dim)
         elif config["normalise"] == "per_item":
-            range_xy = None
+            range = None
         else:
             raise NotImplementedError("Normalise should be per-item or per-dataset")
 
@@ -527,8 +548,10 @@ def main(argv=None):
             max_feat,
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbours=config["kneighbours"],
-            range_xy=range_xy,
+            range=range,
         )
 
         print("Val set...")
@@ -546,8 +569,10 @@ def main(argv=None):
             max_feat,
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbours=config["kneighbours"],
-            range_xy=range_xy,
+            range=range,
         )
 
         print("Test set...")
@@ -565,8 +590,10 @@ def main(argv=None):
             max_feat,
             config["fov_x"],
             config["fov_y"],
+            config["fov_z"],
+            dim,
             kneighbours=config["kneighbours"],
-            range_xy=range_xy,
+            range=range,
         )
 
         # save yaml file

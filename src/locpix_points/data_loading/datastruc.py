@@ -55,6 +55,8 @@ class SMLMDataset(Dataset):
             so can access via a numerical index later.
         fov_x (float) : Size of fov in units for data (x)
         fov_y (float) : Size of fov in units for data (y)
+        fov_z (float) : Size of fov in units for data (z)
+        dim (int) : Dimensions of the dataset
     """
 
     def __init__(
@@ -69,6 +71,8 @@ class SMLMDataset(Dataset):
         pre_transform,
         fov_x,
         fov_y,
+        fov_z,
+        dim,
     ):
         # index the dataitems (idx)
         self._raw_loc_dir_root = raw_loc_dir_root
@@ -87,6 +91,8 @@ class SMLMDataset(Dataset):
         self.save_on_gpu = save_on_gpu
         self.fov_x = fov_x
         self.fov_y = fov_y
+        self.fov_z = fov_z
+        self.dim = dim
 
         if transform is None or len(transform) == 0:
             super().__init__(None, None, pre_transform, pre_filter)
@@ -260,14 +266,16 @@ class LocDataset(SMLMDataset):
         max_feat,
         fov_x,
         fov_y,
+        fov_z,
+        dim,
         kneighbours,
-        range_xy=False,
+        range=False,
     ):
         self.min_feat = min_feat
         self.max_feat = max_feat
         self.feat = feat
         self.kneighbours = kneighbours
-        self.range_xy = range_xy
+        self.range = range
 
         super().__init__(
             raw_loc_dir_root,
@@ -280,6 +288,8 @@ class LocDataset(SMLMDataset):
             pre_transform,
             fov_x,
             fov_y,
+            fov_z,
+            dim,
         )
 
     def process(self):
@@ -332,8 +342,10 @@ class LocDataset(SMLMDataset):
                 self.max_feat,
                 self.fov_x,
                 self.fov_y,
+                self.fov_z,
+                self.dim,
                 self.kneighbours,
-                range_xy=self.range_xy,
+                range=self.range,
             )
 
             # load in gt label
@@ -423,6 +435,8 @@ class ClusterDataset(SMLMDataset):
         pre_transform,
         fov_x,
         fov_y,
+        fov_z,
+        dim,
         from_hetero_loc_cluster=False,
         loc_net=None,
         n_repeats=1,
@@ -444,6 +458,8 @@ class ClusterDataset(SMLMDataset):
             pre_transform,
             fov_x,
             fov_y,
+            fov_z,
+            dim,
         )
 
     def process(self):
@@ -527,8 +543,10 @@ class ClusterLocDataset(SMLMDataset):
         kneighbours (int) : Number of neighbours each cluster connected to
         fov_x (float) : Size of fov in units for data (x)
         fov_y (float) : Size of fov in units for data (y)
+        fov_z (float) : Size of fov in units for data (z)
+        dim (int) : Dimensions of the data
         superclusters (bool) : Whether to include superclusters
-        range_xy (int) : Range of the data
+        range (int) : Range of the data
     """
 
     def __init__(
@@ -550,9 +568,11 @@ class ClusterLocDataset(SMLMDataset):
         kneighboursclusters,
         fov_x,
         fov_y,
+        fov_z,
+        dim,
         kneighbourslocs,
         superclusters=False,
-        range_xy=False,
+        range=False,
     ):
         self.dataset_type = "ClusterLocDataset"
         self.loc_feat = loc_feat
@@ -564,7 +584,7 @@ class ClusterLocDataset(SMLMDataset):
         self.kneighboursclusters = kneighboursclusters
         self.kneighbourslocs = kneighbourslocs
         self.superclusters = superclusters
-        self.range_xy = range_xy
+        self.range = range
 
         super().__init__(
             raw_loc_dir_root,
@@ -577,6 +597,8 @@ class ClusterLocDataset(SMLMDataset):
             pre_transform,
             fov_x,
             fov_y,
+            fov_z,
+            dim,
         )
 
     def process(self):
@@ -644,9 +666,11 @@ class ClusterLocDataset(SMLMDataset):
                 self.kneighboursclusters,
                 self.fov_x,
                 self.fov_y,
+                self.fov_z,
+                self.dim,
                 self.kneighbourslocs,
                 superclusters=self.superclusters,
-                range_xy=self.range_xy,
+                range=self.range,
             )
 
             # load in gt label

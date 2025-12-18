@@ -17,13 +17,13 @@ class LocOnlyNet(torch.nn.Module):
     Raises:
     """
 
-    def __init__(self, config, device="cpu", static=False):
+    def __init__(self, config, dim, device="cpu", static=False):
         super().__init__()
         self.name = "loconlynet"
         self.device = device
         self.static = static
         if config["conv_type"] == "pointtransformer":
-            self.net = PointTransformerEmbedding(config)
+            self.net = PointTransformerEmbedding(config, dim)
         elif config["conv_type"] == "pointnet":
             self.net = PointNetEmbedding(config, static)
         else:

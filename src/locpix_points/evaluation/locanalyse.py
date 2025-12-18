@@ -6,25 +6,26 @@ Then rather than passing through the model as usual - calculating the edge index
 
 We construct the edge index statically for the initial localisations.
 
-We mandate that all ratios set to 1.
-
 We can then perform subgraphX and attention (if relevant) analysis.
 
 We could also implement other point cloud based explainability methods.
 
 Config file at top specifies the analyses we want to run"""
 
-import argparse
+# import argparse
 import json
 import os
-import time
+
+# import time
 from typing import List
-import yaml
+
+# import yaml
 
 from dig.xgraph.method import SubgraphX
 from dig.xgraph.method.subgraphx import find_closest_node_result
 from dig.xgraph.evaluation import XCollector
-from torcheval.metrics import MulticlassConfusionMatrix, MulticlassAccuracy
+
+# from torcheval.metrics import MulticlassConfusionMatrix, MulticlassAccuracy
 from torch_geometric.nn import knn_graph
 from torch_geometric.data import Data
 from locpix_points.data_loading import datastruc
@@ -36,8 +37,9 @@ from locpix_points.evaluation.featanalyse import (
 
 import polars as pl
 import torch
-import torch_geometric.loader as L
-from torch_geometric.nn.conv.message_passing import MessagePassing
+
+# import torch_geometric.loader as L
+# from torch_geometric.nn.conv.message_passing import MessagePassing
 from torch import Tensor
 
 
@@ -152,8 +154,10 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
-        range_xy=False,
+        range=False,
     )
 
     # load in val dataset
@@ -170,8 +174,10 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
-        range_xy=False,
+        range=False,
     )
 
     # load in test dataset
@@ -188,8 +194,10 @@ def analyse_locs(project_directory, config, final_test, automatic):
         max_feat=None,
         fov_x=None,
         fov_y=None,
+        fov_z=None,
+        dim=None,
         kneighbours=None,
-        range_xy=False,
+        range=False,
     )
 
     train_map = pl.read_csv(

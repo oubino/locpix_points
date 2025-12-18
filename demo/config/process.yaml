@@ -6,9 +6,6 @@
 # this argument is redundant but has to be specified for the moment
 save_on_gpu: False
 
-# what dimensions to load into position data
-pos: xy # Options: [xy, xyz]
-
 # per localisation features
 # null -> no localisation features considered
 # e.g. ["photons", "error"] -> features present in original dataset for each localisation to consider
@@ -57,6 +54,7 @@ normalise: per_item # per_dataset
 #   not using the fox_x or fov_y range.
 fov_x: 1.681
 fov_y: 1.607
+fov_z: null
 
 # ---- Archived arguments ------
 

@@ -459,12 +459,14 @@ class ClusterNetHomogeneous(torch.nn.Module):
     Attributes:
         cluster_net_hetero (torch.nn.Module): The heterogeneous ClusterNetwork from which
             we will instantiate a homogeneous one
-        config (dict): Configuration for the Network"""
+        config (dict): Configuration for the Network
+        dim (int): Dimensions of the data"""
 
-    def __init__(self, cluster_net_hetero, config):
+    def __init__(self, cluster_net_hetero, config, dim):
         super().__init__()
         warnings.warn("This assumes a very particular model set up!")
         self.name = "ClusterNetHomogeneous"
+        self.dim = dim
 
         # first
         self.cluster_encoder_0 = conv.PointTransformerConv(
@@ -472,7 +474,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             config["pt_tr_out_channels"][0],
             MLP(  # BN
                 [
-                    config["pt_tr_dim"],
+                    self.dim,
                     config["pt_tr_pos_nn_layers"],
                     config["pt_tr_out_channels"][0],
                 ],
@@ -505,7 +507,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             config["pt_tr_out_channels"][1],
             MLP(  # BN
                 [
-                    config["pt_tr_dim"],
+                    self.dim,
                     config["pt_tr_pos_nn_layers"],
                     config["pt_tr_out_channels"][1],
                 ],
@@ -538,7 +540,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             config["pt_tr_out_channels"][2],
             MLP(  # BN
                 [
-                    config["pt_tr_dim"],
+                    self.dim,
                     config["pt_tr_pos_nn_layers"],
                     config["pt_tr_out_channels"][2],
                 ],
@@ -571,7 +573,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
             config["pt_tr_out_channels"][3],
             MLP(  # BN
                 [
-                    config["pt_tr_dim"],
+                    self.dim,
                     config["pt_tr_pos_nn_layers"],
                     config["pt_tr_out_channels"][3],
                 ],
@@ -707,9 +709,10 @@ def parse_data(data, device):
 
 
 class ClusterNetHetero(torch.nn.Module):
-    def __init__(self, config):
+    def __init__(self, config, dim):
         super().__init__()
         self.name = "cluster_net"
+        self.dim = dim
         self.add_cluster_pos = config["add_cluster_pos"]
         if config["cluster_conv_type"] == "gin":
             self.cluster_net = ClusterNet(
@@ -810,7 +813,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][0],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
@@ -819,7 +822,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][1],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
@@ -828,7 +831,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][2],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["dropout"],
@@ -837,7 +840,7 @@ class ClusterNetHetero(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][3],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
             )
@@ -869,10 +872,11 @@ class ClusterMLP(torch.nn.Module):
         MLP (nn.Module): MLP for the module
     """
 
-    def __init__(self, config):
+    def __init__(self, config, dim):
         super().__init__()
         self.name = "clustermlp"
         channels = config["channels"]
+        self.dim = dim
         self.MLP_in = MLP(
             config["channels"][:-1], plain_last=False, dropout=config["dropout"]
         )
@@ -908,7 +912,7 @@ class LocNet(torch.nn.Module):
     Attributes:
     """
 
-    def __init__(self, config, transformer=False):
+    def __init__(self, config, dim, transformer=False):
         super().__init__()
 
         self.transformer = transformer
@@ -917,7 +921,7 @@ class LocNet(torch.nn.Module):
             self.pointnet = PointNetEmbedding(config)
         else:
             self.name = "locpointtransformer"
-            self.pointtransformer = PointTransformerEmbedding(config)
+            self.pointtransformer = PointTransformerEmbedding(config, dim)
 
     def forward(self, x_locs, edge_index_locs, pos_locs):
         """Method called when data runs through network
@@ -958,13 +962,15 @@ class LocNetClassifyFOV(torch.nn.Module):
 
     Args:
         config (dict): Dictionary containing the configuration for the network
+        dim (int): Dimensions of the data
         device (torch.device): Whether to run on cpu or gpu
         transformer (bool): If true use PointTransformer to encode localisations"""
 
-    def __init__(self, config, device="cpu", transformer=False):
+    def __init__(self, config, dim, device="cpu", transformer=False):
         super().__init__()
         self.name = "locnetclassifyfov"
-        self.loc_net = LocNet(config, transformer=transformer)
+        self.dim = dim
+        self.loc_net = LocNet(config, self.dim, transformer=transformer)
         self.device = device
 
     def forward(self, data):
@@ -1003,16 +1009,18 @@ class LocClusterNet(torch.nn.Module):
 
     Args:
         config (dict): Dictionary containing the configuration for the network
+        dim (int): Dimensions of the data
         device (torch.device): Whether to run on cpu or gpu
 
     Raises:
         NotImplementedError: If incorrect loc convolution specified"""
 
-    def __init__(self, config, device="cpu"):
+    def __init__(self, config, dim, device="cpu"):
         super().__init__()
         self.name = "locclusternet"
         self.device = device
         self.add_cluster_pos = config["add_cluster_pos"]
+        self.dim = dim
         if config["loc_conv_type"] == "pointtransformer":
             transformer = True
         elif config["loc_conv_type"] == "pointnet":
@@ -1027,7 +1035,7 @@ class LocClusterNet(torch.nn.Module):
             self.superclusters = False
 
         # wrong input channel size 2 might change if locs have features
-        self.loc_net = LocNet(config, transformer=transformer)
+        self.loc_net = LocNet(config, self.dim, transformer=transformer)
 
         if config["cluster_conv_type"] == "gin":
             self.cluster_net = ClusterNet(
@@ -1133,7 +1141,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][0],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["cluster_dropout"],
@@ -1142,7 +1150,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][1],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["cluster_dropout"],
@@ -1151,7 +1159,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][2],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 ClusterEncoder(
                     dropout=config["cluster_dropout"],
@@ -1160,7 +1168,7 @@ class LocClusterNet(torch.nn.Module):
                     pt_tr_out_channels=config["pt_tr_out_channels"][3],
                     pt_tr_pos_nn_layers=config["pt_tr_pos_nn_layers"],
                     pt_tr_attn_nn_layers=config["pt_tr_attn_nn_layers"],
-                    pt_tr_dim=config["pt_tr_dim"],
+                    pt_tr_dim=self.dim,
                 ),
                 Linear(config["pt_tr_out_channels"][-1], config["OutputChannels"]),
                 attention_readout=attention_readout,

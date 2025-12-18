@@ -81,9 +81,9 @@ def generate(
         )
     except:
         print("No attention present")
-    h_2 = model.cluster_net.global_pool.register_forward_hook(
-        getActivation("globalpool")
-    )
+        h_2 = model.cluster_net.global_pool.register_forward_hook(
+            getActivation("globalpool")
+        )
 
     for index, data in enumerate(loader):
         with torch.no_grad():
@@ -307,8 +307,10 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
-                    range_xy=False,
+                    range=False,
                 )
 
                 # load in val dataset
@@ -325,8 +327,10 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
-                    range_xy=False,
+                    range=False,
                 )
 
                 # load in test dataset
@@ -343,8 +347,10 @@ def main(argv=None):
                     max_feat=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbours=None,
-                    range_xy=False,
+                    range=False,
                 )
 
             elif config["model"] in [
@@ -372,8 +378,10 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
-                    range_xy=False,
+                    range=False,
                 )
 
                 val_set = datastruc.ClusterLocDataset(
@@ -394,8 +402,10 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
-                    range_xy=False,
+                    range=False,
                 )
 
                 test_set = datastruc.ClusterLocDataset(
@@ -416,8 +426,10 @@ def main(argv=None):
                     kneighboursclusters=None,
                     fov_x=None,
                     fov_y=None,
+                    fov_z=None,
+                    dim=None,
                     kneighbourslocs=None,
-                    range_xy=False,
+                    range=False,
                 )
 
             else:
@@ -469,7 +481,7 @@ def main(argv=None):
                 config["model"],
                 # this should parameterise the chosen model
                 config[config["model"]],
-                dim=dim,
+                dim,
                 device=device,
             )
 
@@ -644,8 +656,10 @@ def main(argv=None):
                 kneighboursclusters=None,
                 fov_x=None,
                 fov_y=None,
+                fov_z=None,
+                dim=None,
                 kneighbourslocs=None,
-                range_xy=False,
+                range=False,
             )
 
         else:
@@ -681,7 +695,7 @@ def main(argv=None):
             config["model"],
             # this should parameterise the chosen model
             config[config["model"]],
-            dim=dim,
+            dim,
             device=device,
         )
 

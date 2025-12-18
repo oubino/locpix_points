@@ -14,7 +14,7 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ["3.11"]
+        python-version: ["3.11.11"]
     steps:
       - uses: actions/checkout@v4
       - uses: conda-incubator/setup-miniconda@v3
@@ -54,6 +54,10 @@ jobs:
           sed -i 's/^eval_on_gpu: True/eval_on_gpu: False/' config/evaluate.yaml
           export WANDB_API_KEY=${{ secrets.wandb_token }}
           wandb login
+          # below line fails because of the dataloader import in pyg
+          # i.e. 
+          # the following command fails...
+          # from torch_geometric.loader import DataLoader
           python scripts/k_fold.py
 
       # continue from here
