@@ -147,3 +147,7 @@ eclipse/*
 
 # demo
 demo/output/*
+
+# paper /raw
+paper/fov/*
+paper/cells/*
