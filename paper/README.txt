@@ -21,8 +21,8 @@ Instructions
 	1. jupyter-notebook # then open the visualise.ipynb notebook, and can visualise all cells and individual raw cell
 
 5. Initialise results directory
-	1. ...
-
+	1. initialise -u oliver-umney -pn nn_classifier -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
+	2. cp correct config files preprocess featextract process k_fold train evaluate
 
 Directory structure
 -------------------
