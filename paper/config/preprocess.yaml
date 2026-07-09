@@ -36,7 +36,7 @@ include_files: all
   #- file_2
 
 # Choice of input features for the clusters
-features: null 
+features: [] 
 
 # GT label
 # either per localisation or per fov
