@@ -31,6 +31,7 @@ Requirements
     * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`_
     * Make a note of your user-name for future use
 * Requires environment below
+* Note: If have different version of CUDA, Python, Pytorch, etc. - please change below accordingly
 
 Environment (locpix-points)
 -----------------------------

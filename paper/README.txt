@@ -20,7 +20,7 @@ Instructions
 5. Visualise raw cells and invidiual raw cell
 	1. jupyter-notebook # then open the visualise.ipynb notebook, and can visualise all cells and individual raw cell
 
-6. Initialise results directory
+6. Neural network classification from scratch
 	1. initialise -u oliver-umney -pn output -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
 	2. for file in preprocess featextract process k_fold train evaluate; do cp -f config/"$file".yaml output/config/"${file}".yaml;done
 		a. This is for linux/unix if on other may have to manually copy across preprocess, featextract, process, k_fold, train and evaluate .yaml files from config/ to output/config, replacing the files that are already there
@@ -30,6 +30,9 @@ Instructions
 	6. python scripts/generate_k_fold_splits.py [OPTIONAL]
 		a. This will overwrite the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
 	7. python scripts/k_fold.py
+
+7. At this point can visualise processed cells (clustered etc.)
+	1. jupyter-notebook # then open the visualise.ipynb notebook,
 
 Directory structure
 -------------------
