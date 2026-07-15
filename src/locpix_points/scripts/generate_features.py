@@ -310,7 +310,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
+                    data_range=False,
                 )
 
                 # load in val dataset
@@ -330,7 +330,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
+                    data_range=False,
                 )
 
                 # load in test dataset
@@ -350,7 +350,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
+                    data_range=False,
                 )
 
             elif config["model"] in [
@@ -381,7 +381,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
+                    data_range=False,
                 )
 
                 val_set = datastruc.ClusterLocDataset(
@@ -405,7 +405,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
+                    data_range=False,
                 )
 
                 test_set = datastruc.ClusterLocDataset(
@@ -429,7 +429,7 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
+                    data_range=False,
                 )
 
             else:
@@ -659,7 +659,7 @@ def main(argv=None):
                 fov_z=None,
                 dim=None,
                 kneighbourslocs=None,
-                range=False,
+                data_range=False,
             )
 
         else:

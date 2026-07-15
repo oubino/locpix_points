@@ -106,6 +106,12 @@ def main(argv=None):
     # log errors
     logging.basicConfig(filename="errors.txt", level=logging.DEBUG)
 
+    # make each model in each fold have the same name
+    time_o = time.gmtime(time.time())
+    model_name = (
+        f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
+    )
+
     # for split in splits
     for index, train_fold in enumerate(train_folds):
         if args.fold is not None:
@@ -168,6 +174,9 @@ def main(argv=None):
                 "-m",
                 f"models/fold_{index}",
                 "-w",
+                "-mn",
+                model_name,
+
             ]
         )
 

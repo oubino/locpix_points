@@ -1,12 +1,12 @@
 Instructions
 ------------
 
-1. COPY DIRECTORY
+1. Follow instructions to install and activate environment for this repository (locpix-points).
 
+2. Navigate to the paper folder in the locpix-points directory
+	1. For example: cd locpix_points/paper
 
-2. Follow instructions to install and activate environment at https://github.com/oubino/locpix_points
-
-3. NAVIGATE TO DIRECTORY [paper]
+3. DOWNLOAD DATA
 
 4. Extract cells from FOVs
 	1. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
@@ -32,7 +32,16 @@ Instructions
 	7. python scripts/k_fold.py
 
 7. At this point can visualise processed cells (clustered etc.)
-	1. jupyter-notebook # then open the visualise.ipynb notebook,
+	1. jupyter-notebook # then open the visualise.ipynb notebook
+
+8. Logistic regression classification
+	1. jupyter-notebook # then open per_cell_simple_classification.ipynb notebook
+		- This should reproduce the results of per-cell classification (deterministic)
+
+9. Combine neural network and logistic regression classification & calculate per-patient performance
+	1. python scripts/rename_nn_models.py # Renames models 
+	2. jupyter-notebook # then open combine_and_classify_patients.ipynb notebook
+
 
 Directory structure
 -------------------
