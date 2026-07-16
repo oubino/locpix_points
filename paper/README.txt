@@ -1,12 +1,12 @@
-Instructions
-------------
+Instructions to train models from scratch on our data
+-----------------------------------------------------
 
 1. Follow instructions to install and activate environment for this repository (locpix-points).
 
 2. Navigate to the paper folder in the locpix-points directory
 	1. For example: cd locpix_points/paper
 
-3. DOWNLOAD DATA
+3. DOWNLOAD DATA [AMEND]
 
 4. Extract cells from FOVs
 	1. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
@@ -42,7 +42,24 @@ Instructions
 	1. python scripts/rename_nn_models.py # Renames models 
 	2. jupyter-notebook # then open combine_and_classify_patients.ipynb notebook
 
+Instructions to load in our model and evaluate on data
+------------------------------------------------------
 
+1. Follow instructions to install and activate environment for this repository (locpix-points).
+
+2. Navigate to the paper folder in the locpix-points directory
+	1. For example: cd locpix_points/paper
+
+3. DOWNLOAD DATA [AMEND] (this will be folder called output/ move this into paper/)
+
+4. Visualise data
+	1. jupyter-notebook # then open the visualise.ipynb notebook
+
+5. Combine neural network and logistic regression classification & calculate per-patient performance
+	1. jupyter-notebook # then open combine_and_classify_patients.ipynb notebook
+
+6. Generate final confusion matrices
+	1. python scripts/per_patient_final_results.py
 Directory structure
 -------------------
 
