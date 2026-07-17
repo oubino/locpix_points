@@ -48,6 +48,7 @@ dependencies = [
     "notebook",
     "cloudpickle==3.0.0",
     "pynndescent==0.5.11",
+    "MLstatkit",
 ]
 
 [project.scripts]
