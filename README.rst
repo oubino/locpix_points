@@ -47,7 +47,7 @@ Install pytorch
 
 .. code-block:: python
 
-    pip install torch --index-url https://download.pytorch.org/whl/cu126
+    pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
 
 Install this repository (the -e flag is needed if want to reproduce manuscript results or develop the code, if neither of these apply remove the flag)
 
