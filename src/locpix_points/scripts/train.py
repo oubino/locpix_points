@@ -498,13 +498,12 @@ def main(argv=None):
         model_folder = os.path.join(project_directory, "models")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-
-    time_o = time.gmtime(time.time())
-    time_o = (
-        f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
-    )
     
     if args.model_name is None:
+        time_o = time.gmtime(time.time())
+        time_o = (
+            f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
+        )
         model_name = time_o
     else:
         model_name = args.model_name
