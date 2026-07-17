@@ -574,7 +574,7 @@ def main(argv=None):
     # yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
     # with open(yaml_save_loc, "w") as outfile:
     #    yaml.dump(config, outfile)
-    yaml_save_loc = os.path.join(wandb.run.dir, f"train_{time_o}.yaml")
+    yaml_save_loc = os.path.join(wandb.run.dir, f"train_{model_name}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 
