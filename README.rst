@@ -313,13 +313,13 @@ Other commands
         scripts/analysis_locs.ipynb
 
 
-#. Evaluate the model multiple times and take an average - ARGS see longer description in `errata <https://github.com/oubino/locpix_points/blob/main/errata.rst>`_.
+#. Evaluate the model multiple times and take an average - ARGS see longer description in `addenda <https://github.com/oubino/locpix_points/blob/main/addenda.rst>`_.
 
     .. code-block:: shell
     
          evaluate_ensemble [ARGS]
 
-Errata
-======
+Addenda
+=======
 
-For more information, including a longer description of each command see `errata <https://github.com/oubino/locpix_points/blob/main/errata.rst>`_.
+For more information, including a longer description of each command see `addenda <https://github.com/oubino/locpix_points/blob/main/addenda.rst>`_.

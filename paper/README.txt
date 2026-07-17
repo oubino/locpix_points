@@ -6,7 +6,9 @@ Instructions to train models from scratch on our data
 2. Navigate to the paper folder in the locpix-points directory
 	1. For example: cd locpix_points/paper
 
-3. DOWNLOAD DATA [AMEND]
+3. Download data (NOTE: fov/ folder is only required if want to reproduce step 4)
+	1. Download cells.zip and fov.zip folders from https://doi.org/10.5281/zenodo.21339937
+	2. Unzip folders and place both in the paper/ folder
 
 4. Extract cells from FOVs
 	1. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
@@ -50,7 +52,9 @@ Instructions to load in our model and evaluate on data
 2. Navigate to the paper folder in the locpix-points directory
 	1. For example: cd locpix_points/paper
 
-3. DOWNLOAD DATA [AMEND] (this will be folder called output/ move this into paper/)
+3. Download output data
+	1. Download output.zip from https://doi.org/10.5281/zenodo.21410192
+	2. Unzip folder and place in the paper/ folder
 
 4. Visualise data
 	1. jupyter-notebook # then open the visualise.ipynb notebook
@@ -60,6 +64,7 @@ Instructions to load in our model and evaluate on data
 
 6. Generate final confusion matrices
 	1. python scripts/per_patient_final_results.py
+
 Directory structure
 -------------------
 
@@ -79,3 +84,5 @@ config/ --> contains config file for scripts
 
 scripts/
 	prepare_fovs.py
+
+environments/ --> contains copies of environments used by OU during development
