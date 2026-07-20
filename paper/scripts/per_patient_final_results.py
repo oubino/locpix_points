@@ -53,7 +53,7 @@ all_df = linked_files_df.join(dstorm_pat_df, on="patient")
 all_df
 
 # %% [markdown]
-# ## Confusion matrices, all EREG levels by IHC
+# ## Confusion matrices, all EREG/AREG levels by IHC
 
 # %%
 cm_storm_all = confusion_matrix(all_df["GT"].to_numpy(), all_df["dSTORM_pred"].to_numpy())
@@ -79,7 +79,7 @@ print(f"Response 0 {cm_ihc_all[0]}")
 print(f"Response 1 {cm_ihc_all[1]}")
 
 # %% [markdown]
-# ## McNemar's test, all EREG levels by IHC
+# ## McNemar's test, all EREG/AREG levels by IHC
 
 # %%
 n01 = (~has_IHC_df["dSTORM_correct"] & has_IHC_df["IHC_correct"]).sum()
@@ -98,7 +98,7 @@ else:
     print(f"Exact McNemar (one-sided, dSTORM > IHC): p = {p_ml_greater:.6g}")
 
 # %% [markdown]
-# ## Confusion matrices, only high EREG levels by IHC
+# ## Confusion matrices, only high EREG/AREG levels by IHC
 
 # %%
 high_ereg_pats_df = has_IHC_df.filter((pl.col("%pos_ereg") >= 50.0) | (pl.col("%pos_areg") >= 50.0))
@@ -107,7 +107,7 @@ high_ereg_pats_df
 # %%
 cm_storm_highereg = confusion_matrix(high_ereg_pats_df["GT"].to_numpy(), high_ereg_pats_df["dSTORM_pred"].to_numpy())
 print()
-print("_dSTORM confusion matrix, high-EREG samples_")
+print("_dSTORM confusion matrix, high-EREG/AREG samples_")
 print("\tPred 0 | Pred 1")
 print(f"Response 0 {cm_storm_highereg[0]}")
 print(f"Response 1 {cm_storm_highereg[1]}")
@@ -115,13 +115,13 @@ print(f"Response 1 {cm_storm_highereg[1]}")
 # %%
 cm_ihc_highereg = confusion_matrix(high_ereg_pats_df["GT"].to_numpy(), high_ereg_pats_df["IHC_pred"].to_numpy())
 print()
-print("_IHC confusion matrix, high-EREG samples_")
+print("_IHC confusion matrix, high-EREG/AREG samples_")
 print("\tPred 0 | Pred 1")
 print(f"Response 0 {cm_ihc_highereg[0]}")
 print(f"Response 1 {cm_ihc_highereg[1]}")
 
 # %% [markdown]
-# ## McNemar's test, high EREG level by IHC
+# ## McNemar's test, high EREG/AREG levels by IHC
 
 # %%
 n01 = (~high_ereg_pats_df["dSTORM_correct"] & high_ereg_pats_df["IHC_correct"]).sum()
