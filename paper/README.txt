@@ -1,5 +1,5 @@
-Instructions to train models from scratch on our data
------------------------------------------------------
+Instructions to train models from scratch on our data or re-generate preprocessing results
+------------------------------------------------------------------------------------------
 
 1. Follow instructions to install and activate environment for this repository (locpix-points).
 
@@ -11,13 +11,35 @@ Instructions to train models from scratch on our data
 	2. Unzip folders and place both in the paper/ folder
 
 4. Extract cells from FOVs
-	1. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
-	2. annotate -i fov/ -c config/annotate_cells.yaml -n 
-		a. When you add points, ensure no layer is selected i.e. name of layer should be "Points"
-		b. Add on -r flag to relabel FOVs
-	3. python scripts/separate_cells.py # Extract cells from FOV
-	4. python scripts/link_cells.py  # This gives cells their GT annotation
-	5. python scripts/check_cells.py  # [Optional]: Check cells have sufficient localisations
+	1A. To visualise existing annotations or reannotate:
+		a. annotate -i fov/ -c config/annotate_cells.yaml -n -r
+	1B. To run all of preprocessing and annotating from raw data:
+		a. Remove all of the preprocessing/ folder from fov/
+		b. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
+			- Ignore UserWarning: No ground truth label or gt label map: these are deliberately not present yet
+		c. annotate -i fov/ -c config/annotate_cells.yaml -n
+	
+	2. If annotating:
+	    a. FOV appears in napari 
+		b. Pixel sizes (xy bins) for the visualisation (approx. 100 nm) appear in the terminal
+		c. Delete previous annotation layers if relevant
+			- If only visualising previous annotations, not reannotating, leave them as they are (ignore e, f)
+		d. Adjusting gamma may help with visualisation
+		e. In napari, use a paintbrush in a "Labels" layer to annotate membranes  # Stored in fov/preprocessed/labels
+		f. In a "Points" layers, add a point in the interior of each annotated cell  # Stored in fov/preprocessed/markers
+		g. Close napari; the next cell will appear ready for annotation; repeat a-e
+			- Do not use Ctrl+W to close the window, as this will terminate the whole process.
+
+	3A. To use previously annotated and extracted cell data:
+		- Continue to 4
+	3B. To re-extract existing cells or extract newly annotated cells from fovs, rather than using downloaded cell data:
+		a. Remove all of the cells/ folder
+		b. python scripts/separate_cells.py  # Extract cells from FOV
+			- Annotates whole cells based on filling with watershed from the interior points to the membranes
+			- Displays a histogram of localisation count per annotated cell
+			- Close the histogram window to continue
+		c. python scripts/link_cells.py  # This gives cells their clinical GT annotation
+		d. python scripts/check_cells.py  # [Optional]: Check cells have sufficient localisations
 
 5. Visualise raw cells and invidiual raw cell
 	1. jupyter-notebook  # then open the scripts/visualise.ipynb notebook, and can visualise all cells and individual raw cells
