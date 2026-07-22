@@ -41,19 +41,21 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 		c. python scripts/link_cells.py  # This gives cells their clinical GT annotation
 		d. python scripts/check_cells.py  # [Optional]: Check cells have sufficient localisations
 
-5. Visualise raw cells and invidiual raw cell
+5. Visualise raw cells and individual raw cell
 	1. jupyter-notebook  # then open the scripts/visualise.ipynb notebook, and can visualise all cells and individual raw cells
 
 6. Neural network classification from scratch
 	1. initialise -u [user-name from wandb*] -pn output -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
 		* See requirements in installation instructions
-	2. for file in preprocess featextract process k_fold train evaluate; do cp -f config/"$file".yaml output/config/"${file}".yaml;done
+		- The next step addresses the message about adjusting configuration files.
+	2. for file in preprocess featextract process k_fold train evaluate; do cp -f config/"$file".yaml output/config/"${file}".yaml; done
 		a. This is for linux/unix if on other may have to manually copy across preprocess, featextract, process, k_fold, train and evaluate .yaml files from config/ to output/config, replacing the files that are already there
 	3. cd output
 	4. python scripts/preprocess.py
 	5. python scripts/featextract.py
-	6. python scripts/generate_k_fold_splits.py [OPTIONAL]
-		a. This will overwrite the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
+	6. [OPTIONAL} Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
+		a. From output/ remove config/k_fold.yaml
+		b. python scripts/generate_k_fold_splits.py
 	7. python scripts/k_fold.py
 
 7. At this point can visualise processed cells (clustered etc.)
@@ -66,7 +68,7 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 
 9. Combine neural network and logistic regression classification & calculate per-patient performance
 	1. python scripts/rename_nn_models.py  # Renames models 
-	2. jupyter-notebook  # then open the scripts/combine_and_classify_patients.ipynb notebook
+	2. jupyter-notebook  # then open the scripts/combine_and_classify_patients.ipynb notebook and run to the end
 	3. python scripts/per_patient_final_results.py  # Can also be run cell by cell in some IDEs (e.g. VS Code) to display dataframes
 
 Instructions to load in our model and evaluate on data
