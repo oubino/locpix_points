@@ -13,7 +13,7 @@ files = os.listdir(input_folder)
 
 # Localisation threshold
 loc_threshold_global = 0 # threshold for localisations applied to each cell
-loc_threshold_ind = 5 # threshold for localisations applied indepenedlty to membrane and non-membrane 
+loc_threshold_ind = 5 # threshold for localisations applied independently to membrane and non-membrane 
 
 for file in files:
     # load memb and cell item
@@ -27,3 +27,6 @@ for file in files:
         
         if len(non_memb_table) < loc_threshold_ind or len(memb_table) < loc_threshold_ind:
             raise ValueError(f"Cell {file} has insufficient localisations per membrane/interior")
+
+print(f"All cells have more than {loc_threshold_global} localisations")
+print(f"and more than {loc_threshold_ind} localisations in both the membrane and the interior.")
