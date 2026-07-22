@@ -4,11 +4,11 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 1. Follow instructions to install and activate environment for this repository (locpix-points).
 
 2. Navigate to the paper folder in the locpix-points directory
-	1. For example: cd locpix_points/paper
+	1. For example: cd locpix_points/paper/ereg-pan-2026
 
 3. Download data (NOTE: fov/ folder is only required if want to reproduce step 4)
 	1. Download cells.zip and fov.zip folders from https://doi.org/10.5281/zenodo.21339937
-	2. Unzip folders and place both in the paper/ folder
+	2. Unzip folders and place both in the paper/ereg-pan-2026/ folder
 
 4. Extract cells from FOVs
 	1A. To visualise existing annotations or reannotate:
@@ -53,7 +53,7 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 	3. cd output
 	4. python scripts/preprocess.py
 	5. python scripts/featextract.py
-	6. [OPTIONAL} Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
+	6. [OPTIONAL] Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
 		a. From output/ remove config/k_fold.yaml
 		b. python scripts/generate_k_fold_splits.py
 	7. python scripts/k_fold.py
@@ -77,17 +77,17 @@ Instructions to load in our model and evaluate on data
 1. Follow instructions to install and activate environment for this repository (locpix-points).
 
 2. Navigate to the paper folder in the locpix-points directory
-	1. For example: cd locpix_points/paper
+	1. For example: cd locpix_points/paper/ereg-pan-2026
 
 3. Download output data
 	1. Download output.zip from https://doi.org/10.5281/zenodo.21410192
-	2. Unzip folder and place in the paper/ folder
+	2. Unzip folder and place in the paper/ereg-pan-2026/ folder
 
 4. Visualise data
-	1. jupyter-notebook  # then open the visualise.ipynb notebook
+	1. jupyter-notebook  # then open the scripts/visualise.ipynb notebook
 
 5. Combine neural network and logistic regression classification & calculate per-patient performance
-	1. jupyter-notebook  # then open combine_and_classify_patients.ipynb notebook
+	1. jupyter-notebook  # then open the scripts/combine_and_classify_patients.ipynb notebook and run to the end
 
 6. Generate final confusion matrices and statistical tests
 	1. python scripts/per_patient_final_results.py
