@@ -23,7 +23,8 @@ Instructions to train models from scratch on our data
 	1. jupyter-notebook  # then open the scripts/visualise.ipynb notebook, and can visualise all cells and individual raw cells
 
 6. Neural network classification from scratch
-	1. initialise -u oliver-umney -pn output -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
+	1. initialise -u [user-name from wandb*] -pn output -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
+		* See requirements in installation instructions
 	2. for file in preprocess featextract process k_fold train evaluate; do cp -f config/"$file".yaml output/config/"${file}".yaml;done
 		a. This is for linux/unix if on other may have to manually copy across preprocess, featextract, process, k_fold, train and evaluate .yaml files from config/ to output/config, replacing the files that are already there
 	3. cd output
