@@ -16,11 +16,11 @@ Instructions to train models from scratch on our data
 		a. When you add points, ensure no layer is selected i.e. name of layer should be "Points"
 		b. Add on -r flag to relabel FOVs
 	3. python scripts/separate_cells.py # Extract cells from FOV
-	4. python scripts/link_cells.py # This gives cells their GT annotation
-	5. python scripts/check_cells.py # [Optional]: Check cells have sufficient localisations
+	4. python scripts/link_cells.py  # This gives cells their GT annotation
+	5. python scripts/check_cells.py  # [Optional]: Check cells have sufficient localisations
 
 5. Visualise raw cells and invidiual raw cell
-	1. jupyter-notebook # then open the visualise.ipynb notebook, and can visualise all cells and individual raw cell
+	1. jupyter-notebook  # then open the scripts/visualise.ipynb notebook, and can visualise all cells and individual raw cells
 
 6. Neural network classification from scratch
 	1. initialise -u oliver-umney -pn output -pp . -d cells/gt_label -dn ereg_cells -cp no -cs no -gt yes
@@ -34,15 +34,17 @@ Instructions to train models from scratch on our data
 	7. python scripts/k_fold.py
 
 7. At this point can visualise processed cells (clustered etc.)
-	1. jupyter-notebook # then open the visualise.ipynb notebook
+	1. cd ..
+	2. jupyter-notebook  # then open the scripts/visualise.ipynb notebook
 
 8. Logistic regression classification
-	1. jupyter-notebook # then open per_cell_simple_classification.ipynb notebook
+	1. jupyter-notebook  # then open the scripts/per_cell_simple_classification.ipynb notebook
 		- This should reproduce the results of per-cell classification (deterministic)
 
 9. Combine neural network and logistic regression classification & calculate per-patient performance
-	1. python scripts/rename_nn_models.py # Renames models 
-	2. jupyter-notebook # then open combine_and_classify_patients.ipynb notebook
+	1. python scripts/rename_nn_models.py  # Renames models 
+	2. jupyter-notebook  # then open the scripts/combine_and_classify_patients.ipynb notebook
+	3. python scripts/per_patient_final_results.py  # Can also be run cell by cell in some IDEs (e.g. VS Code) to display dataframes
 
 Instructions to load in our model and evaluate on data
 ------------------------------------------------------
@@ -57,12 +59,12 @@ Instructions to load in our model and evaluate on data
 	2. Unzip folder and place in the paper/ folder
 
 4. Visualise data
-	1. jupyter-notebook # then open the visualise.ipynb notebook
+	1. jupyter-notebook  # then open the visualise.ipynb notebook
 
 5. Combine neural network and logistic regression classification & calculate per-patient performance
-	1. jupyter-notebook # then open combine_and_classify_patients.ipynb notebook
+	1. jupyter-notebook  # then open combine_and_classify_patients.ipynb notebook
 
-6. Generate final confusion matrices
+6. Generate final confusion matrices and statistical tests
 	1. python scripts/per_patient_final_results.py
 
 Directory structure
