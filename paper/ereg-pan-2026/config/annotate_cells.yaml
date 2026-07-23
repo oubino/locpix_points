@@ -1,0 +1,19 @@
+# Mapping from integer labels to real terms
+gt_label_map:
+  0 : background
+  1 : membrane
+
+# When saving annotations - if true then localisations which are assigned a label of zero are not saved
+drop_zero_label: False
+
+# if using napari to annotate then the following applies
+napari:
+  # The number of bins in each dimension i.e. x_bins = 500, y_bins = 500 will create a
+  # 500x500 pixel image - where the bin size in metric space will vary depending on the
+  # input data
+  x_bins: 500
+  y_bins: 800
+  z_bins: None
+
+  # Dimensions of the data
+  dim: 2 # Options: [2,3]

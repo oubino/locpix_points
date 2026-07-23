@@ -47,7 +47,7 @@ def load_loc_cluster(
     dim,
     kneighbourslocs=None,
     superclusters=False,
-    range=False,
+    data_range=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -73,8 +73,8 @@ def load_loc_cluster(
         kneighbourslocs (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If "all" then connects all locs within each cluster. Default (None)
         superclusters (bool) : If true extracts superclusters
-        range (float) : Range of the data over whole dataset. If not given calculate range
-            on per item basis, otherwise use range to define normalisation for each item. If
+        data_range (float) : data_range of the data over whole dataset. If not given calculate data_range
+            on per item basis, otherwise use data_range to define normalisation for each item. If
             False then shouldn't be processing the data
 
     Returns:
@@ -82,11 +82,11 @@ def load_loc_cluster(
             position and feature for each node
 
     Raises:
-        ValueError: If try and process data when range has not been calculated
+        ValueError: If try and process data when data_range has not been calculated
         NotImplementedError: If try to run superclusters in 3D"""
 
-    if range is False:
-        raise ValueError("should not be processing the data haven't considered range")
+    if data_range is False:
+        raise ValueError("should not be processing the data haven't considered data_range")
 
     loc_table = pl.from_arrow(loc_table)
     cluster_table = pl.from_arrow(cluster_table)
@@ -196,7 +196,7 @@ def load_loc_cluster(
     min_y = y_locs.min()
     if dim == 3:
         min_z = z_locs.min()
-    if range is None:
+    if data_range is None:
         per_item = True
         x_range = x_locs.max() - min_x
         y_range = y_locs.max() - min_y
@@ -208,25 +208,25 @@ def load_loc_cluster(
             logging.info(
                 f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
             )
-        range = max(x_range, y_range)
+        data_range = max(x_range, y_range)
         if dim == 3:
             z_range = z_locs.max() - min_z
             if z_range < 0.95 * fov_z:
                 logging.info(
                     f"Range of z data: {z_range} is smaller than 95% of the height of the fov: {fov_z}"
                 )
-            range = max(z_range, range)
+            data_range = max(z_range, data_range)
     else:
         per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
-    x_locs = (x_locs - min_x) / range
-    y_locs = (y_locs - min_y) / range
+    x_locs = (x_locs - min_x) / data_range
+    y_locs = (y_locs - min_y) / data_range
     x_locs = torch.clamp(x_locs, min=0, max=1)
     y_locs = torch.clamp(y_locs, min=0, max=1)
     if dim == 3:
-        z_locs = (z_locs - min_z) / range
+        z_locs = (z_locs - min_z) / data_range
         z_locs = torch.clamp(z_locs, min=0, max=1)
     # scale to between -1 and 1
     if per_item:
@@ -260,12 +260,12 @@ def load_loc_cluster(
         z_clusters = torch.tensor(cluster_table["z_mean"].to_numpy())
 
     # scale from -1 to 1
-    x_clusters = (x_clusters - min_x) / range
-    y_clusters = (y_clusters - min_y) / range
+    x_clusters = (x_clusters - min_x) / data_range
+    y_clusters = (y_clusters - min_y) / data_range
     x_clusters = torch.clamp(x_clusters, min=0, max=1)
     y_clusters = torch.clamp(y_clusters, min=0, max=1)
     if dim == 3:
-        z_clusters = (z_clusters - min_z) / range
+        z_clusters = (z_clusters - min_z) / data_range
         z_clusters = torch.clamp(z_clusters, min=0, max=1)
     # scale from -1 to 1
     if per_item:
@@ -318,7 +318,7 @@ def load_loc_cluster(
     # warnings.warn(f'Loc to loc edges are undirected: {is_undirected(loc_loc_edges)} and contains self loops: {contains_self_loops(loc_loc_edges)}')
     # warnings.warn(f'Cluster to cluster edges are undirected: {is_undirected(cluster_cluster_edges)} and contains self loops: {contains_self_loops(cluster_cluster_edges)}')
 
-    # warnings.warn(f'1 unit in new space == {range/2.0} in original units')
+    # warnings.warn(f'1 unit in new space == {data_range/2.0} in original units')
     # warnings.warn("Need to check that graph is connected correctly")
     # warnings.warn("Data should be normalised and scaled correctly")
     data.validate(raise_on_error=True)
@@ -411,7 +411,7 @@ def load_loc(
     fov_z,
     dim,
     kneighbours=None,
-    range=False,
+    data_range=False,
 ):
     """Load in position, features and edge index to each node
 
@@ -429,8 +429,8 @@ def load_loc(
         dim (int) : Dimensions of the data
         kneighbours (int) : How many nearest neighbours to consider constructing knn graph for
             loc loc dataset. If None then no edges between locs Default (None)
-        range (float) : Range of the data over whole dataset. If not given calculate range
-            on per item basis, otherwise use range to define normalisation for each item. If
+        data_range (float) : data_range of the data over whole dataset. If not given calculate data_range
+            on per item basis, otherwise use data_range to define normalisation for each item. If
             False should not be processing the data.
 
     Returns:
@@ -438,10 +438,10 @@ def load_loc(
             position and feature for eacch node
 
     Raises:
-        ValueError: If try to process data and haven't define range"""
+        ValueError: If try to process data and haven't define data_range"""
 
-    if range is False:
-        raise ValueError("should not be processing the data haven't considered range")
+    if data_range is False:
+        raise ValueError("should not be processing the data haven't considered data_range")
 
     loc_table = pl.from_arrow(loc_table)
 
@@ -486,7 +486,7 @@ def load_loc(
     min_y = y_locs.min()
     if dim == 3:
         min_z = z_locs.min()
-    if range is None:
+    if data_range is None:
         per_item = True
         x_range = x_locs.max() - min_x
         y_range = y_locs.max() - min_y
@@ -498,25 +498,25 @@ def load_loc(
             logging.info(
                 f"Range of y data: {y_range} is smaller than 95% of the height of the fov: {fov_y}"
             )
-        range = max(x_range, y_range)
+        data_range = max(x_range, y_range)
         if dim == 3:
             z_range = z_locs.max() - min_z
             if z_range < 0.95 * fov_z:
                 logging.info(
                     f"Range of z data: {z_range} is smaller than 95% of the height of the fov: {fov_z}"
                 )
-            range = max(z_range, range)
+            data_range = max(z_range, data_range)
     else:
         per_item = False
 
     # scale position
     # shift and scale biggest axis from -1 to 1
-    x_locs = (x_locs - min_x) / range
-    y_locs = (y_locs - min_y) / range
+    x_locs = (x_locs - min_x) / data_range
+    y_locs = (y_locs - min_y) / data_range
     x_locs = torch.clamp(x_locs, min=0, max=1)
     y_locs = torch.clamp(y_locs, min=0, max=1)
     if dim == 3:
-        z_locs = (z_locs - min_z) / range
+        z_locs = (z_locs - min_z) / data_range
         z_locs = torch.clamp(z_locs, min=0, max=1)
 
     if per_item:

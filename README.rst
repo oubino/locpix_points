@@ -31,6 +31,7 @@ Requirements
     * Set up an account and login using instructions at `wandb <https://docs.wandb.ai/quickstart/>`_
     * Make a note of your user-name for future use
 * Requires environment below
+* Note: If have different version of CUDA, Python, Pytorch, etc. - please change below accordingly
 
 Environment (locpix-points)
 -----------------------------
@@ -46,7 +47,7 @@ Install pytorch
 
 .. code-block:: python
 
-    pip install torch --index-url https://download.pytorch.org/whl/cu126
+    pip install torch==2.6.0 --index-url https://download.pytorch.org/whl/cu126
 
 Install this repository (the -e flag is needed if want to reproduce manuscript results or develop the code, if neither of these apply remove the flag)
 
@@ -312,13 +313,13 @@ Other commands
         scripts/analysis_locs.ipynb
 
 
-#. Evaluate the model multiple times and take an average - ARGS see longer description in `errata <https://github.com/oubino/locpix_points/blob/main/errata.rst>`_.
+#. Evaluate the model multiple times and take an average - ARGS see longer description in `addenda <https://github.com/oubino/locpix_points/blob/main/addenda.rst>`_.
 
     .. code-block:: shell
     
          evaluate_ensemble [ARGS]
 
-Errata
-======
+Addenda
+=======
 
-For more information, including a longer description of each command see `errata <https://github.com/oubino/locpix_points/blob/main/errata.rst>`_.
+For more information, including a longer description of each command see `addenda <https://github.com/oubino/locpix_points/blob/main/addenda.rst>`_.

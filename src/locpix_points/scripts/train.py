@@ -97,6 +97,16 @@ def main(argv=None):
         help="name of the run in wandb",
     )
 
+    parser.add_argument(
+        "-mn",
+        "--model_name",
+        action="store",
+        type=str,
+        help="name of the model",
+        default=None,
+        required=False,
+    )
+
     args = parser.parse_args(argv)
 
     project_directory = args.project_directory
@@ -176,7 +186,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range=False,
+            data_range=False,
         )
 
         # load in val dataset
@@ -201,7 +211,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range=False,
+            data_range=False,
         )
 
         # load in test dataset
@@ -226,7 +236,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range=False,
+            data_range=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -247,7 +257,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range=False,
+            data_range=False,
         )
 
         # load in val dataset
@@ -267,7 +277,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range=False,
+            data_range=False,
         )
 
         # load in test dataset
@@ -287,7 +297,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range=False,
+            data_range=False,
         )
     else:
         raise ValueError("Model not defined for train script")
@@ -488,11 +498,16 @@ def main(argv=None):
         model_folder = os.path.join(project_directory, "models")
     if not os.path.exists(model_folder):
         os.makedirs(model_folder)
-    time_o = time.gmtime(time.time())
-    time_o = (
-        f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
-    )
-    model_path = f"{project_name}_{dataset_name}_{time_o}.pt"
+    
+    if args.model_name is None:
+        time_o = time.gmtime(time.time())
+        time_o = (
+            f"hhmm_{time_o[3]}_{time_o[4]}_ddmmyyyy_{time_o[2]}_{time_o[1]}_{time_o[0]}"
+        )
+        model_name = time_o
+    else:
+        model_name = args.model_name
+    model_path = f"{project_name}_{dataset_name}_{model_name}.pt"
     model_path = os.path.join(model_folder, model_path)
 
     # train loop
@@ -559,7 +574,7 @@ def main(argv=None):
     # yaml_save_loc = os.path.join(project_directory, f"train_{time_o}.yaml")
     # with open(yaml_save_loc, "w") as outfile:
     #    yaml.dump(config, outfile)
-    yaml_save_loc = os.path.join(wandb.run.dir, f"train_{time_o}.yaml")
+    yaml_save_loc = os.path.join(wandb.run.dir, f"train_{model_name}.yaml")
     with open(yaml_save_loc, "w") as outfile:
         yaml.dump(config, outfile)
 

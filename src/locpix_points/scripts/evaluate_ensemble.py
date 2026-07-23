@@ -362,7 +362,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
                 )
 
                 # load in test dataset
@@ -382,7 +381,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
                 )
 
                 # load in test dataset
@@ -402,7 +400,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbours=None,
-                    range=False,
                 )
 
             elif config["model"] in [
@@ -433,7 +430,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
                 )
 
                 val_set = datastruc.ClusterLocDataset(
@@ -457,7 +453,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
                 )
 
                 test_set = datastruc.ClusterLocDataset(
@@ -481,7 +476,6 @@ def main(argv=None):
                     fov_z=None,
                     dim=None,
                     kneighbourslocs=None,
-                    range=False,
                 )
 
             else:
@@ -753,9 +747,9 @@ def main(argv=None):
 
             if process_config["normalise"] == "per_dataset":
                 # calculate xy range
-                range = minmaxpos(file_directory, train_list)
+                data_range = minmaxpos(file_directory, train_list)
             elif process_config["normalise"] == "per_item":
-                range = None
+                data_range = None
             else:
                 raise NotImplementedError("Normalise should be per-item or per-dataset")
 
@@ -816,7 +810,7 @@ def main(argv=None):
                 dim,
                 kneighbourslocs=process_config["kneighbourslocs"],
                 superclusters=superclusters,
-                range=range,
+                data_range=data_range,
             )
 
             RTS_loader = L.DataLoader(

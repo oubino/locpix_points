@@ -147,3 +147,9 @@ eclipse/*
 
 # demo
 demo/output/*
+
+# paper stuff
+paper/fov/*
+paper/cells/*
+
+paper/nn_classifier/preprocessed/*

@@ -6,6 +6,7 @@ visualise histo mask, save the exported annotation .parquet
 
 import argparse
 import json
+import numpy as np
 import os
 import yaml
 
@@ -45,6 +46,14 @@ def main(argv=None):
         required=True,
     )
 
+    parser.add_argument(
+        "-r",
+        "--relabel",
+        action="store_true",
+        default=False,
+        help="If true will relabel and assume labels are present (default = False)",
+    )
+
     group = parser.add_mutually_exclusive_group()
 
     group.add_argument(
@@ -75,16 +84,39 @@ def main(argv=None):
         raise ValueError("There should be some preprocessed files to open")
 
     # if output directory not present create it
-    output_directory = os.path.join(project_directory, "preprocessed/gt_label")
-    if not os.path.exists(output_directory):
+    output_datastructure_directory = os.path.join(project_directory, "preprocessed/gt_label")
+    if not os.path.exists(output_datastructure_directory):
         print("Making folder")
-        os.makedirs(output_directory)
+        os.makedirs(output_datastructure_directory)
+
+    if args.napari:
+
+        # if output directory not present create it
+        output_labels_directory = os.path.join(project_directory, "preprocessed/labels")
+        if not os.path.exists(output_labels_directory):
+            print("Making folder")
+            os.makedirs(output_labels_directory)
+        
+        # if output directory not present create it
+        output_markers_directory = os.path.join(project_directory, "preprocessed/markers")
+        if not os.path.exists(output_markers_directory):
+            print("Making folder")
+            os.makedirs(output_markers_directory)
 
     for file in files:
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, "preprocessed/no_gt_label", file)
         )
+
+        # check if file already present and annotated
+        # note assumptions
+        # 1. assumes name convention of save_to_parquet is
+        # os.path.join(save_folder, self.name + '.parquet')
+        parquet_save_loc = os.path.join(output_datastructure_directory, item.name + ".parquet")
+        if os.path.exists(parquet_save_loc) and not args.relabel:
+            print(f"Skipping file as already present: {parquet_save_loc}")
+            continue
 
         if args.napari:
             if config["napari"]["dim"] == 2:
@@ -103,12 +135,26 @@ def main(argv=None):
                 histo_size,
             )
 
+            labels_loc = os.path.join(output_labels_directory, item.name + ".npy")
+            markers_loc = os.path.join(output_markers_directory, item.name + ".npy")
+
             # manual segment
-            item.manual_segment_per_loc()
+            labels, markers = item.manual_segment_per_loc(
+                relabel=args.relabel,
+                labels_loc=labels_loc,
+                markers_loc=markers_loc,
+            )
 
             # save df to parquet
             item.gt_label_scope = "loc"
             item.gt_label = None
+
+            # save labels
+            np.save(labels_loc, labels)
+
+            # save markers
+            np.save(markers_loc, markers)
+
 
         else:
             if args.scope == "fov":
@@ -145,8 +191,9 @@ def main(argv=None):
 
         item.gt_label_map = config["gt_label_map"]
         item.save_to_parquet(
-            output_directory,
+            output_datastructure_directory,
             drop_zero_label=config["drop_zero_label"],
+            overwrite=args.relabel,
         )
 
     # save gt label map to metadata

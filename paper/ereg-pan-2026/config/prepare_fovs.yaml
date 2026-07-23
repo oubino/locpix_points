@@ -1,0 +1,9 @@
+dim: 2
+channel_col: channelIndex[]
+frame_col: frameIndex[]
+x_col: '# x[nm]'
+y_col: y[nm]
+channel_choice:
+- 0
+channel_label:
+- ereg

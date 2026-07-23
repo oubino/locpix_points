@@ -169,7 +169,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbourslocs=None,
-            range=False,
+            data_range=False,
         )
 
     elif config["model"] in ["loconlynet"]:
@@ -190,7 +190,7 @@ def main(argv=None):
             fov_z=None,
             dim=None,
             kneighbours=None,
-            range=False,
+            data_range=False,
         )
 
     else:

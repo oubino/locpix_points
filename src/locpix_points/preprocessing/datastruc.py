@@ -330,7 +330,13 @@ class item:
             #    .alias("z_pixel")
             # )
 
-    def manual_segment_per_loc(self, cmap=["green", "red", "blue", "bop purple"]):
+    def manual_segment_per_loc(
+        self,
+        cmap=["green", "red", "blue", "bop purple"],
+        relabel=False,
+        markers_loc=None,
+        labels_loc=None,
+    ):
         """Manually segment the image (histogram.T). Return the segmented
         histogram and extra column in dataframe corresponding to label.
         0 should be reserved for background.
@@ -338,6 +344,12 @@ class item:
         Args:
             cmap (list of strings) : Colourmaps napari uses to
                 plot the histograms
+            relabel (bool) : Whether to relabel
+            markers_loc (str) : Location to save the markers in
+            labels_loc (str) : Location to save the labels in
+
+        Returns:
+            markers (list) : Coordinates of markers if added
 
         Raises:
             ValueError: If try to manually segment file which already has gt labels
@@ -345,7 +357,7 @@ class item:
         """
 
         # if already has gt label raise error
-        if "gt_label" in self.df.columns:
+        if "gt_label" in self.df.columns and not relabel:
             raise ValueError(
                 "Manual segment cannot be called on a file which\
                               already has gt labels in it"
@@ -359,7 +371,7 @@ class item:
                     # then iterate through others)
                     colormap_list = cmap
                     # note image shape when plotted: [x, y]
-                    viewer = napari.view_image(
+                    viewer, _ = napari.imshow(
                         self.histo[self.channels[0]].T,
                         name=f"Channel {self.channels[0]}/"
                         f"{self.chan_2_label(self.channels[0])}",
@@ -379,13 +391,29 @@ class item:
                             gamma=2,
                             contrast_limits=[0, 30],
                         )
+                    
+                    # add labels if present
+                    if relabel:
+                        # note this has to be called after coord_2_histo to be in the
+                        # correct shape
+                        histo_mask = np.load(labels_loc)
+                        viewer.add_labels(histo_mask.T, name="Labels")
+                        if markers_loc is not None:
+                            markers = np.load(markers_loc, allow_pickle=True)
+                            if markers.any() is not None:
+                                    viewer.add_points(markers, name="Points")
+                    else:
+                        viewer.add_labels(
+                        np.zeros(self.histo[self.channels[0]].T.shape, dtype=int), 
+                        name="Labels"
+                    )
                     napari.run()
 
                 # only one channel
                 else:
                     img = self.histo[self.channels[0]].T
                     # create the viewer and add the image
-                    viewer = napari.view_image(
+                    viewer, _ = napari.imshow(
                         img,
                         name=f"Channel {self.channels[0]}/"
                         f"{self.chan_2_label(self.channels[0])}",
@@ -393,7 +421,31 @@ class item:
                         gamma=2,
                         contrast_limits=[0, 30],
                     )
+                   
+                    # add labels if present
+                    if relabel:
+                        # note this has to be called after coord_2_histo to be in the
+                        histo_mask = np.load(labels_loc)
+                        viewer.add_labels(histo_mask.T, name="Labels")
+                        if markers_loc is not None:
+                            markers = np.load(markers_loc, allow_pickle=True)
+                            if markers.any() is not None:
+                                    viewer.add_points(markers, name="Points")
+                    else:
+                        viewer.add_labels(
+                            np.zeros(img.shape, dtype=int), 
+                            name="Labels"
+                        )
+
                     napari.run()
+
+                try:
+                    markers = viewer.layers["Points"].data
+                    x = [[int(float(j)) for j in i] for i in markers]
+                    markers = [tuple(i) for i in x]
+                except KeyError:
+                    print("No markers found")
+                    markers = None
 
                 # histogram mask should be assigned to GUI output
                 try:
@@ -407,6 +459,8 @@ class item:
 
         # segment the coordinates
         self._manual_seg_pixel_2_coord()
+
+        return self.histo_mask, markers
 
     def _manual_seg_pixel_2_coord(self):
         """Get the localisations associated with manual annotation.
@@ -431,7 +485,7 @@ class item:
             data = {"x_pixel": x_pixel, "y_pixel": y_pixel, "gt_label": label}
             mask_df = pl.DataFrame(
                 data,
-                columns=[
+                schema=[
                     ("x_pixel", pl.Int64),
                     ("y_pixel", pl.Int64),
                     ("gt_label", pl.Int64),

@@ -131,7 +131,7 @@ def minmaxpos(file_directory, train_list, dim):
         range (float): Range of the data (in xy if 2D or xyz in 3D)
     """
 
-    range = -1
+    data_range = -1
     for _, file in enumerate(train_list):
         df = pl.read_parquet(os.path.join(file_directory, file + ".parquet"))
         # load in positions
@@ -149,9 +149,9 @@ def minmaxpos(file_directory, train_list, dim):
             z_range = z_locs.max() - min_z
             range_temp = max(range_temp, z_range)
 
-        range = max(range_temp, range)
+        data_range = max(range_temp, data_range)
 
-    return range
+    return data_range
 
 
 def main(argv=None):
@@ -411,9 +411,9 @@ def main(argv=None):
 
         if config["normalise"] == "per_dataset":
             # calculate range
-            range = minmaxpos(file_directory, train_list, dim)
+            data_range = minmaxpos(file_directory, train_list, dim)
         elif config["normalise"] == "per_item":
-            range = None
+            data_range = None
         else:
             raise NotImplementedError("Normalise should be per-item or per-dataset")
 
@@ -451,7 +451,7 @@ def main(argv=None):
             dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range=range,
+            data_range=data_range,
         )
 
         print("Val set...")
@@ -478,7 +478,7 @@ def main(argv=None):
             dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range=range,
+            data_range=data_range,
         )
 
         print("Test set...")
@@ -505,7 +505,7 @@ def main(argv=None):
             dim,
             kneighbourslocs=config["kneighbourslocs"],
             superclusters=superclusters,
-            range=range,
+            data_range=data_range,
         )
 
         # save yaml file
@@ -527,9 +527,9 @@ def main(argv=None):
 
         if config["normalise"] == "per_dataset":
             # calculate range
-            range = minmaxpos(file_directory, train_list, dim)
+            data_range = minmaxpos(file_directory, train_list, dim)
         elif config["normalise"] == "per_item":
-            range = None
+            data_range = None
         else:
             raise NotImplementedError("Normalise should be per-item or per-dataset")
 
@@ -551,7 +551,7 @@ def main(argv=None):
             config["fov_z"],
             dim,
             kneighbours=config["kneighbours"],
-            range=range,
+            data_range=data_range,
         )
 
         print("Val set...")
@@ -572,7 +572,7 @@ def main(argv=None):
             config["fov_z"],
             dim,
             kneighbours=config["kneighbours"],
-            range=range,
+            data_range=data_range,
         )
 
         print("Test set...")
@@ -593,7 +593,7 @@ def main(argv=None):
             config["fov_z"],
             dim,
             kneighbours=config["kneighbours"],
-            range=range,
+            data_range=data_range,
         )
 
         # save yaml file

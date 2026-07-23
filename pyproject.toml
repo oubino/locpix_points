@@ -22,7 +22,7 @@ classifiers = [
 dependencies = [
     "polars==0.19.8",
     "numpy==1.26.1",
-    "napari",
+    "napari==0.5.6",
     "matplotlib",
     "imageio-ffmpeg", # napari needs this
     "PyQt5", # napari needs this
@@ -48,6 +48,7 @@ dependencies = [
     "notebook",
     "cloudpickle==3.0.0",
     "pynndescent==0.5.11",
+    "MLstatkit",
 ]
 
 [project.scripts]
