@@ -57,7 +57,7 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 	6.6. [OPTIONAL] Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
 		a. From output/ remove config/k_fold.yaml
 		b. python scripts/generate_k_fold_splits.py
-	6.7. python scripts/k_fold.py
+	6.7. python scripts/k_fold.py  # Train models (Ignore the message from pytorch-geomtric about pre-filtering)
 
 7. At this point we can visualise processed cells (clustered etc.)
 	7.1. cd ..
