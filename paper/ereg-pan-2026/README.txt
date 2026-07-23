@@ -113,4 +113,4 @@ config/ --> contains config file for scripts
 scripts/
 	prepare_fovs.py
 
-environments/ --> contains copies of environments used by OU during development
+environments/ --> contains copies of environments used during development
