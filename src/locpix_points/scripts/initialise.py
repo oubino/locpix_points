@@ -310,7 +310,7 @@ def main(argv=None):
     if gt_label_present == "yes":
         print("-----------------------------------\n")
         print(
-            "Preprocess .yaml needs to be adjusted if you haven't copied preprocessed files!"
+            "preprocess.yaml needs to be adjusted if you haven't copied preprocessed files!"
         )
         # don't need to copy annotate but copy correct preprocess
         src = files("locpix_points.template.config").joinpath("preprocess_present.yaml")
