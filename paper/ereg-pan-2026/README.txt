@@ -11,15 +11,14 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 	3.2. Unzip folders and place both in the paper/ereg-pan-2026/ folder
 
 4. Extract cells from FOVs
-	4.1A. To visualise existing annotations or reannotate:
+	4.1 python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
+	4.2A. To visualise existing annotations and reannotate if desired:
 		a. annotate -i fov/ -c config/annotate_cells.yaml -n -r
-	4.1B. To run all of preprocessing and annotating from raw data:
-		a. Remove all of the preprocessing/ folder from fov/
-		b. python scripts/prepare_fovs.py -i fov/raw -c config/prepare_fovs.yaml -o fov/
-			- Ignore UserWarning: No ground truth label or gt label map: these are deliberately not present yet
-		c. annotate -i fov/ -c config/annotate_cells.yaml -n
+	4.2B. To annotate from scratch without seeing previous annotations:
+		a. From fov/preprocessed/ remove gt_label/, labels/, and markers/
+		b. annotate -i fov/ -c config/annotate_cells.yaml -n
 	
-	4.2. If annotating:
+	4.3. If annotating:
 	    a. FOV appears in napari 
 		b. Pixel sizes (xy bins) for the visualisation (approx. 100 nm) appear in the terminal
 		c. Delete previous annotation layers if relevant
@@ -28,11 +27,10 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 		e. In napari, use a paintbrush in a "Labels" layer to annotate membranes  # Stored in fov/preprocessed/labels
 		f. In a "Points" layers, add a point in the interior of each annotated cell  # Stored in fov/preprocessed/markers
 		g. Close napari; the next cell will appear ready for annotation; repeat a-e
-			- Do not use Ctrl+W to close the window, as this will terminate the whole process.
 
-	4.3A. To use previously annotated and extracted cell data:
+	4.4A. To use previously annotated and extracted cell data:
 		- Continue to step 5.
-	4.3B. To re-extract existing cells or extract newly annotated cells from fovs, rather than using downloaded cell data:
+	4.4B. To re-extract existing cells or extract newly annotated cells from fovs, rather than using downloaded cell data:
 		a. Remove all of the cells/ folder
 		b. python scripts/separate_cells.py  # Extract cells from FOV
 			- Annotates whole cells based on filling with watershed from the interior points to the membranes
