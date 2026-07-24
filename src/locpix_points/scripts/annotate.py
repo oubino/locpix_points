@@ -6,8 +6,9 @@ visualise histo mask, save the exported annotation .parquet
 
 import argparse
 import json
-import numpy as np
 import os
+
+import numpy as np
 import yaml
 
 from locpix_points.preprocessing import datastruc
@@ -104,6 +105,7 @@ def main(argv=None):
             os.makedirs(output_markers_directory)
 
     for file in files:
+        print(f"-- {file} --")
         item = datastruc.item(None, None, None, None, None)
         item.load_from_parquet(
             os.path.join(project_directory, "preprocessed/no_gt_label", file)

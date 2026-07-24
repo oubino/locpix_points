@@ -378,7 +378,7 @@ class item:
                         rgb=False,
                         blending="additive",
                         colormap=colormap_list[0],
-                        gamma=2,
+                        # gamma=2,
                         contrast_limits=[0, 30],
                     )
                     for index, chan in enumerate(self.channels[1:]):
@@ -388,7 +388,7 @@ class item:
                             rgb=False,
                             blending="additive",
                             colormap=colormap_list[index + 1],
-                            gamma=2,
+                            # gamma=2,
                             contrast_limits=[0, 30],
                         )
                     
@@ -418,7 +418,7 @@ class item:
                         name=f"Channel {self.channels[0]}/"
                         f"{self.chan_2_label(self.channels[0])}",
                         rgb=False,
-                        gamma=2,
+                        # gamma=2,
                         contrast_limits=[0, 30],
                     )
                    
