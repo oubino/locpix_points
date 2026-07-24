@@ -7,12 +7,16 @@ Module takes in the .csv files and processes saving the datastructures
 import argparse
 import json
 import os
-import polars as pl
 import socket
 import time
+
+import polars as pl
 import yaml
 
-from locpix_points.preprocessing import datastruc, functions
+from locpix_points.preprocessing import datastruc
+
+# from locpix_points.preprocessing import functions
+
 
 class project_info:
     """Project information metadata
@@ -130,41 +134,44 @@ def main():
     if not os.path.exists(output_folder):
         os.makedirs(output_folder)
 
-        # initialise metadata and save
-        metadata = project_info(time.asctime(time.gmtime(time.time())), project_folder)
-        metadata.save(os.path.join(project_folder, "metadata.json"))
+    # initialise metadata and save
+    metadata = project_info(time.asctime(time.gmtime(time.time())), project_folder)
+    metadata.save(os.path.join(project_folder, "metadata.json"))
 
     # if all is specified then consider all files otherwise consider specified files
     include_files = os.listdir(args.input)
     include_files = [os.path.splitext(item)[0] for item in include_files]
 
     files = [os.path.join(input_path, f"{file}.csv") for file in include_files]
-    # check file not already present
+    # Go through input files
     for file in files:
         file_name = os.path.basename(file)
         output_path = os.path.join(
             output_folder, f"{file_name.replace('.csv', '.parquet')}"
         )
-        if os.path.exists(output_path):
-            raise ValueError("Can't preprocess as output file already exists")
+        # check file not already present
+        if not os.path.exists(output_path):
+            # convert to datastructure -> save
+            item = load_csv(
+                file,
+                config["dim"],
+                config["channel_col"],
+                config["frame_col"],
+                config["x_col"],
+                config["y_col"],
+                config["channel_choice"],
+                config["channel_label"],
+            )
+            # have to not drop zero label
+            # as no gt_label yet
+            item.save_to_parquet(
+                output_folder,
+            )
+        else:
+            print(f"Output file {output_path} already exists. Skipping preprocessing for {file_name}.")
 
-    # go through files -> convert to datastructure -> save
-    for file in files:
-        item = load_csv(
-            file,
-            config["dim"],
-            config["channel_col"],
-            config["frame_col"],
-            config["x_col"],
-            config["y_col"],
-            config["channel_choice"],
-            config["channel_label"],
-        )
-        # have to not drop zero label
-        # as no gt_label yet
-        item.save_to_parquet(
-            output_folder,
-        )
+    print(f"Preprocessing complete. Preprocessed FOVs in {output_folder}.")
+
 
 if __name__ == "__main__":
     main()
