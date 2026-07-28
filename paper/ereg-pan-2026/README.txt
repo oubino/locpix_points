@@ -54,6 +54,8 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 	6.5. python scripts/featextract.py
 	6.6. [OPTIONAL] Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
 		a. From output/ remove config/k_fold.yaml  # The original folds will still be in paper/ereg-pan-2026/config/kfold.yaml
+		b. Modify the template script at output/scripts/generate_k_fold_splits.py to use grouping by patient in the folds
+			- use the version in output.zip from https://doi.org/10.5281/zenodo.21410192
 		b. python scripts/generate_k_fold_splits.py
 	6.7. python scripts/k_fold.py  # Train models (Ignore the message from pytorch-geomtric about pre-filtering)
 
