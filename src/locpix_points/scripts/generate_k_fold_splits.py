@@ -7,8 +7,10 @@ Recipe :
 import argparse
 import json
 import os
-import pyarrow.parquet as pq
+import sys
 import time
+
+import pyarrow.parquet as pq
 import yaml
 from sklearn.model_selection import StratifiedKFold, train_test_split
 
@@ -83,9 +85,10 @@ def main(argv=None):
     # check for presence of k_fold.yaml
     k_fold_yaml = os.path.join(args.config, "k_fold.yaml")
     if os.path.exists(k_fold_yaml) and not args.force:
-        raise ValueError(
+        print(
             "k_fold.yaml already exists, to overwrite provide the --force flag"
         )
+        sys.exit(1)
     else:
         # proceed to splitting the data
         splits = {}
@@ -93,6 +96,7 @@ def main(argv=None):
         n_splits = args.split
         kf = StratifiedKFold(n_splits=n_splits, shuffle=True)
         file_list = os.listdir(os.path.join(project_directory, "preprocessed/gt_label"))
+
         targets = []
         for file in file_list:
             target = pq.read_table(
