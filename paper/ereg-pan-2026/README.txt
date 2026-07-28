@@ -53,7 +53,7 @@ Instructions to train models from scratch on our data or re-generate preprocessi
 	6.4. python scripts/preprocess.py
 	6.5. python scripts/featextract.py
 	6.6. [OPTIONAL] Generate new k-fold validation splits: This will replace the current k_fold.yaml, which contains the splits we used in the paper to generate the results!
-		a. If output/config/k_fold.yaml has been generated previously, remove it
+		a. From output/ remove config/k_fold.yaml
 		b. python scripts/generate_k_fold_splits.py
 	6.7. python scripts/k_fold.py  # Train models (Ignore the message from pytorch-geomtric about pre-filtering)
 
