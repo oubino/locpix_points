@@ -1,4 +1,12 @@
-"""Test pipeline"""
+"""Call k-fold split generation (locpix_points/scripts/generate_k_splits.py).
+
+Extra options include:
+    -g for grouping data and sharing between
+    test and train/validation sets, e.g. for multiple datapoints per patient
+    (see help (-h) for the called script).
+
+    -v for verbose output.
+"""
 
 from locpix_points.scripts.generate_k_fold_splits import main as main_gen_k
 
