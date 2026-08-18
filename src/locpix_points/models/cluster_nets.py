@@ -121,7 +121,7 @@ class ClusterEncoder(torch.nn.Module):
                         add_self_loops=False,
                     )
                 },
-                aggr="max",  # CHANGE
+                aggr="max",
             )
         else:
             raise ValueError(f"{conv_type} not supported")
@@ -383,6 +383,7 @@ class ClusterNet(torch.nn.Module):
         )
 
         if supercluster_ID_0 is not None and supercluster_ID_1 is not None:
+            raise NotImplementedError("Currently final linear layer here defaults to two classes, which may not be the case")
             if self.attention_readout:
                 raise NotImplementedError(
                     "Not implemented attention readout for SC yet"
@@ -445,7 +446,7 @@ class ClusterNet(torch.nn.Module):
             else:
                 x_dict["clusters"] = self.global_pool(
                     x_dict["clusters"], index=batch
-                )  # CHANGE
+                )
 
             # linear layer on each fov feature vector
             return self.linear(x_dict["clusters"])
@@ -464,9 +465,14 @@ class ClusterNetHomogeneous(torch.nn.Module):
 
     def __init__(self, cluster_net_hetero, config, dim):
         super().__init__()
-        warnings.warn("This assumes a very particular model set up!")
         self.name = "ClusterNetHomogeneous"
         self.dim = dim
+
+        if config["cluster_conv_type"] != "pointtransformer":
+            raise NotImplementedError("Only supported for pointtransformer models")
+
+        if config["add_cluster_pos"]:
+            raise NotImplementedError("Adding cluster posn is not supported")
 
         # first
         self.cluster_encoder_0 = conv.PointTransformerConv(
@@ -606,20 +612,27 @@ class ClusterNetHomogeneous(torch.nn.Module):
         self.linear.load_state_dict(state_dict_saved)
 
         # attentional aggregation
-        chans = self.linear.in_features
-        attention_readout_nn = Linear(chans, chans)
-        attention_readout_node_level = config["attention_readout_node_level"]
-        if attention_readout_node_level:
-            attention_readout_gate = Linear(chans, 1)
+        if "attention_readout" in config.keys():
+            chans = self.linear.in_features
+            attention_readout_nn = Linear(chans, chans)
+            attention_readout_node_level = config["attention_readout_node_level"]
+            if attention_readout_node_level:
+                attention_readout_gate = Linear(chans, 1)
+            else:
+                attention_readout_gate = attention_readout_nn
+    
+            self.global_pool = AttentionalAggregation(
+                attention_readout_gate, attention_readout_nn
+            )
+            state_dict_saved = cluster_net_hetero.attention_readout_fn.state_dict()
+            self.global_pool.load_state_dict(state_dict_saved)
         else:
-            attention_readout_gate = attention_readout_nn
+            self.global_pool = MaxAggregation()
 
-        self.attention_readout_fn = AttentionalAggregation(
-            attention_readout_gate, attention_readout_nn
-        )
-        state_dict_saved = cluster_net_hetero.attention_readout_fn.state_dict()
-        self.attention_readout_fn.load_state_dict(state_dict_saved)
-
+        # superclusters not supported
+        if "superclusters" in config.keys():
+            raise NotImplementedError("Superclusters not supported")
+    
     def forward(self, x, edge_index, batch, pos, logits=True):
         """The method called when ClusterNetHomogeneous is used on a dataitem
 
@@ -642,7 +655,7 @@ class ClusterNetHomogeneous(torch.nn.Module):
         x = self.cluster_encoder_3(x, pos, edge_index)
 
         # pooling step so end up with one feature vector per fov
-        x = self.attention_readout_fn(x, index=batch)
+        x = self.global_pool(x, index=batch)
 
         # linear layer on each fov feature vector
         if logits:
