@@ -13,7 +13,7 @@ import json
 import os
 
 import time
-from matplotlib.cm import get_cmap
+from matplotlib.pyplot import get_cmap
 import matplotlib.patches as mpatches
 import matplotlib.pyplot as plt
 import matplotlib.colors as mpl_colors
