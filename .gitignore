@@ -153,3 +153,8 @@ paper/fov/*
 paper/cells/*
 
 paper/nn_classifier/preprocessed/*
+
+paper/ereg-pan-2026/fov/*
+paper/ereg-pan-2026/cells/*
+
+paper/ereg-pan-2026/nn_classifier/preprocessed/*
