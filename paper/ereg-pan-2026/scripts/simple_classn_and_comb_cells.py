@@ -3,8 +3,10 @@ simple_classn_and_comb_cells.py - predictions from logistic regression and combi
 """
 
 import os  # noqa: I001
+import re
 
 import numpy as np
+import pandas as pd
 import polars as pl
 import yaml
 # from sklearn.metrics import accuracy_score
@@ -205,6 +207,9 @@ def log_regr():
             features_list,
         )
 
+    # Keep only file stem
+    final_test_files = [x.removesuffix(".parquet") for x in final_test_files]
+    
     print("Mean AUROC on test set")
     print(np.mean(test_scores_simple_auroc))
 
@@ -240,3 +245,60 @@ def eval_best_nn_model():
         nn_final_test_predictions,
         nn_final_test_gt
     )
+
+
+def make_cell_results_df(
+    lr_test_files: list,
+    lr_probs: list,
+    nn_test_files: list,
+    nn_probs: list,
+    grd_truths: list,
+):
+    """
+    Create dataframe containing logistic regression, neural network, combined
+    results and patient reference for each cell.
+
+    Labelling by patient requires files to be named "PAT"+integer
+    """
+    nn_df = pd.DataFrame(
+        {
+            # "File": nn_final_test_file_list,
+            # "nn_prob": nn_final_test_probs,
+            # "GT": nn_final_test_gt,
+            "File": nn_test_files,
+            "nn_prob": nn_probs,
+            "GT": grd_truths,
+        }
+    )
+
+    simple_df = pd.DataFrame(
+        #{"File": final_test_files, "simple_prob": final_probs_simple}
+        {"File": lr_test_files, "simple_prob": lr_probs}
+    )
+
+    merge_df = pd.merge(nn_df, simple_df, on="File")
+
+    combined_probs = np.mean(
+        np.array([merge_df["simple_prob"], merge_df["nn_prob"]]), axis=0
+    )
+
+    df = pd.DataFrame(
+        {
+            "File": merge_df["File"],
+            "GT": merge_df["GT"],
+            "simple_prob": merge_df["simple_prob"],
+            "NN_prob": merge_df["nn_prob"],
+            "Combined_prob": combined_probs,
+        }
+    )
+
+    # Add patient labels
+    patients = []
+    files = df["File"]
+    for file in files:
+        match = re.search(r"PAT(\d+)", file)
+        p_number = match.group(1) if match else None
+        patients.append(p_number)
+    df["patient"] = patients
+
+    return df
