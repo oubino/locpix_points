@@ -12,6 +12,7 @@ from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import class_likelihood_ratios, roc_auc_score
 from sklearn.preprocessing import StandardScaler
 
+from locpix_points.scripts import evaluate_ensemble
 from functions import extract_features
 
 balanced_accuracy = True
@@ -36,6 +37,7 @@ def feat_extract(features, feature_str, file_filter):
         .drop("_order")
     )
     return df_filtered["file"], df_filtered[feature_str].to_numpy(), df_filtered["gt"].to_numpy()
+
 
 def feat_extract_overall(features, feature_list, train_folds, val_folds, test_folds):
     train_list = []
@@ -98,7 +100,9 @@ def simple_classify(model, X_train, Y_train, X_test, Y_test, train_scores, final
 
 def log_regr():
     """
-    Do logistic regression...
+    Do logistic regression.
+
+    Uses hard-coded input locations for this project.
 
     Using c=100, l1_ratio= .25, max_iter= 5000 penalty=elasticnet,
     found in nested validation.
@@ -208,3 +212,31 @@ def log_regr():
     print(np.mean(test_scores_simple_acc))
 
     return test_folds, final_test_files, final_probs_simple
+
+
+def eval_best_nn_model():
+    (
+        nn_final_test_file_list,
+        nn_final_test_probs,
+        nn_final_test_predictions,
+        nn_final_test_gt,
+    ) = evaluate_ensemble.main(
+        [
+            "-i",
+            "../output",
+            "-n",
+            "nn_model.pt",
+            "-m",
+            "../config/linked_files.csv",
+            "-c",
+            "config",
+            "-fo",
+            "5",
+        ]
+    )
+    return (
+        nn_final_test_file_list,
+        nn_final_test_probs,
+        nn_final_test_predictions,
+        nn_final_test_gt
+    )
