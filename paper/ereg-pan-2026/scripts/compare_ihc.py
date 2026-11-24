@@ -1,45 +1,21 @@
-# %% [markdown]
-# # Calculate final per-patient results
+"""
+compare_ihc.py - Compare dSTORM analysis with results from previous IHC threshold.
+"""
 
-# %% [markdown]
-# ## Imports
-
-# %%
 import polars as pl
 from scipy.stats import binomtest
 from sklearn.metrics import confusion_matrix
 
-# %% [markdown]
-# ## Load data in
-
 # %%
-# Load in k_fold_df.csv - per cell dSTORM predictions
-dstorm_cells_df = "output/combined_classification/k_fold_df.csv"
-dstorm_cells_df = pl.read_csv(dstorm_cells_df)
-
-# IHC data
+## Load IHC data
 linked_files_df = "config/linked_files.csv"
 linked_files_df = pl.read_csv(linked_files_df)
 linked_files_df = linked_files_df.with_columns(
     pl.col("patient").str.strip_prefix("PAT").cast(pl.Int64)
 )
 
-# %% [markdown]
-# ## Merge data, and add binary predictions and correctness
-
 # %%
-dstorm_pat_df = dstorm_cells_df.group_by(
-    pl.col(["patient","GT"])
-    ).agg(pl.col(["simple_prob", "NN_prob", "Combined_prob"]).mean()).sort("patient")
-dstorm_pat_df = dstorm_pat_df.with_columns(
-    (pl.col("Combined_prob") >= 0.5).cast(pl.Int64).alias("dSTORM_pred")
-)
-dstorm_pat_df = dstorm_pat_df.with_columns(
-    (pl.col("dSTORM_pred") == pl.col("GT")).alias("dSTORM_correct")
-)
-print(dstorm_pat_df)
-
-# %%
+## Add predictions
 linked_files_df = linked_files_df.with_columns(
     ((pl.col("%pos_ereg") >= 50) | (pl.col("%pos_areg") >= 50)).cast(pl.Int64).alias("IHC_pred")
 )
@@ -48,7 +24,9 @@ linked_files_df = linked_files_df.with_columns(
 )
 print(linked_files_df)
 
+
 # %%
+dstorm_pat_df = pl.read_csv("output/combined_classification/dstorm_patient_preds.csv")
 all_df = linked_files_df.join(dstorm_pat_df, on="patient")
 print(all_df)
 
@@ -139,8 +117,3 @@ else:
     p_ml_greater = binomtest(k=n10, n=n_discordant, p=0.5, alternative='greater').pvalue
     print(f"Exact McNemar (one-sided, dSTORM > IHC): p = {p_ml_greater:.6g}")
     print()
-
-# %%
-
-
-
