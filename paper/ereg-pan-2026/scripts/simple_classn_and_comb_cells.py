@@ -2,7 +2,8 @@
 simple_classn_and_comb_cells.py - predictions from logistic regression and combination with neural network results per cell
 """
 
-import os  # noqa: I001
+import argparse  # noqa: I001
+import os
 import re
 
 import numpy as np
@@ -10,7 +11,6 @@ import pandas as pd
 import polars as pl
 import yaml
 from pandas import DataFrame
-# from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import class_likelihood_ratios, roc_auc_score
 from sklearn.preprocessing import StandardScaler
@@ -101,7 +101,10 @@ def simple_classify(model, X_train, Y_train, X_test, Y_test, train_scores, final
     return test_probs
 
 
-def log_regr(output_dir: str = "output"):
+def log_regr(
+        cells_path: str = "../cells",
+        output_path: str = "../output",
+):
     """
     Do logistic regression.
 
@@ -111,11 +114,14 @@ def log_regr(output_dir: str = "output"):
     found in nested validation.
 
     Args:
-        output_dir: str
-            Name of output directory.
+        cells_path: str
+            Path to cells directory contained cell data extracted from FOVs
+            with GT annotations.
+        output_path: str
+            Path to output directory.
     """
     # Preprocessing
-    input_folder = "../cells/gt_label"
+    input_folder = f"{cells_path}/gt_label"
     files = os.listdir(input_folder)
     # channels = ["ereg"]
 
@@ -124,7 +130,7 @@ def log_regr(output_dir: str = "output"):
     # class_1_str = "any-response"
 
     # load in splits
-    k_fold_file = f"../{output_dir}/config/k_fold.yaml"
+    k_fold_file = f"{output_path}/config/k_fold.yaml"
 
     # load yaml
     with open(k_fold_file, "r") as ymlfile:
@@ -135,10 +141,10 @@ def log_regr(output_dir: str = "output"):
     test_folds = k_fold_file["splits"]["test"]
 
     # Get model features and store if necessary
-    if not os.path.exists(f"../{output_dir}/simple_classification"):
-        os.makedirs(f"../{output_dir}/simple_classification")
+    if not os.path.exists(f"{output_path}/simple_classification"):
+        os.makedirs(f"{output_path}/simple_classification")
 
-    features_path = f"../{output_dir}/simple_classification/features.parquet"
+    features_path = f"{output_path}/simple_classification/features.parquet"
 
     if not os.path.exists(features_path):
         features = extract_features(files, input_folder)
@@ -224,11 +230,16 @@ def log_regr(output_dir: str = "output"):
     return test_folds, final_test_files, final_probs_simple
 
 
-def eval_best_nn_model(output_dir: str = "output"):
+def eval_best_nn_model(
+        config_path: str = "../config",
+        output_path: str = "../output",
+):
     """
     Args:
-    output_dir: str
-        Name of output directory.
+        config_path: str
+            Path to config diredtory holding linked_filed.csv
+        output_path: str
+            Path to output directory.
     """
     (
         nn_final_test_file_list,
@@ -238,11 +249,11 @@ def eval_best_nn_model(output_dir: str = "output"):
     ) = evaluate_ensemble.main(
         [
             "-i",
-            f"../{output_dir}",
+            f"{output_path}",
             "-n",
             "nn_model.pt",
             "-m",
-            "../config/linked_files.csv",
+            f"{config_path}/linked_files.csv",
             "-c",
             "config",
             "-fo",
@@ -316,14 +327,85 @@ def make_cell_results_df(
 
 def save_cell_results_df(
     cells_df: DataFrame,
-    output_dir: str = "output",
+    output_path: str = "../output",
 ):
     """
     Args:
-        output_dir: str
-            Name of output directory.
+        output_path: str
+            Path to output directory.
     """
-    output_path = f"../{output_dir}/combined_classification"
+    output_path = f"{output_path}/combined_classification"
     if not os.path.exists(output_path):
         os.makedirs(output_path)
     cells_df.to_csv(os.path.join(output_path, "k_fold_df.csv"))
+
+
+def main():
+    parser = argparse.ArgumentParser(
+        description=(
+            "Run logistic regression prediction model and combine with neural network "
+            "probabilities."
+        )
+    )
+    parser.add_argument(
+        "-cells",
+        "--cells_path",
+        action="store",
+        type=str,
+        default="../cells",
+        help="Path to the folder containing cell data extracted from the FOVs "
+            "with GT annotation."
+    )
+
+    parser.add_argument(
+        "-config",
+        "--config_path",
+        action="store",
+        type=str,
+        default="../config",
+        help="Path to the config folder containing linked_files.csv."
+    )
+
+    parser.add_argument(
+        "-o",
+        "--output_path",
+        action="store",
+        type=str,
+        default="../output",
+        help="Path to the folder containing preprocessed data, config, etc. "
+            "for this k-fold assignment."
+    )
+
+    args = parser.parse_args()
+
+    _test_folds, lr_test_files, lr_pred_probs = log_regr(
+        args.cells_path,
+        args.output_path,
+    )
+
+    print("\nObtaining NN evaluation...\n")
+
+    (
+        nn_final_test_file_list,
+        nn_final_test_probs,
+        _nn_final_test_predictions,
+        nn_final_test_gt,
+    ) = eval_best_nn_model(args.config_path, args.output_path)
+
+    print("\nFinished obtaining NN evaluation.\n")
+
+    df = make_cell_results_df(
+        lr_test_files,
+        lr_pred_probs,
+        nn_final_test_file_list,
+        nn_final_test_probs,
+        nn_final_test_gt
+    )
+
+    save_cell_results_df(df, args.output_path)
+
+    print("Saved cell probabilities dataframe.")
+
+
+if __name__ == "__main__":
+    main()
