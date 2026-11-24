@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import polars as pl
 import yaml
+from pandas import DataFrame
 # from sklearn.metrics import accuracy_score
 from sklearn.linear_model import LogisticRegression
 from sklearn.metrics import class_likelihood_ratios, roc_auc_score
@@ -100,7 +101,7 @@ def simple_classify(model, X_train, Y_train, X_test, Y_test, train_scores, final
     return test_probs
 
 
-def log_regr():
+def log_regr(output_dir: str = "output"):
     """
     Do logistic regression.
 
@@ -108,6 +109,10 @@ def log_regr():
 
     Using c=100, l1_ratio= .25, max_iter= 5000 penalty=elasticnet,
     found in nested validation.
+
+    Args:
+        output_dir: str
+            Name of output directory.
     """
     # Preprocessing
     input_folder = "../cells/gt_label"
@@ -119,7 +124,7 @@ def log_regr():
     # class_1_str = "any-response"
 
     # load in splits
-    k_fold_file = "../output/config/k_fold.yaml"
+    k_fold_file = f"../{output_dir}/config/k_fold.yaml"
 
     # load yaml
     with open(k_fold_file, "r") as ymlfile:
@@ -130,10 +135,10 @@ def log_regr():
     test_folds = k_fold_file["splits"]["test"]
 
     # Get model features and store if necessary
-    if not os.path.exists("../output/simple_classification"):
-        os.makedirs("../output/simple_classification")
+    if not os.path.exists(f"../{output_dir}/simple_classification"):
+        os.makedirs(f"../{output_dir}/simple_classification")
 
-    features_path = "../output/simple_classification/features.parquet"
+    features_path = f"../{output_dir}/simple_classification/features.parquet"
 
     if not os.path.exists(features_path):
         features = extract_features(files, input_folder)
@@ -219,7 +224,12 @@ def log_regr():
     return test_folds, final_test_files, final_probs_simple
 
 
-def eval_best_nn_model():
+def eval_best_nn_model(output_dir: str = "output"):
+    """
+    Args:
+    output_dir: str
+        Name of output directory.
+    """
     (
         nn_final_test_file_list,
         nn_final_test_probs,
@@ -228,7 +238,7 @@ def eval_best_nn_model():
     ) = evaluate_ensemble.main(
         [
             "-i",
-            "../output",
+            f"../{output_dir}",
             "-n",
             "nn_model.pt",
             "-m",
@@ -302,3 +312,18 @@ def make_cell_results_df(
     df["patient"] = patients
 
     return df
+
+
+def save_cell_results_df(
+    cells_df: DataFrame,
+    output_dir: str = "output",
+):
+    """
+    Args:
+        output_dir: str
+            Name of output directory.
+    """
+    output_path = f"../{output_dir}/combined_classification"
+    if not os.path.exists(output_path):
+        os.makedirs(output_path)
+    cells_df.to_csv(os.path.join(output_path, "k_fold_df.csv"))
