@@ -37,7 +37,7 @@ dstorm_pat_df = dstorm_pat_df.with_columns(
 dstorm_pat_df = dstorm_pat_df.with_columns(
     (pl.col("dSTORM_pred") == pl.col("GT")).alias("dSTORM_correct")
 )
-dstorm_pat_df
+print(dstorm_pat_df)
 
 # %%
 linked_files_df = linked_files_df.with_columns(
@@ -46,11 +46,11 @@ linked_files_df = linked_files_df.with_columns(
 linked_files_df = linked_files_df.with_columns(
     (pl.col("IHC_pred") == pl.col("response")).alias("IHC_correct")
 )
-linked_files_df
+print(linked_files_df)
 
 # %%
 all_df = linked_files_df.join(dstorm_pat_df, on="patient")
-all_df
+print(all_df)
 
 # %% [markdown]
 # ## Confusion matrices, all EREG/AREG levels by IHC
@@ -68,7 +68,7 @@ print(f"Response 1 {cm_storm_all[1]}")
 
 # %%
 has_IHC_df = all_df.drop_nulls()
-has_IHC_df
+print(has_IHC_df)
 
 # %%
 cm_ihc_all = confusion_matrix(has_IHC_df["GT"].to_numpy(), has_IHC_df["IHC_pred"].to_numpy())
@@ -102,7 +102,7 @@ else:
 
 # %%
 high_ereg_pats_df = has_IHC_df.filter((pl.col("%pos_ereg") >= 50.0) | (pl.col("%pos_areg") >= 50.0))
-high_ereg_pats_df
+print(high_ereg_pats_df)
 
 # %%
 cm_storm_highereg = confusion_matrix(high_ereg_pats_df["GT"].to_numpy(), high_ereg_pats_df["dSTORM_pred"].to_numpy())
