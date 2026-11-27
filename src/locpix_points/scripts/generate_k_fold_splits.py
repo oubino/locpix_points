@@ -25,7 +25,7 @@ from sklearn.model_selection import (
 # from sklearn.model_selection import LeaveOneGroupOut, GroupShuffleSplit
 
 
-def extract_groups(file_list: list[str], prefix: str):
+def extract_groups(file_list: list, prefix: str):
     """Extract groups from names in an input file list. Finds integers
     representing groups after a prefix.
 
@@ -43,7 +43,7 @@ def extract_groups(file_list: list[str], prefix: str):
     """
     group_ids = []
     for file in file_list:
-        match = re.search(r"PAT(\d+)", file)  # {re.escape(prefix)}
+        match = re.search(rf"{prefix}(\d+)", file)
         group_id = match.group(1) if match else None
         group_ids.append(group_id)
     return(group_ids)
@@ -90,10 +90,11 @@ def main(argv=None):
     )
 
     parser.add_argument(
-        "-f",
-        "--force",
-        action="store_true",
-        help="if present then forces the split and overwrites",
+        "-seed",
+        type=int,
+        action="store",
+        default=None,
+        help="if present, seeds the k-fold assignment algorithm"
     )
 
     parser.add_argument(
@@ -107,6 +108,13 @@ def main(argv=None):
         " training/validation sets. The string given should be a prefix in the"
         " filenames before integers that represent the group."
         " e.g. type \"-g PAT\" for filenames like PAT1, PAT2, etc."
+    )
+
+    parser.add_argument(
+        "-f",
+        "--force",
+        action="store_true",
+        help="if present then forces the split and overwrites",
     )
 
     parser.add_argument(
@@ -161,11 +169,24 @@ def main(argv=None):
 
         # Prepare k-fold split, include groups if present
         # Random splits
+        group_ids = None
+
+        if args.verbose:
+            print(f"Seed: {args.seed}")
+        
         if args.groups is None:
-            kf = StratifiedKFold(n_splits=n_splits, shuffle=True)
+            kf = StratifiedKFold(
+                n_splits=n_splits,
+                shuffle=True,
+                random_state=args.seed
+            )
             kfsplit = kf.split(file_list, targets)
         else:
-            kf = StratifiedGroupKFold(n_splits=n_splits, shuffle=True)
+            kf = StratifiedGroupKFold(
+                n_splits=n_splits,
+                shuffle=True,
+                random_state=args.seed
+            )
             print(f"Extracting: {args.groups}")
             group_ids = extract_groups(file_list, args.groups)
             kfsplit = kf.split(file_list, targets, group_ids)
@@ -230,12 +251,9 @@ def main(argv=None):
             if args.groups is not None:
             # Ensure groups in test set are not present in
             # training or validation sets
-                train_patients = []
-                val_patients = []
-                test_patients = []
-                extract_groups(train_fold, train_patients)
-                extract_groups(val_fold, val_patients)
-                extract_groups(test_fold, test_patients)
+                train_patients = extract_groups(train_fold, args.groups)
+                val_patients = extract_groups(val_fold, args.groups)
+                test_patients = extract_groups(test_fold, args.groups)
 
                 if any(i in train_patients for i in test_patients):
                     raise ValueError("Should not share common values train/test")
