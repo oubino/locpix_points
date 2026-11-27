@@ -64,6 +64,7 @@ eggs/
 
 # code output
 output/
+output*
 
 # markdown files for developers
 DEVELOPMENT.md
