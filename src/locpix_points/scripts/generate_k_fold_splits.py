@@ -75,8 +75,9 @@ def main(argv=None):
         "--config",
         action="store",
         type=str,
-        help="the location of the configuaration folder\
-                which has process.yaml, train.yaml and k_fold.yaml",
+        help="the location of the configuration folder, "
+            "relative to the project folder, "
+            "which has process.yaml, train.yaml and k_fold.yaml",
         required=True,
     )
 
@@ -175,21 +176,21 @@ def main(argv=None):
             print(f"Seed: {args.seed}")
         
         if args.groups is None:
-            kf = StratifiedKFold(
+            skf = StratifiedKFold(
                 n_splits=n_splits,
                 shuffle=True,
                 random_state=args.seed
             )
-            kfsplit = kf.split(file_list, targets)
+            kfsplit = skf.split(file_list, targets)
         else:
-            kf = StratifiedGroupKFold(
+            sgkf = StratifiedGroupKFold(
                 n_splits=n_splits,
                 shuffle=True,
                 random_state=args.seed
             )
             print(f"Extracting: {args.groups}")
             group_ids = extract_groups(file_list, args.groups)
-            kfsplit = kf.split(file_list, targets, group_ids)
+            kfsplit = sgkf.split(file_list, targets, group_ids)
 
         # Generate folds
         train_folds = []
